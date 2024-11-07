@@ -16,7 +16,7 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = Purple,
 
     background = DarkGreenishGray,
-    surface = LightGray,
+    surface = DarkGreenishGray,
     onPrimary = DarkGreenishGray,
     onSecondary = LightGray,
     onTertiary = LightGray,
@@ -25,8 +25,8 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = DarkGreenishGray,
-    secondary = LightGray,
+    primary = LightGray,
+    secondary = DarkGreenishGray,
     tertiary = Purple,
 
     /* Other default colors to override */
@@ -42,22 +42,13 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun ZIMTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+//    val colors = if(darkTheme) DarkColorScheme else LightColorScheme;
+    val colors = DarkColorScheme;
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = colors,
         typography = Typography,
         content = content
     )
