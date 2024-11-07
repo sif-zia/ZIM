@@ -1,5 +1,7 @@
 package com.example.zim.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,12 +11,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -24,6 +27,27 @@ import com.example.zim.components.LogoRow
 import com.example.zim.navigation.Navigation
 import java.time.LocalDate
 
+fun validateName(name: String, newName: String, context: Context): String {
+    if (!newName.any { !it.isLetter() } && newName.length <= 30)
+        if(newName.isNotEmpty())
+            return newName[0].uppercaseChar() + newName.substring(1);
+        else
+            return "";
+    else if (name.length >= 30)
+        Toast.makeText(
+            context,
+            "Only 30 characters allowed!",
+            Toast.LENGTH_SHORT
+        ).show();
+    else
+        Toast.makeText(
+            context,
+            "Only alphabets are allowed!",
+            Toast.LENGTH_SHORT
+        ).show();
+    return name;
+}
+
 @Composable
 fun SignUpScreen(navController: NavController) {
 
@@ -31,6 +55,7 @@ fun SignUpScreen(navController: NavController) {
     var lastName by remember { mutableStateOf("") }
     var DOB by remember { mutableStateOf<LocalDate?>(null) }
 
+    val context = LocalContext.current;
     return Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,11 +71,11 @@ fun SignUpScreen(navController: NavController) {
         )
 
         TextInput(label = "First Name", text = firstName) { newText ->
-            firstName = newText
+            firstName = validateName(firstName, newText, context)
         }
 
         TextInput(label = "Last Name", text = lastName) { newText ->
-            lastName = newText
+            lastName = validateName(lastName, newText, context)
         }
 
         DateInput(label = "Date of Birth", date = DOB) { newDate ->
@@ -59,12 +84,12 @@ fun SignUpScreen(navController: NavController) {
 
         Button(
             modifier = Modifier.padding(top = 32.dp),
-            onClick = { navController.navigate(Navigation.Chats.route)},
+            onClick = { navController.navigate(Navigation.Chats.route) },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.tertiary,
                 contentColor = MaterialTheme.colorScheme.onTertiary
             )
-            ) {
+        ) {
             Text(text = "Save")
         }
     };
