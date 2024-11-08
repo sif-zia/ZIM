@@ -24,36 +24,35 @@ import androidx.navigation.NavController
 import com.example.zim.components.DateInput
 import com.example.zim.components.TextInput
 import com.example.zim.components.LogoRow
+import com.example.zim.events.SignUpEvent
 import com.example.zim.navigation.Navigation
+import com.example.zim.states.SignUpState
 import java.time.LocalDate
 
 fun validateName(name: String, newName: String, context: Context): String {
-    if (!newName.any { !it.isLetter() } && newName.length <= 30)
-        if(newName.isNotEmpty())
-            return newName[0].uppercaseChar() + newName.substring(1);
-        else
-            return "";
-    else if (name.length >= 30)
-        Toast.makeText(
-            context,
-            "Only 30 characters allowed!",
-            Toast.LENGTH_SHORT
-        ).show();
-    else
-        Toast.makeText(
-            context,
-            "Only alphabets are allowed!",
-            Toast.LENGTH_SHORT
-        ).show();
+    if (!newName.any { !it.isLetter() } && newName.length <= 30) if (newName.isNotEmpty()) return newName[0].uppercaseChar() + newName.substring(
+        1
+    );
+    else return "";
+    else if (name.length >= 30) Toast.makeText(
+        context, "Only 30 characters allowed!", Toast.LENGTH_SHORT
+    ).show();
+    else Toast.makeText(
+        context, "Only alphabets are allowed!", Toast.LENGTH_SHORT
+    ).show();
     return name;
 }
 
 @Composable
-fun SignUpScreen(navController: NavController) {
-
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var DOB by remember { mutableStateOf<LocalDate?>(null) }
+fun SignUpScreen(
+    navController: NavController,
+    state: SignUpState,
+    onEvent: (SignUpEvent) -> Unit
+) {
+    if(state.IsLoggedIn)
+    {
+        navController.navigate(Navigation.Chats.route)
+    }
 
     val context = LocalContext.current;
     return Column(
@@ -70,21 +69,22 @@ fun SignUpScreen(navController: NavController) {
             fontSize = 28.sp,
         )
 
-        TextInput(label = "First Name", text = firstName) { newText ->
-            firstName = validateName(firstName, newText, context)
+        TextInput(label = "First Name", text = state.firstName, onTextChange = { newText ->
+            onEvent(SignUpEvent.SetFirstName( validateName(state.firstName, newText, context)))
+        })
+        //same as above state updater
+        TextInput(label = "Last Name", text = state.lastName) { newText ->
+            onEvent(SignUpEvent.SetLastName(validateName(state.lastName, newText, context)))
         }
 
-        TextInput(label = "Last Name", text = lastName) { newText ->
-            lastName = validateName(lastName, newText, context)
-        }
+        DateInput(label = "Date of Birth", date = state.DOB) { newDate ->
+            onEvent(SignUpEvent.SetDOB(newDate))
 
-        DateInput(label = "Date of Birth", date = DOB) { newDate ->
-            DOB = newDate
         }
 
         Button(
             modifier = Modifier.padding(top = 32.dp),
-            onClick = { navController.navigate(Navigation.Chats.route) },
+            onClick = { onEvent(SignUpEvent.SaveUser) },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.tertiary,
                 contentColor = MaterialTheme.colorScheme.onTertiary

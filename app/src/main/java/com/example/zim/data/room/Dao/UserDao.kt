@@ -14,7 +14,7 @@ import com.example.zim.data.room.models.UserWithCurrentUser
 @Dao
 interface UserDao {
     @Insert
-    suspend fun insertUser(user: Users) : Long
+    suspend fun insertUser(user: Users): Long
 
     @Update
     suspend fun updateUser(user: Users)
@@ -23,29 +23,44 @@ interface UserDao {
     suspend fun deleteUser(user: Users)
 
     @Insert
-    suspend fun insertCurrUser(currUser: CurrentUser) : Long
+    suspend fun insertCurrUser(currUser: CurrentUser): Long
 
     @Update
     suspend fun updateCurrUser(currUser: CurrentUser)
 
     // Get Current User with relation
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM Users as U
         INNER JOIN Curr_User as C
         ON C.User_ID_FK = U.User_ID
         LIMIT 1
-    """)
+    """
+    )
     suspend fun getCurrentUser(): UserWithCurrentUser?  // Return nullable UserWithCurrentUser to avoid issues if no result found
 
     // Get Connected Users
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT *
         FROM Users as U
         INNER JOIN Curr_User as C
         ON C.User_ID_FK != U.User_ID
-    """)
+    """
+    )
     suspend fun getConnectedUsers(): List<UserWithCurrentUser>  // Return a list of UserWithCurrentUser
+
+    @Transaction
+    @Query(
+        """
+       SELECT EXISTS(
+        SELECT *
+        FROM Curr_User
+    )
+    """
+    )
+    suspend fun doesCurrentUserExist(): Boolean
 }
