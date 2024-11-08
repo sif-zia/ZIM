@@ -22,6 +22,9 @@ interface UserDao {
     @Delete
     suspend fun deleteUser(user: Users)
 
+    @Query("DELETE FROM Users WHERE User_ID = :id")
+    suspend fun deleteUserById(id: Int): Int
+
     @Insert
     suspend fun insertCurrUser(currUser: CurrentUser): Long
 

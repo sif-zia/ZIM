@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     //kotlin("kapt")
     id("kotlin-kapt") // Add this line
+    id("com.google.dagger.hilt.android")
 }
 kapt {
     correctErrorTypes = true // Ensure proper error handling for kapt
@@ -93,5 +94,9 @@ dependencies {
 
     // Navigation
     implementation ("androidx.navigation:navigation-compose:2.7.1")
+
+    // Dagger Hilt
+    implementation("com.google.dagger:hilt-android:2.48")
+    kapt("com.google.dagger:hilt-android-compiler:2.48")
 
 }

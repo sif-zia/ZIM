@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 data class Messages(
     @ColumnInfo(name = Schema.MESSAGE_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val msg: String, // Any
     val type: String, // Text, Audio, Image, Video, File
     val sentTime: LocalDateTime,

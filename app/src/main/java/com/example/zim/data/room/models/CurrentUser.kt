@@ -13,7 +13,7 @@ import com.example.zim.data.room.schema.Schema
 data class CurrentUser(
     @ColumnInfo(name = Schema.CURR_USER_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val prKey: String? = null, // Any
     // Foreign Keys
     @ColumnInfo(name = Schema.USER_ID_FK)

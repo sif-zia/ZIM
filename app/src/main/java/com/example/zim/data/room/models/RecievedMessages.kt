@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 data class ReceivedMessages(
     @ColumnInfo(name = Schema.RECEIVED_MESSAGE_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val receivedTime: LocalDateTime,
 
     // Foreign Keys

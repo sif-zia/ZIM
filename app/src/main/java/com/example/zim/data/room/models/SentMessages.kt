@@ -11,7 +11,7 @@ import com.example.zim.data.room.schema.Schema
 data class SentMessages(
     @ColumnInfo(name = Schema.SENT_MESSAGE_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val status: String, // Failed, Sent, Sending
 
     // Foreign Keys

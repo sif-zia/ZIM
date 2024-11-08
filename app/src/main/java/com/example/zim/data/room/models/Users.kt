@@ -13,7 +13,7 @@ import java.time.LocalDate
 data class Users(
     @ColumnInfo(name = Schema.USER_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val deviceName: String? = null,
     val fName: String,  // Any
     val lName: String? = null, // Any

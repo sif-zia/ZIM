@@ -1,7 +1,6 @@
 package com.example.zim
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,32 +16,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
-import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.zim.data.room.ZIMDatabase
 import com.example.zim.data.room.schema.Schema
 import com.example.zim.navigation.NavGraph
 import com.example.zim.ui.theme.ZIMTheme
 import com.example.zim.viewModels.SignUpViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val database by lazy {
-        Room.databaseBuilder(
-            applicationContext,
-            ZIMDatabase::class.java,
-            Schema.DB_NAME
-        ).build()
-    }
-    private val SignUpViewModel by viewModels<SignUpViewModel>(
-        factoryProducer = {
-            object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SignUpViewModel(database.userDao) as T
-                }
-            }
-        }
-    )
+    private val signUpViewModel: SignUpViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,8 +41,8 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
 
                 ) {
-                    val state by SignUpViewModel.state.collectAsState()
-                    NavGraph(state=state, onEvent = SignUpViewModel::onEvent)
+                    val state by signUpViewModel.state.collectAsState()
+                    NavGraph(signUpState=state, onSignUpEvent = signUpViewModel::onEvent)
                 }
             }
         }

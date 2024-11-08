@@ -9,14 +9,18 @@ import com.example.zim.screens.AlertsScreen
 import com.example.zim.screens.ChatsScreen
 import com.example.zim.screens.ConnectionsScreen
 import com.example.zim.screens.SignUpScreen
+import com.example.zim.screens.SplashScreen
 import com.example.zim.states.SignUpState
 
 @Composable
-fun NavGraph(state: SignUpState, onEvent: (SignUpEvent) -> Unit) {
+fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit) {
     val navController = rememberNavController();
-    NavHost(navController = navController, startDestination = Navigation.SignUp.route) {
+    NavHost(navController = navController, startDestination = Navigation.SplashScreen.route) {
+        composable(Navigation.SplashScreen.route) {
+            SplashScreen(navController, signUpState, onSignUpEvent)
+        }
         composable(Navigation.SignUp.route) {
-            SignUpScreen(navController = navController, onEvent = onEvent, state = state)
+            SignUpScreen(navController = navController, onEvent = onSignUpEvent, state = signUpState)
         }
         composable(Navigation.Chats.route) {
             ChatsScreen(navController = navController)
