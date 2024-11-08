@@ -1,12 +1,15 @@
 package com.example.zim.components
 
+import android.widget.ImageButton
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,23 +20,38 @@ import androidx.compose.ui.unit.sp
 import com.example.zim.R
 
 @Composable
-fun LogoRow() {
+fun LogoRow(modifier: Modifier = Modifier, menu: Boolean = false) {
     return Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             modifier = Modifier
-                .height(64.dp)
-                .width(64.dp)
-                .offset(x = (-12).dp),
+                .height(44.dp)
+                .width(44.dp),
             painter = painterResource(id = R.drawable.zim_logo),
             contentDescription = "ZIM Logo"
         )
         Text(
-            modifier = Modifier.offset(x = (-12).dp),
             text = "ZIM",
-            fontSize = 32.sp
+            fontSize = 22.sp
         )
+
+        if (menu)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .width(32.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+
+                Image(
+                    painter = painterResource(id = R.drawable.menu_icon),
+                    contentDescription = "Menu Icon"
+                )
+
+            }
     }
 }

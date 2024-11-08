@@ -45,16 +45,12 @@ class SignUpViewModel @Inject constructor(
 
 
                 try {
-                    // Log inputs for debugging
-                    Log.d("Save User", "$firstName $lastName")
-
                     // Insert the user into the database and get the row ID
                     viewModelScope.launch {
                         val userId: Long = userDao.insertUser(
                             Users(fName = firstName, lName = lastName, DOB = DOB)
                         )
-                        Log.d("Save User", "User inserted with ID: $userId")
-                        if (userId > 0) {
+                        if (userId >= 0) {
                             userDao.insertCurrUser(
                                 CurrentUser(
                                     userIDFK = userId.toInt()
