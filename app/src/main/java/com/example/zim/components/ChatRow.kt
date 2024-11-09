@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,8 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
+import com.example.zim.navigation.Navigation
 import com.example.zim.ui.theme.Typography
 import java.time.Duration
 import java.time.LocalDate
@@ -74,13 +77,21 @@ fun ChatRow(
     modifier: Modifier = Modifier,
     name: String,
     lastMsg: String? = null,
-    isConnected: Boolean,
-    isRead: Boolean,
+    isConnected: Boolean = false,
+    isRead: Boolean = true,
     time: LocalDateTime,
-    dpUri: Uri? = null
+    dpUri: Uri? = null,
+    isDM: Boolean = true,
+    id: Int,
+    navController: NavController
 ) {
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
-    Box(modifier = modifier) {
+    Box(modifier = modifier.clickable {
+        if (isDM)
+            navController.navigate(Navigation.UserChat.route + "/${id}")
+        else
+            navController.navigate(Navigation.GroupChat.route + "/${id}")
+    }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,11 +135,16 @@ fun ChatRow(
                     .padding(start = 10.dp), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(
-                    modifier = Modifier.fillMaxHeight().weight(1F),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(3F),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Name
-                    Text(text = name, style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text = name,
+                        style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                    )
 
 
                     val msgColor = if (isRead) {
@@ -138,7 +154,7 @@ fun ChatRow(
                     }
 
                     // Last Message
-                    if(lastMsg != null)
+                    if (lastMsg != null)
                         Text(
                             modifier = Modifier,
                             text = lastMsg,
@@ -157,7 +173,7 @@ fun ChatRow(
                 }
 
                 Column(
-                    modifier = Modifier.fillMaxHeight(),
+                    modifier = Modifier.fillMaxHeight().weight(1F),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {

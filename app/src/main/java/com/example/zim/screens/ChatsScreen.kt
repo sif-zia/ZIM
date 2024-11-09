@@ -17,6 +17,7 @@ import com.example.zim.components.LogoRow
 import com.example.zim.components.Search
 import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
@@ -24,23 +25,25 @@ import androidx.compose.ui.platform.LocalFocusManager
 data class Chat(
     val name: String,
     val lastMsg: String,
-    val isConnected: Boolean,
+    val isConnected: Boolean = false,
     val time: LocalDateTime,
-    val isRead: Boolean
+    val isRead: Boolean = false,
+    val isDM: Boolean = true,
+    val id: Int
 )
 
 val chatList = listOf(
-    Chat("Zainab Bilal", "Dheet", false, LocalDateTime.now().minusMinutes(5), false),
-    Chat("Ali Raza", "Hey there!", true, LocalDateTime.now().minusHours(1), true),
-    Chat("Sara Ahmed", "Good morning!", true, LocalDateTime.now().minusHours(3), false),
-    Chat("John Doe", "Let's catch up later.", false, LocalDateTime.now().minusDays(1), true),
-    Chat("Emily Clark", "Miss you!", true, LocalDateTime.now().minusDays(2), false),
-    Chat("James Smith", "See you soon!", false, LocalDateTime.now().minusDays(3), true),
-    Chat("Lily Evans", "Got it!", true, LocalDateTime.now().minusWeeks(1), false),
-    Chat("Robert Brown", "Thanks!", false, LocalDateTime.now().minusDays(6), true),
-    Chat("Sophia Wilson", "Good night!", true, LocalDateTime.now().minusDays(2), false),
-    Chat("Isla Moore", "Bye!", false, LocalDateTime.now().minusDays(7), true),
-    Chat("Liam Johnson", "Check this out", true, LocalDateTime.now().minusDays(5), false)
+    Chat("Zainab Bilal", "Dheet", false, LocalDateTime.now().minusMinutes(5), false, false, 1),
+    Chat("Ali Raza", "Hey there!", true, LocalDateTime.now().minusHours(1), true, true, 1),
+    Chat("Sara Ahmed", "Good morning!", true, LocalDateTime.now().minusHours(3), false, false, 2),
+    Chat("John Doe", "Let's catch up later.", false, LocalDateTime.now().minusDays(1), true, true, 2),
+    Chat("Emily Clark", "Miss you!", true, LocalDateTime.now().minusDays(2), false, true, 3),
+    Chat("James Smith", "See you soon!", false, LocalDateTime.now().minusDays(3), true, false, 3),
+    Chat("Lily Evans", "Got it!", true, LocalDateTime.now().minusWeeks(1), false, true, 4),
+    Chat("Robert Brown", "Thanks!", false, LocalDateTime.now().minusDays(6), true, false, 4),
+    Chat("Sophia Wilson", "Good night!", true, LocalDateTime.now().minusDays(2), false, false, 5),
+    Chat("Isla Moore", "Bye!", false, LocalDateTime.now().minusDays(7), true, false, 6),
+    Chat("Liam Johnson", "Check this out", true, LocalDateTime.now().minusDays(5), false, true, 5)
 )
 
 
@@ -51,6 +54,8 @@ fun ChatsScreen(navController: NavController) {
     val verticalPadding: Dp = 12.dp
     val focusManager: FocusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
+
+    val chatList = remember { chatList }
 
     return Column(
         modifier = Modifier
@@ -79,7 +84,8 @@ fun ChatsScreen(navController: NavController) {
         LazyColumn(
             modifier = Modifier
                 .padding(top = verticalPadding)
-                .fillMaxHeight()
+                .fillMaxHeight(),
+            state = rememberLazyListState()
         ) {
             items(chatList) { chat ->
                 ChatRow(
@@ -87,7 +93,10 @@ fun ChatsScreen(navController: NavController) {
                     lastMsg = chat.lastMsg,
                     isConnected = chat.isConnected,
                     time = chat.time,
-                    isRead = chat.isRead
+                    isRead = chat.isRead,
+                    isDM = chat.isDM,
+                    id = chat.id,
+                    navController = navController
                 )
             }
         }

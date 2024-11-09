@@ -5,7 +5,9 @@ enum class Screen {
     CHATS,
     CONNECTIONS,
     ALERTS,
-    SPLASH_SCREEN
+    SPLASH_SCREEN,
+    GROUP_CHAT,
+    USER_CHAT
 }
 sealed class Navigation(val route: String) {
     object SignUp : Navigation(Screen.SIGNUP.name)
@@ -13,4 +15,6 @@ sealed class Navigation(val route: String) {
     object Connections : Navigation(Screen.CONNECTIONS.name)
     object Alerts : Navigation(Screen.ALERTS.name)
     object SplashScreen: Navigation(Screen.SPLASH_SCREEN.name)
+    object UserChat: Navigation(Screen.USER_CHAT.name)
+    object GroupChat: Navigation(Screen.GROUP_CHAT.name)
 }
