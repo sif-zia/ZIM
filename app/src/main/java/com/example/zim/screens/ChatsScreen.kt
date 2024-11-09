@@ -1,5 +1,7 @@
 package com.example.zim.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,9 @@ import com.example.zim.components.LogoRow
 import com.example.zim.components.Search
 import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
 
 data class Chat(
     val name: String,
@@ -44,10 +49,17 @@ fun ChatsScreen(navController: NavController) {
 
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
+    val focusManager: FocusManager = LocalFocusManager.current
+    val interactionSource = remember { MutableInteractionSource() }
 
     return Column(
         modifier = Modifier
             .fillMaxSize()
+            .clickable(
+                indication = null, // Removes the click animation
+                interactionSource = interactionSource, // Required for clickable without animation
+                onClick = { focusManager.clearFocus() }
+            )
     ) {
         LogoRow(
             menu = true,

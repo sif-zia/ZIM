@@ -3,6 +3,7 @@ package com.example.zim.components
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
@@ -71,7 +73,7 @@ fun formatDateTime(dateTime: LocalDateTime): String {
 fun ChatRow(
     modifier: Modifier = Modifier,
     name: String,
-    lastMsg: String,
+    lastMsg: String? = null,
     isConnected: Boolean,
     isRead: Boolean,
     time: LocalDateTime,
@@ -122,11 +124,11 @@ fun ChatRow(
                     .padding(start = 10.dp), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(
-                    modifier = Modifier.fillMaxHeight(),
+                    modifier = Modifier.fillMaxHeight().weight(1F),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Name
-                    Text(text = name, style = Typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold))
+                    Text(text = name, style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
 
 
                     val msgColor = if (isRead) {
@@ -136,11 +138,22 @@ fun ChatRow(
                     }
 
                     // Last Message
-                    Text(
-                        text = lastMsg,
-                        style = Typography.bodyMedium,
-                        color = msgColor
-                    )
+                    if(lastMsg != null)
+                        Text(
+                            modifier = Modifier,
+                            text = lastMsg,
+                            style = Typography.bodyMedium,
+                            color = msgColor,
+                            maxLines = 1
+                        )
+                    else
+                        Text(
+                            modifier = Modifier,
+                            text = "(Start ZIMing with your new Connection)",
+                            style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            color = msgColor,
+                            maxLines = 1
+                        )
                 }
 
                 Column(
