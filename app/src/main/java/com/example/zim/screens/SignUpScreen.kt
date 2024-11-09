@@ -49,9 +49,12 @@ fun SignUpScreen(
     state: SignUpState,
     onEvent: (SignUpEvent) -> Unit
 ) {
-    if(state.IsLoggedIn)
+    if(state.IsLoggedIn == true)
     {
-        navController.navigate(Navigation.Chats.route)
+        navController.navigate(Navigation.Chats.route) {
+            popUpTo(0)
+            launchSingleTop = true
+        }
     }
 
     val context = LocalContext.current;

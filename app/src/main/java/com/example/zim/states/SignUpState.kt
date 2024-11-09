@@ -10,5 +10,5 @@ data class SignUpState(
     val firstName: String = "",
     val lastName: String = "",
     val DOB: LocalDate = LocalDate.now().minusYears(16),
-    val IsLoggedIn: Boolean = false
+    val IsLoggedIn: Boolean? = null
 )
