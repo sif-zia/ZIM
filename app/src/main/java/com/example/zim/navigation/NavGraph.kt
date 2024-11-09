@@ -46,7 +46,7 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit) {
                 enter = slideInVertically { it }, // Slide in from the bottom
                 exit = slideOutVertically { it }, // Slide out to the bottom
             ) {
-                BottomNavigationBar(navController = navController)
+                BottomNavigationBar(navController = navController, currentRoute = currentRoute)
             }
         }
     ) {
