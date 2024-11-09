@@ -1,5 +1,6 @@
 package com.example.zim.components
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,8 +25,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
 import com.example.zim.ui.theme.Typography
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -37,6 +40,11 @@ fun formatDateTime(dateTime: LocalDateTime): String {
     val datePart = dateTime.toLocalDate()
 
     return when {
+        Duration.between(dateTime, LocalDateTime.now()).toMinutes() < 1 -> {
+            // If the time difference is less than a minute, return "Just Now"
+            "Just Now"
+        }
+
         datePart.isEqual(now) -> {
             // If the date is today, return the time in the format "hh:mm a"
             dateTime.toLocalTime().format(DateTimeFormatter.ofPattern("hh:mm a"))
@@ -66,7 +74,8 @@ fun ChatRow(
     lastMsg: String,
     isConnected: Boolean,
     isRead: Boolean,
-    time: LocalDateTime
+    time: LocalDateTime,
+    dpUri: Uri? = null
 ) {
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
     Box(modifier = modifier) {
@@ -93,8 +102,13 @@ fun ChatRow(
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Display Picture
             Image(
-                painter = painterResource(id = R.drawable.dp_icon),
+                painter = rememberAsyncImagePainter(
+                    model = dpUri,
+                    placeholder = painterResource(R.drawable.dp_icon),
+                    error = painterResource(id = R.drawable.dp_icon)
+                ),
                 contentDescription = "Display Picture",
                 modifier = Modifier
                     .clip(shape = RoundedCornerShape(100))
@@ -139,6 +153,7 @@ fun ChatRow(
                     } else {
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) // Faded primary color
                     }
+                    // Connected Status
                     Box(
                         modifier = Modifier
                             .clip(shape = RoundedCornerShape(100))
@@ -146,6 +161,8 @@ fun ChatRow(
                             .height(10.dp)
                             .width(10.dp)
                     )
+
+                    // Last Message time
                     Text(
                         text = formatDateTime(time),
                         modifier = Modifier.padding(top = 5.dp),

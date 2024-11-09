@@ -98,4 +98,13 @@ dependencies {
     // Dagger Hilt
     implementation("com.google.dagger:hilt-android:2.48")
     kapt("com.google.dagger:hilt-android-compiler:2.48")
+
+    // Uri Loading Dependency (Coil)
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    // Bottom Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.0-rc01")
+
+    // Material Icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
 }

@@ -10,10 +10,43 @@ import androidx.compose.ui.unit.sp
 import com.example.zim.R
 
 val RobotoCondensed = FontFamily(
+    // Regular
     Font(R.font.roboto_condensed_regular, FontWeight.Normal, FontStyle.Normal),
-    Font(R.font.roboto_condensed_regular, FontWeight.Bold, FontStyle.Normal), // Use regular for bold
-    Font(R.font.roboto_condensed_italic, FontWeight.Normal, FontStyle.Italic)
+    Font(R.font.roboto_condensed_italic, FontWeight.Normal, FontStyle.Italic),
+
+    // Thin
+    Font(R.font.roboto_condensed_thin, FontWeight.Thin, FontStyle.Normal),
+    Font(R.font.roboto_condensed_thinitalic, FontWeight.Thin, FontStyle.Italic),
+
+    // Extra Light
+    Font(R.font.roboto_condensed_extralight, FontWeight.ExtraLight, FontStyle.Normal),
+    Font(R.font.roboto_condensed_extralightitalic, FontWeight.ExtraLight, FontStyle.Italic),
+
+    // Light
+    Font(R.font.roboto_condensed_light, FontWeight.Light, FontStyle.Normal),
+    Font(R.font.roboto_condensed_lightitalic, FontWeight.Light, FontStyle.Italic),
+
+    // Medium
+    Font(R.font.roboto_condensed_medium, FontWeight.Medium, FontStyle.Normal),
+    Font(R.font.roboto_condensed_mediumitalic, FontWeight.Medium, FontStyle.Italic),
+
+    // SemiBold
+    Font(R.font.roboto_condensed_semibold, FontWeight.SemiBold, FontStyle.Normal),
+    Font(R.font.roboto_condensed_semibolditalic, FontWeight.SemiBold, FontStyle.Italic),
+
+    // Bold
+    Font(R.font.roboto_condensed_bold, FontWeight.Bold, FontStyle.Normal),
+    Font(R.font.roboto_condensed_bolditalic, FontWeight.Bold, FontStyle.Italic),
+
+    // Extra Bold
+    Font(R.font.roboto_condensed_extrabold, FontWeight.ExtraBold, FontStyle.Normal),
+    Font(R.font.roboto_condensed_extrabolditalic, FontWeight.ExtraBold, FontStyle.Italic),
+
+    // Black
+    Font(R.font.roboto_condensed_black, FontWeight.Black, FontStyle.Normal),
+    Font(R.font.roboto_condensed_blackitalic, FontWeight.Black, FontStyle.Italic)
 )
+
 
 val Typography = Typography(
     // 1) TitleFont
