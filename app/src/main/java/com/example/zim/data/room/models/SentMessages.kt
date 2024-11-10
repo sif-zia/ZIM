@@ -6,13 +6,17 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.example.zim.data.room.schema.Schema
+import java.time.LocalDateTime
 
 @Entity(tableName = Schema.SENT_MESSAGES)
 data class SentMessages(
     @ColumnInfo(name = Schema.SENT_MESSAGE_ID)
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val status: String, // Failed, Sent, Sending
+    @ColumnInfo(defaultValue = "Sending")
+    val status: String = "Sending", // Failed, Sent, Sending
+    @ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
+    val sentTime: LocalDateTime = LocalDateTime.now(),
 
     // Foreign Keys
     @ColumnInfo(name = Schema.USER_ID_FK)

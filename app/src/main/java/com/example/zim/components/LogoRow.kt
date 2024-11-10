@@ -1,15 +1,13 @@
 package com.example.zim.components
 
-import android.widget.ImageButton
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +18,11 @@ import androidx.compose.ui.unit.sp
 import com.example.zim.R
 
 @Composable
-fun LogoRow(modifier: Modifier = Modifier, menu: Boolean = false) {
+fun LogoRow(
+    modifier: Modifier = Modifier,
+    expandMenu: (() -> Unit)? = null,
+    dropDown: (@Composable () -> Unit )? = null
+) {
     return Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -37,7 +39,7 @@ fun LogoRow(modifier: Modifier = Modifier, menu: Boolean = false) {
             fontSize = 22.sp
         )
 
-        if (menu)
+        if (dropDown != null)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -47,11 +49,17 @@ fun LogoRow(modifier: Modifier = Modifier, menu: Boolean = false) {
                 horizontalArrangement = Arrangement.End
             ) {
 
-                Image(
-                    painter = painterResource(id = R.drawable.menu_icon),
-                    contentDescription = "Menu Icon"
-                )
-
+                Column {
+                    Image(
+                        modifier = Modifier.clickable {
+                            if (expandMenu != null)
+                                expandMenu()
+                        },
+                        painter = painterResource(id = R.drawable.menu_icon),
+                        contentDescription = "Menu Icon"
+                    )
+                    dropDown()
+                }
             }
     }
 }

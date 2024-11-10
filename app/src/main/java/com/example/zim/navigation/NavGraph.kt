@@ -27,15 +27,20 @@ import com.example.zim.screens.UserChat
 import com.example.zim.states.SignUpState
 import kotlinx.coroutines.delay
 import com.example.zim.R
+import com.example.zim.events.ChatsEvent
+import com.example.zim.screens.NewGroupScreen
+import com.example.zim.screens.ProfileScreen
+import com.example.zim.screens.SettingsScreen
+import com.example.zim.states.ChatsState
 
 @Composable
-fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit) {
+fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, chatsState: ChatsState, onChatsEvent: (ChatsEvent) -> Unit) {
     val navController = rememberNavController();
 
     val routesWithBottomNavBar: List<String> = listOf(
         Navigation.Chats.route,
         Navigation.Connections.route,
-        Navigation.Alerts.route
+        Navigation.Alerts.route,
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -81,7 +86,7 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit) {
                     )
                 }
                 composable(Navigation.Chats.route) {
-                    ChatsScreen(navController = navController)
+                    ChatsScreen(navController = navController, state = chatsState, onEvent = onChatsEvent)
                 }
                 composable(Navigation.Connections.route) {
                     ConnectionsScreen(navController = navController)
@@ -98,6 +103,15 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit) {
                     val groupId = backStackEntry.arguments?.getString("groupId")?.toInt()
                     if (groupId != null)
                         GroupChat(groupId = groupId)
+                }
+                composable(Navigation.NewGroup.route) {
+                    NewGroupScreen()
+                }
+                composable(Navigation.Settings.route) {
+                    SettingsScreen()
+                }
+                composable(Navigation.Profile.route) {
+                    ProfileScreen()
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.example.zim.di
 
 import android.content.Context
+import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.ZIMDatabase
 import dagger.Module
@@ -23,5 +24,10 @@ object AppModule {
     @Provides
     fun provideUserDao(database: ZIMDatabase): UserDao {
         return database.userDao
+    }
+
+    @Provides
+    fun provideMessageDao(database: ZIMDatabase): MessageDao {
+        return database.messageDao
     }
 }

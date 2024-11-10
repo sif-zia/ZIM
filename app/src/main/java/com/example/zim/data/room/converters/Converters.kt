@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter
 class Converters {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-    private val dateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss") // Updated pattern
 
     // URI Converters
     @TypeConverter

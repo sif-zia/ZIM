@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
@@ -41,6 +42,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 fun formatDateTime(dateTime: LocalDateTime): String {
+
     val now = LocalDate.now()
     val datePart = dateTime.toLocalDate()
 
@@ -79,7 +81,7 @@ fun ChatRow(
     lastMsg: String? = null,
     isConnected: Boolean = false,
     isRead: Boolean = true,
-    time: LocalDateTime,
+    time: LocalDateTime? = null,
     dpUri: Uri? = null,
     isDM: Boolean = true,
     id: Int,
@@ -166,14 +168,16 @@ fun ChatRow(
                         Text(
                             modifier = Modifier,
                             text = "(Start ZIMing with your new Connection)",
-                            style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic, fontSize = 14.sp),
                             color = msgColor,
                             maxLines = 1
                         )
                 }
 
                 Column(
-                    modifier = Modifier.fillMaxHeight().weight(1F),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1F),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
@@ -192,11 +196,12 @@ fun ChatRow(
                     )
 
                     // Last Message time
-                    Text(
-                        text = formatDateTime(time),
-                        modifier = Modifier.padding(top = 5.dp),
-                        style = Typography.bodyMedium
-                    )
+                    if (time != null)
+                        Text(
+                            text = formatDateTime(time),
+                            modifier = Modifier.padding(top = 5.dp),
+                            style = Typography.bodyMedium
+                        )
                 }
             }
         }

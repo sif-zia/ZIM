@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import com.example.zim.R
 
 @Composable
-fun Search(modifier: Modifier = Modifier) {
-    var text by remember { mutableStateOf("") }
+fun Search(modifier: Modifier = Modifier, query: String, onQueryChange: (String) -> Unit) {
+
 
     Row(
         modifier = modifier
@@ -45,8 +45,8 @@ fun Search(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             BasicTextField(
-                value = text,
-                onValueChange = { text = it },
+                value = query,
+                onValueChange = { onQueryChange(it) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.9F),
                 textStyle = TextStyle(
@@ -58,7 +58,7 @@ fun Search(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         innerTextField()
-                        if (text.isEmpty()) {
+                        if (query.isEmpty()) {
                             Text(
                                 text = "Search",
                                 style = TextStyle(

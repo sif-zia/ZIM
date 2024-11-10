@@ -14,10 +14,13 @@ data class Messages(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val msg: String, // Any
-    val type: String, // Text, Audio, Image, Video, File
-    val sentTime: LocalDateTime,
+    @ColumnInfo(defaultValue = "Text")
+    val type: String = "Text", // Text, Audio, Image, Video, File
     val isSent: Boolean,
-    val isDM: Boolean,
-    val isForwarded: Boolean,
-    val isDeleted: Boolean
+    @ColumnInfo(defaultValue = true.toString())
+    val isDM: Boolean = true,
+    @ColumnInfo(defaultValue = false.toString())
+    val isForwarded: Boolean = false,
+    @ColumnInfo(defaultValue = false.toString())
+    val isDeleted: Boolean = false
 )

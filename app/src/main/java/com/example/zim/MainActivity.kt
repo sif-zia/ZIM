@@ -23,12 +23,14 @@ import com.example.zim.data.room.ZIMDatabase
 import com.example.zim.data.room.schema.Schema
 import com.example.zim.navigation.NavGraph
 import com.example.zim.ui.theme.ZIMTheme
+import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val signUpViewModel: SignUpViewModel by viewModels()
+    private val chatsViewModel: ChatsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,8 +43,14 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
 
                 ) {
-                    val state by signUpViewModel.state.collectAsState()
-                    NavGraph(signUpState=state, onSignUpEvent = signUpViewModel::onEvent)
+                    val signUpState by signUpViewModel.state.collectAsState()
+                    val chatsState by chatsViewModel.state.collectAsState()
+                    NavGraph(
+                        signUpState=signUpState,
+                        onSignUpEvent = signUpViewModel::onEvent,
+                        chatsState = chatsState,
+                        onChatsEvent = chatsViewModel::onEvent
+                    )
                 }
             }
         }

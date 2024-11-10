@@ -10,6 +10,7 @@ import androidx.room.Transaction
 import com.example.zim.data.room.models.CurrentUser
 import com.example.zim.data.room.models.Users
 import com.example.zim.data.room.models.UserWithCurrentUser
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
@@ -66,4 +67,17 @@ interface UserDao {
     """
     )
     suspend fun doesCurrentUserExist(): Boolean
+
+    @Transaction
+    @Query(
+        """
+    SELECT U.*
+    FROM Users AS U
+    INNER JOIN Curr_User AS C
+    ON C.User_ID_FK != U.User_ID
+    WHERE lName LIKE '%' || :name || '%'
+    OR fName LIKE '%' || :name || '%'
+"""
+    )
+    fun getUsersByName(name: String): Flow<List<Users>>
 }
