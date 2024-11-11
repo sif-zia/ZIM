@@ -11,6 +11,7 @@ import com.example.zim.data.room.models.CurrentUser
 import com.example.zim.data.room.models.Users
 import com.example.zim.data.room.models.UserWithCurrentUser
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDateTime
 
 @Dao
 interface UserDao {
@@ -80,4 +81,50 @@ interface UserDao {
 """
     )
     fun getUsersByName(name: String): Flow<List<Users>>
+
+    @Query("""
+    SELECT 
+        user_info.User_ID,
+        user_info.fName,
+        user_info.lName,
+        MAX(user_info.latest_message_time) AS latest_message_time,
+        user_info.latest_message_content
+    FROM (
+            SELECT 
+                u.User_ID,
+                u.fName,
+                u.lName,
+                MAX(sm.sentTime) AS latest_message_time,
+                m.msg AS latest_message_content
+            FROM Users u
+            LEFT JOIN Sent_Messages sm ON sm.User_ID_FK = u.User_ID
+            LEFT JOIN Messages m ON m.Message_ID = sm.Message_ID_FK
+            GROUP BY u.User_ID, u.fName, u.lName
+
+            UNION
+
+            SELECT 
+                u.User_ID,
+                u.fName,
+                u.lName,
+                MAX(rm.receivedTime) AS latest_message_time,
+                m.msg AS latest_message_content
+            FROM Users u
+            LEFT JOIN Received_Messages rm ON rm.User_ID_FK = u.User_ID
+            LEFT JOIN Messages m ON m.Message_ID = rm.Message_ID_FK
+            GROUP BY u.User_ID, u.fName, u.lName
+        ) AS user_info
+    GROUP BY user_info.User_ID, user_info.fName, user_info.lName
+    ORDER BY latest_message_time DESC
+""")
+    fun getUsersWithLatestMessage(): Flow<List<UserWithLatestMessage>>
+
 }
+
+data class UserWithLatestMessage(
+    val User_ID: Int,
+    val fName: String,
+    val lName: String,
+    val latest_message_time: LocalDateTime?,
+    val latest_message_content: String?
+)

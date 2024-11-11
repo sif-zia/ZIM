@@ -80,25 +80,25 @@ interface MessageDao {
     """)
     suspend fun getMessageById(id: Int): Messages?
 
-    @Query("""
-        SELECT R.*
-        FROM messages as M
-        INNER JOIN Received_Messages as R
-        ON M.Message_ID = R.Message_ID_FK
-        WHERE  R.User_ID_FK= :id
-        ORDER BY R.receivedTime DESC
-         LIMIT 1
-    """)
-    suspend fun getLatestReceivedMessageBySenderId(id: Int): ReceivedMessages?
-
-    @Query("""
-        SELECT S.*
-        FROM messages as M
-        INNER JOIN Sent_Messages as S
-        ON M.Message_ID = S.Message_ID_FK
-        WHERE  S.User_ID_FK= :id
-        ORDER BY S.sentTime DESC
-         LIMIT 1
-    """)
-    suspend fun getLatestSentMessageByReceiverId(id: Int): SentMessages?
+//    @Query("""
+//        SELECT R.*
+//        FROM messages as M
+//        INNER JOIN Received_Messages as R
+//        ON M.Message_ID = R.Message_ID_FK
+//        WHERE  R.User_ID_FK= :id
+//        ORDER BY R.receivedTime DESC
+//         LIMIT 1
+//    """)
+//    suspend fun getLatestReceivedMessageBySenderId(id: Int): ReceivedMessages?
+//
+//    @Query("""
+//        SELECT S.*
+//        FROM messages as M
+//        INNER JOIN Sent_Messages as S
+//        ON M.Message_ID = S.Message_ID_FK
+//        WHERE  S.User_ID_FK= :id
+//        ORDER BY S.sentTime DESC
+//         LIMIT 1
+//    """)
+//    suspend fun getLatestSentMessageByReceiverId(id: Int): SentMessages?
 }

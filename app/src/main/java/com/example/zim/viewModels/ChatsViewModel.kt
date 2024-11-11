@@ -1,5 +1,6 @@
 package com.example.zim.viewModels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.zim.data.room.Dao.MessageDao
@@ -23,8 +24,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatsViewModel @Inject constructor(
-    private val userDao: UserDao,
-    private val messageDao: MessageDao
+    private val userDao: UserDao
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatsState())
@@ -53,42 +53,28 @@ class ChatsViewModel @Inject constructor(
 
     private fun fetchUsers(query: String) {
         viewModelScope.launch {
-            userDao.getUsersByName(query).collectLatest { usersList ->
-                val chats = usersList.map { user ->
-                    Chat(name = "${user.fName} ${user.lName}", id = user.id)
-                }
+            try {
+                // Fetch users along with their latest message from both sent and received
+                userDao.getUsersWithLatestMessage().collectLatest { usersWithLatestMessages ->
 
-                // Update _state with new chats
-                _state.update { it.copy(chats = chats) }
-
-                // Map each chat with its latest message
-                val updatedChats = chats.map { chat ->
-                    val sentMessage = messageDao.getLatestSentMessageByReceiverId(chat.id)
-                    val receivedMessage = messageDao.getLatestReceivedMessageBySenderId(chat.id)
-
-                    // Determine the latest message ID and time by comparing timestamps
-                    val (latestMessageId, latestMessageTime) = when {
-                        sentMessage == null && receivedMessage == null -> null to null
-                        sentMessage == null -> receivedMessage?.id to receivedMessage?.receivedTime
-                        receivedMessage == null -> sentMessage.id to sentMessage.sentTime
-                        sentMessage.sentTime.isAfter(receivedMessage.receivedTime) -> sentMessage.id to sentMessage.sentTime
-                        else -> receivedMessage.id to receivedMessage.receivedTime
+                    // Map users to chats
+                    val chats = usersWithLatestMessages.map { user ->
+                        Chat(
+                            name = "${user.fName} ${user.lName}",
+                            id = user.User_ID,  // Assuming User_ID is the unique identifier for each user
+                            lastMsg = user.latest_message_content,  // Assign the latest message content
+                            time = user.latest_message_time  // Assign the latest message time
+                        )
                     }
 
-                    // Fetch message content if `latestMessageId` is not null
-                    val messageContent = latestMessageId?.let { id ->
-                        messageDao.getMessageById(id)?.msg
-                    }
-
-                    // Create a modified chat with the latest message content and timestamp
-                    chat.copy(
-                        lastMsg = messageContent,
-                        time = latestMessageTime
-                    )
+                    // Update _state with new chats
+                    _state.update { it.copy(chats = chats) }
                 }
-
-                // Update _state with chats containing the latest messages
-                _state.update { it.copy(chats = updatedChats) }
+            } catch (e: Exception) {
+                // Handle errors gracefully
+                Log.e("fetchUsers", "Error fetching users with latest messages: ${e.message}")
+                // Optionally, update _state with an error or fallback data
+                _state.update { it.copy(chats = emptyList()) }
             }
         }
     }
