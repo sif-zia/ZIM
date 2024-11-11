@@ -99,6 +99,7 @@ interface UserDao {
             FROM Users u
             LEFT JOIN Sent_Messages sm ON sm.User_ID_FK = u.User_ID
             LEFT JOIN Messages m ON m.Message_ID = sm.Message_ID_FK
+            JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
             GROUP BY u.User_ID, u.fName, u.lName
 
             UNION
@@ -112,6 +113,7 @@ interface UserDao {
             FROM Users u
             LEFT JOIN Received_Messages rm ON rm.User_ID_FK = u.User_ID
             LEFT JOIN Messages m ON m.Message_ID = rm.Message_ID_FK
+            JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
             GROUP BY u.User_ID, u.fName, u.lName
         ) AS user_info
     GROUP BY user_info.User_ID, user_info.fName, user_info.lName
