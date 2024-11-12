@@ -54,20 +54,7 @@ class ChatsViewModel @Inject constructor(
     private fun fetchUsers(query: String) {
         viewModelScope.launch {
             try {
-                // Fetch users along with their latest message from both sent and received
-                userDao.getUsersWithLatestMessage().collectLatest { usersWithLatestMessages ->
-
-                    // Map users to chats
-                    val chats = usersWithLatestMessages.map { user ->
-                        Chat(
-                            name = "${user.fName} ${user.lName}",
-                            id = user.User_ID,  // Assuming User_ID is the unique identifier for each user
-                            lastMsg = user.latest_message_content,  // Assign the latest message content
-                            time = user.latest_message_time  // Assign the latest message time
-                        )
-                    }
-
-                    // Update _state with new chats
+                userDao.getUsersWithLatestMessage(query).collectLatest { chats ->
                     _state.update { it.copy(chats = chats) }
                 }
             } catch (e: Exception) {

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -80,7 +83,7 @@ fun ChatRow(
     name: String,
     lastMsg: String? = null,
     isConnected: Boolean = false,
-    isRead: Boolean = true,
+    unReadMsgs: Int = 0,
     time: LocalDateTime? = null,
     dpUri: Uri? = null,
     isDM: Boolean = true,
@@ -143,13 +146,32 @@ fun ChatRow(
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Name
-                    Text(
-                        text = name,
-                        style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = name,
+                            style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+
+                        if (unReadMsgs > 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = unReadMsgs.toString(),
+                                modifier = Modifier
+                                    .clip(shape = RoundedCornerShape(100))
+                                    .background(MaterialTheme.colorScheme.tertiary)
+                                    .defaultMinSize(minWidth = 15.dp),
+                                textAlign = TextAlign.Center,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
 
 
-                    val msgColor = if (isRead) {
+                    val msgColor = if (unReadMsgs == 0) {
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     } else {
                         MaterialTheme.colorScheme.primary
@@ -168,7 +190,10 @@ fun ChatRow(
                         Text(
                             modifier = Modifier,
                             text = "(Start ZIMing with your new Connection)",
-                            style = Typography.bodyMedium.copy(fontStyle = FontStyle.Italic, fontSize = 14.sp),
+                            style = Typography.bodyMedium.copy(
+                                fontStyle = FontStyle.Italic,
+                                fontSize = 14.sp
+                            ),
                             color = msgColor,
                             maxLines = 1
                         )
