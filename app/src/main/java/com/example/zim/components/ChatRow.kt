@@ -164,8 +164,7 @@ fun ChatRow(
                                     .background(MaterialTheme.colorScheme.tertiary)
                                     .defaultMinSize(minWidth = 15.dp),
                                 textAlign = TextAlign.Center,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 15.sp
                             )
                         }
                     }

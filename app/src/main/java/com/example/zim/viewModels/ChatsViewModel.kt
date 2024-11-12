@@ -24,13 +24,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatsViewModel @Inject constructor(
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val messageDao: MessageDao
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatsState())
 
     init {
         fetchUsers("")
+        fetchUnReadMsgs()
     }
 
     val state: StateFlow<ChatsState> = _state.stateIn(
@@ -66,5 +68,17 @@ class ChatsViewModel @Inject constructor(
         }
     }
 
-
+    private fun fetchUnReadMsgs() {
+        viewModelScope.launch {
+            try {
+                val count = messageDao.getUnReadMsgsCount()
+                _state.update { it.copy(unReadMsgs = count) }
+            } catch (e: Exception) {
+                // Handle errors gracefully
+                Log.e("fetchUsers", "Error fetching users with latest messages: ${e.message}")
+                // Optionally, update _state with an error or fallback data
+                _state.update { it.copy(chats = emptyList()) }
+            }
+        }
+    }
 }

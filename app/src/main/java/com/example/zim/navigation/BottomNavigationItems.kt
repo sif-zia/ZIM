@@ -1,32 +1,34 @@
 package com.example.zim.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LeakAdd
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.zim.states.ChatsState
 
-data class BottomNavigationItem(
+data class BottomNavigationItems(
     val label : String = "",
     val icon : ImageVector = Icons.Filled.Home,
-    val route : String = ""
+    val route : String = "",
+    val notificationCount: Int = 0
 ) {
 
-    fun bottomNavigationItems() : List<BottomNavigationItem> {
+    fun getBottomNavigationItems(chatsState: ChatsState) : List<BottomNavigationItems> {
         return listOf(
-            BottomNavigationItem(
+            BottomNavigationItems(
                 label = "Chats",
                 icon = Icons.Filled.ChatBubble,
-                route = Navigation.Chats.route
+                route = Navigation.Chats.route,
+                notificationCount = chatsState.unReadMsgs
             ),
-            BottomNavigationItem(
+            BottomNavigationItems(
                 label = "Connections",
                 icon = Icons.Filled.LeakAdd,
                 route = Navigation.Connections.route
             ),
-            BottomNavigationItem(
+            BottomNavigationItems(
                 label = "Alert",
                 icon = Icons.Filled.NotificationsNone,
                 route = Navigation.Alerts.route
