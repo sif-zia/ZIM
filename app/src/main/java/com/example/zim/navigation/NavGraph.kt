@@ -46,7 +46,6 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    onSignUpEvent(SignUpEvent.CheckLogin)
 
     if (signUpState.IsLoggedIn == null)
         Box(modifier = Modifier.fillMaxSize()) {

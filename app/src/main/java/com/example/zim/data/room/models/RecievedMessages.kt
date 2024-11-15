@@ -14,7 +14,7 @@ data class ReceivedMessages(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val receivedTime: LocalDateTime,
-    @ColumnInfo(defaultValue = false.toString())
+    @ColumnInfo(defaultValue = "0")
     val isRead: Boolean = false,
 
     // Foreign Keys

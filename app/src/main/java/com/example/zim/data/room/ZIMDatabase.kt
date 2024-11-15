@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Users::class, CurrentUser::class, Messages::class, SentMessages::class, ReceivedMessages::class],
-    version = 2,
+    version =2,
 )
 @TypeConverters(Converters::class)
 abstract class ZIMDatabase : RoomDatabase() {

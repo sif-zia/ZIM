@@ -33,6 +33,10 @@ class SignUpViewModel @Inject constructor(
         SignUpState()
     )
 
+    init {
+        checkLogin()
+    }
+
     fun onEvent(event: SignUpEvent) {
         when (event) {
             is SignUpEvent.SaveUser -> {
@@ -76,13 +80,14 @@ class SignUpViewModel @Inject constructor(
                 _state.update { it.copy(lastName = event.lastName) }
             }
 
-            is SignUpEvent.CheckLogin -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(IsLoggedIn = userDao.doesCurrentUserExist()) }
-                }
 
-            }
         }
 
+    }
+
+    private fun checkLogin() {
+        viewModelScope.launch {
+            _state.update { it.copy(IsLoggedIn = userDao.doesCurrentUserExist()) }
+        }
     }
 }

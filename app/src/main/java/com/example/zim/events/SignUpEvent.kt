@@ -8,5 +8,4 @@ sealed interface SignUpEvent {
     data class SetLastName(val lastName: String) : SignUpEvent
     data class SetDOB(val dob: LocalDate) : SignUpEvent
     data object SaveUser : SignUpEvent
-    data object CheckLogin : SignUpEvent
 }
