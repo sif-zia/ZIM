@@ -31,27 +31,6 @@ import com.example.zim.helperclasses.Chat
 import com.example.zim.navigation.DropDownMenus
 import com.example.zim.states.ChatsState
 
-//val chatList = listOf(
-//    Chat("Zainab Bilal", null, false, null, false, false, 1),
-//    Chat("Ali Raza", "Hey there!", true, LocalDateTime.now().minusHours(1), true, true, 1),
-//    Chat("Sara Ahmed", "Good morning!", true, LocalDateTime.now().minusHours(3), false, false, 2),
-//    Chat(
-//        "John Doe",
-//        "Let's catch up later.",
-//        false,
-//        LocalDateTime.now().minusDays(1),
-//        true,
-//        true,
-//        2
-//    ),
-//    Chat("Emily Clark", "Miss you!", true, LocalDateTime.now().minusDays(2), false, true, 3),
-//    Chat("James Smith", "See you soon!", false, LocalDateTime.now().minusDays(3), true, false, 3),
-//    Chat("Lily Evans", "Got it!", true, LocalDateTime.now().minusWeeks(1), false, true, 4),
-//    Chat("Robert Brown", "Thanks!", false, LocalDateTime.now().minusDays(6), true, false, 4),
-//    Chat("Sophia Wilson", "Good night!", true, LocalDateTime.now().minusDays(2), false, false, 5),
-//    Chat("Isla Moore", "Bye!", false, LocalDateTime.now().minusDays(7), true, false, 6),
-//    Chat("Liam Johnson", "Check this out", true, LocalDateTime.now().minusDays(5), false, true, 5)
-//)
 
 
 @Composable
@@ -62,8 +41,6 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
     val focusManager: FocusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
 
-//    val chatList = remember { chatList }
-
     return Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,21 +50,6 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
                 onClick = { focusManager.clearFocus() }
             )
     ) {
-        LogoRow(
-            modifier = Modifier.padding(
-                horizontal = horizontalPadding,
-                vertical = verticalPadding
-            ),
-            expandMenu = { onEvent(ChatsEvent.ExpandMenu) }
-        ) {
-            DropDown(
-                dropDownMenu = DropDownMenus.ChatsScreen(),
-                navController = navController,
-                expanded = state.menuExpanded
-            ) {
-                onEvent(ChatsEvent.DismissMenu)
-            }
-        }
 
         Search(
             modifier = Modifier.padding(

@@ -13,6 +13,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,6 +29,8 @@ import com.example.zim.screens.UserChat
 import com.example.zim.states.SignUpState
 import kotlinx.coroutines.delay
 import com.example.zim.R
+import com.example.zim.components.DropDown
+import com.example.zim.components.LogoRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.screens.NewGroupScreen
 import com.example.zim.screens.ProfileScreen
@@ -42,6 +46,14 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
         Navigation.Connections.route,
         Navigation.Alerts.route,
     )
+    val routesWithLogoRow: List<String> = listOf(
+        Navigation.Chats.route,
+        Navigation.Connections.route,
+        Navigation.Alerts.route,
+    )
+
+    val horizontalPadding: Dp = 16.dp
+    val verticalPadding: Dp = 12.dp
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -56,14 +68,39 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
         }
     else
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 32.dp),
             bottomBar = {
                 AnimatedVisibility(
                     visible = currentRoute in routesWithBottomNavBar,
                     enter = slideInVertically { it }, // Slide in from the bottom
-                    exit = slideOutVertically { it }, // Slide out to the bottom
+                    exit = slideOutVertically { it }, // Slide out t other bottom
                 ) {
                     BottomNavigationBar(navController = navController, currentRoute = currentRoute, chatsState = chatsState)
+                }
+
+            },
+            topBar = {
+                AnimatedVisibility(
+                    visible = currentRoute in routesWithLogoRow,
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it },
+                ) {
+                    LogoRow(
+                        modifier = Modifier.padding(
+                            horizontal = horizontalPadding,
+                        ),
+                        expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
+                    ) {
+                        DropDown(
+                            dropDownMenu = DropDownMenus.ChatsScreen(),
+                            navController = navController,
+                            expanded = chatsState.menuExpanded
+                        ) {
+                            onChatsEvent(ChatsEvent.DismissMenu)
+                        }
+                    }
                 }
             }
         ) { paddingValues ->
