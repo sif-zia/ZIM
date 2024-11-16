@@ -75,8 +75,8 @@ fun formatDateTime(dateTime: LocalDateTime): String {
             datePart.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         }
     }
-}
 
+}
 @Composable
 fun ChatRow(
     modifier: Modifier = Modifier,

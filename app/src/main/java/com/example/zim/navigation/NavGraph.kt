@@ -105,8 +105,8 @@ fun NavGraph(
             topBar = {
                 AnimatedVisibility(
                     visible = currentRoute in routesWithLogoRow,
-                    enter = slideInVertically { it },
-                    exit = slideOutVertically { it },
+                    enter = slideInVertically { -it },
+                    exit = slideOutVertically { -it },
                 ) {
                     LogoRow(
                         modifier = Modifier.padding(
