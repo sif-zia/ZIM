@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -32,13 +33,21 @@ import com.example.zim.R
 import com.example.zim.components.DropDown
 import com.example.zim.components.LogoRow
 import com.example.zim.events.ChatsEvent
+import com.example.zim.events.ConnectionsEvent
 import com.example.zim.screens.NewGroupScreen
 import com.example.zim.screens.ProfileScreen
 import com.example.zim.screens.SettingsScreen
 import com.example.zim.states.ChatsState
+import com.example.zim.viewModels.ChatsViewModel
+import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.SignUpViewModel
 
 @Composable
-fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, chatsState: ChatsState, onChatsEvent: (ChatsEvent) -> Unit) {
+fun NavGraph(
+    chatsViewModel: ChatsViewModel,
+    signUpViewModel: SignUpViewModel,
+    connectionsViewModel: ConnectionsViewModel
+) {
     val navController = rememberNavController();
 
     val routesWithBottomNavBar: List<String> = listOf(
@@ -58,6 +67,14 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val chatsState by chatsViewModel.state.collectAsState()
+    val onChatsEvent = chatsViewModel::onEvent
+
+    val signUpState by signUpViewModel.state.collectAsState()
+    val onSignUpEvent = signUpViewModel::onEvent
+
+    val connectionsState by connectionsViewModel.state.collectAsState()
+    val connectionOnEvent = connectionsViewModel::onEvent
 
     if (signUpState.IsLoggedIn == null)
         Box(modifier = Modifier.fillMaxSize()) {
@@ -77,7 +94,11 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
                     enter = slideInVertically { it }, // Slide in from the bottom
                     exit = slideOutVertically { it }, // Slide out t other bottom
                 ) {
-                    BottomNavigationBar(navController = navController, currentRoute = currentRoute, chatsState = chatsState)
+                    BottomNavigationBar(
+                        navController = navController,
+                        currentRoute = currentRoute,
+                        chatsState = chatsState
+                    )
                 }
 
             },
@@ -122,10 +143,20 @@ fun NavGraph(signUpState: SignUpState, onSignUpEvent: (SignUpEvent) -> Unit, cha
                     )
                 }
                 composable(Navigation.Chats.route) {
-                    ChatsScreen(navController = navController, state = chatsState, onEvent = onChatsEvent)
+                    ChatsScreen(
+                        navController = navController,
+                        state = chatsState,
+                        onEvent = onChatsEvent
+                    )
                 }
                 composable(Navigation.Connections.route) {
-                    ConnectionsScreen(navController = navController)
+
+                    connectionOnEvent(ConnectionsEvent.ScanForConnections)
+                    ConnectionsScreen(
+                        navController = navController,
+                        state = connectionsState,
+                        onEvent = connectionOnEvent
+                    )
                 }
                 composable(Navigation.Alerts.route) {
                     AlertsScreen(navController = navController)

@@ -7,6 +7,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.zim.data.room.schema.Schema
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 
 @Entity(tableName = Schema.USERS_TABLE)
@@ -17,8 +18,10 @@ data class Users(
     val deviceName: String? = null,
     val fName: String,  // Any
     val lName: String? = null, // Any
-    val DOB: LocalDate,
+    val DOB: LocalDate?=null,
     val cover: Uri? = null, // URI
     val puKey: String?=null,
+    @ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
+    val connectionTime: LocalDateTime = LocalDateTime.now(),
 )
 

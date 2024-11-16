@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -24,6 +25,7 @@ import com.example.zim.data.room.schema.Schema
 import com.example.zim.navigation.NavGraph
 import com.example.zim.ui.theme.ZIMTheme
 import com.example.zim.viewModels.ChatsViewModel
+import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -31,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val signUpViewModel: SignUpViewModel by viewModels()
     private val chatsViewModel: ChatsViewModel by viewModels()
+    private val connectionsViewModel: ConnectionsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,33 +46,15 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
 
                 ) {
-                    val signUpState by signUpViewModel.state.collectAsState()
-                    val chatsState by chatsViewModel.state.collectAsState()
+
                     NavGraph(
-                        signUpState=signUpState,
-                        onSignUpEvent = signUpViewModel::onEvent,
-                        chatsState = chatsState,
-                        onChatsEvent = chatsViewModel::onEvent
+                        chatsViewModel,
+                        signUpViewModel,
+                        connectionsViewModel
                     )
                 }
             }
         }
 
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ZIMTheme {
-        Greeting("Android")
     }
 }
