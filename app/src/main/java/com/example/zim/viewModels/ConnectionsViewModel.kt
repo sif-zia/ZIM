@@ -40,6 +40,7 @@ class ConnectionsViewModel @Inject constructor(
 
             is ConnectionsEvent.MakeConnection -> {
                 addUser(event.connection)
+                onEvent(ConnectionsEvent.HidePrompt)
             }
 
             is ConnectionsEvent.RemoveConnection -> {
@@ -64,7 +65,7 @@ class ConnectionsViewModel @Inject constructor(
             }
 
             is ConnectionsEvent.HidePrompt -> {
-                if (_state.value.promptConnections.isNotEmpty() ) {
+                if (_state.value.promptConnections.isNotEmpty()) {
                     _state.update { currentState ->
 
                         val lastConnection =
@@ -78,17 +79,23 @@ class ConnectionsViewModel @Inject constructor(
                 if (event.connection !in _state.value.promptConnections) {
                     _state.update { it.copy(promptConnections = _state.value.promptConnections + event.connection) }
                     // Start a timer for 1 minute to remove the connection if it still exists
-//                    CoroutineScope(Dispatchers.Default).launch {
-//                        delay(60000L) // 1 minute delay (60000 milliseconds)
-//                        _state.update { currentState ->
-//                            if (event.connection in currentState.promptConnections) {
-//                                val updatedConnections = currentState.promptConnections - event.connection
-//                                currentState.copy(promptConnections = updatedConnections)
-//                            } else {
-//                                currentState
-//                            }
-//                        }
-//                    }
+                    CoroutineScope(Dispatchers.Default).launch {
+                        delay(60000L) // 1 minute delay
+                        try {
+                            _state.update { currentState ->
+                                if (event.connection in currentState.promptConnections) {
+                                    val updatedConnections =
+                                        currentState.promptConnections - event.connection
+                                    currentState.copy(promptConnections = updatedConnections)
+                                } else {
+                                    currentState
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.d("removeConnections", "Error removing Connections: ${e.message}")
+
+                        }
+                    }
                 }
             }
         }

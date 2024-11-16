@@ -28,6 +28,7 @@ import androidx.navigation.NavController
 import com.example.zim.components.ConnectionPrompt
 import com.example.zim.components.ConnectionRow
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
 
 @Composable
@@ -47,6 +48,14 @@ fun ConnectionsScreen(
                     state.promptConnections.last(),
                     onAccept = { onEvent(ConnectionsEvent.MakeConnection(state.promptConnections.last())) },
                     onReject = { onEvent(ConnectionsEvent.HidePrompt) }
+                )
+            }
+            else {
+                val dummyConnection = Connection("","","")
+                ConnectionPrompt(
+                    dummyConnection,
+                    onAccept = {},
+                    onReject = {}
                 )
             }
         }
