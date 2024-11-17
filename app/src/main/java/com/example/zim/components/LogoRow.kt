@@ -48,7 +48,6 @@ fun LogoRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
             ) {
-
                 Column {
                     Image(
                         modifier = Modifier.clickable {

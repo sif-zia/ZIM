@@ -33,24 +33,21 @@ import com.example.zim.helperclasses.AlertType
 
 @Composable
 fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
-    Column(
+    Row(
         modifier = modifier
-            .padding(16.dp)
-            .fillMaxWidth(0.9f)
+            .padding(vertical = 8.dp)
+            .fillMaxWidth(0.8f)
             .clip(shape = RoundedCornerShape(33))
             .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(33))
     ) {
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .height(12.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.Start
         ) {
-            Spacer(modifier = Modifier
-                .fillMaxHeight()
-                .width(12.dp))
             val icon = when (alert.type) {
                 AlertType.HEALTH -> Icons.Outlined.PersonalInjury
                 AlertType.FALL -> Icons.Outlined.SportsMartialArts
@@ -70,42 +67,35 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
                 contentDescription = "Alert Icon",
                 modifier = Modifier.size(64.dp)
             )
-            Column(
-                modifier = Modifier.height(64.dp),
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Text(text = alertType,fontSize=18.sp)
-                Text(
-                    text = alert.senderName,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary.copy(0.66f)
-                )
+            Row (horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.padding(horizontal = 8.dp).weight(1f),) {
+                Column(
+                    modifier = Modifier.height(64.dp),
+                    verticalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Text(text = alertType, fontSize = 18.sp)
+                    Text(
+                        text = alert.senderName,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary.copy(0.66f)
+                    )
 
+                }
+                Column(
+                    modifier = Modifier.height(64.dp),
+                    verticalArrangement = Arrangement.SpaceEvenly,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(text = "${minDistance}m - ${maxDistance}m", fontSize = 14.sp)
+                    Text(
+                        text = formatDateTime(alert.time),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary.copy(0.66f)
+                    )
+
+                }
             }
-            Column(
-                modifier = Modifier.height(64.dp),
-                verticalArrangement = Arrangement.SpaceEvenly,
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(text = "${minDistance}m - ${maxDistance}m", fontSize =14.sp)
-                Text(
-                    text = formatDateTime(alert.time),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.primary.copy(0.66f)
-                )
-
-            }
-
-            Spacer(modifier = Modifier
-                .fillMaxHeight()
-                .width(12.dp))
 
         }
-
-        Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .height(12.dp))
-
     }
 
 

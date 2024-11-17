@@ -1,5 +1,8 @@
 package com.example.zim.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +28,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.zim.components.AlertRow
+import com.example.zim.components.FloatingButton
+import com.example.zim.components.myAlert
 import com.example.zim.helperclasses.Alert
 import com.example.zim.helperclasses.AlertType
 import com.example.zim.navigation.Navigation
@@ -42,6 +51,13 @@ import java.time.LocalDateTime
 @Composable
 fun AlertsScreen(navController: NavController) {
     val verticalPadding = 12.dp
+    var showAddAlertBtn by remember {
+        mutableStateOf(true)
+    }
+    var currentAlert by remember {
+        mutableStateOf<Alert?>(null)
+    }
+    currentAlert = Alert(AlertType.SAFETY, "Muaaz", 3, LocalDateTime.now())
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -61,15 +77,21 @@ fun AlertsScreen(navController: NavController) {
                     textAlign = TextAlign.Center
                 )
                 HorizontalDivider(modifier = Modifier.weight(0.33f))
+
             }
-            Text(
-                text = "No Recent Alerts",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.primary.copy(0.6f)
-            )
+            currentAlert?.let { alert ->
+                showAddAlertBtn = myAlert(alert = alert)
+            } ?: run {
+                Text(
+                    text = "No Recent Alerts",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = verticalPadding),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary.copy(0.6f)
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
@@ -115,38 +137,19 @@ fun AlertsScreen(navController: NavController) {
 
 
         }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.End
+        AnimatedVisibility(
+            visible = showAddAlertBtn,
+            enter = slideInVertically { it }, // Slide in from the bottom
+            exit = slideOutVertically { it }, // Slide out t other bottom
         ) {
-            Row(
-                modifier = Modifier
-                    .width(64.dp)
-                    .height(64.dp)
-                    .clip(shape = RoundedCornerShape(100))
-                    .border(
-                        1.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(100)
-                    )
-                    .background(color = MaterialTheme.colorScheme.tertiary),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-
-            )
-            {
+            FloatingButton(onClick = { /*TODO*/ }) {
                 Icon(
                     imageVector = Icons.Outlined.NotificationAdd,
                     contentDescription = "Add Alert Button",
-                    modifier = Modifier.size(35.dp),
-                    tint= MaterialTheme.colorScheme.primary,
-
+                    modifier = Modifier.size(25.dp),
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
-
     }
 }
