@@ -1,5 +1,6 @@
 package com.example.zim.components
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,21 +19,41 @@ import androidx.compose.material.icons.outlined.FireTruck
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.PersonalInjury
 import androidx.compose.material.icons.outlined.SportsMartialArts
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zim.helperclasses.Alert
 import com.example.zim.helperclasses.AlertType
-
+import kotlinx.coroutines.delay
 
 @Composable
 fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
+
+    var timeString by remember {
+        mutableStateOf(formatDateTime(alert.time))
+    }
+
+    LaunchedEffect(alert.time) {
+        while(true)
+        {
+            delay(60 * 1000L)
+            timeString = formatDateTime(alert.time)
+        }
+    }
+
     Row(
         modifier = modifier
             .padding(vertical = 8.dp)
@@ -48,22 +69,12 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            val icon = when (alert.type) {
-                AlertType.HEALTH -> Icons.Outlined.PersonalInjury
-                AlertType.FALL -> Icons.Outlined.SportsMartialArts
-                AlertType.SAFETY -> Icons.Outlined.HealthAndSafety
-                AlertType.FIRE -> Icons.Outlined.FireTruck
-            }
-            val alertType = when (alert.type) {
-                AlertType.HEALTH -> "Health Alert"
-                AlertType.FALL -> "Fall Alert"
-                AlertType.SAFETY -> "Safety Alert"
-                AlertType.FIRE -> "Fire Alert"
-            }
+
+
             val minDistance = (alert.hops - 1) * 100
             val maxDistance = (alert.hops) * 100
             Icon(
-                imageVector = icon,
+                imageVector = alert.type.toIcon(),
                 contentDescription = "Alert Icon",
                 modifier = Modifier.size(64.dp)
             )
@@ -72,7 +83,7 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
                     modifier = Modifier.height(64.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(text = alertType, fontSize = 18.sp)
+                    Text(text = alert.type.toName(), fontSize = 18.sp)
                     Text(
                         text = alert.senderName,
                         fontSize = 16.sp,
@@ -87,7 +98,7 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
                 ) {
                     Text(text = "${minDistance}m - ${maxDistance}m", fontSize = 14.sp)
                     Text(
-                        text = formatDateTime(alert.time),
+                        text = timeString,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )

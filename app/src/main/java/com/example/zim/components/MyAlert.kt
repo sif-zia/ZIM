@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,7 +18,6 @@ import androidx.compose.material.icons.outlined.FireTruck
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.PersonalInjury
 import androidx.compose.material.icons.outlined.SportsMartialArts
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,26 +39,26 @@ import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
 
-fun getNewAngle(alertTime: LocalDateTime): Float {
+fun getNewAngle(alertTime: LocalDateTime, durationInMillis: Long): Float {
     val currentTime = LocalDateTime.now()
     val duration = Duration.between(alertTime, currentTime)
     val differenceInMillis = duration.toMillis()
-    val fiveMinutesInMillis = 10 * 1000
-    val fraction = differenceInMillis.toFloat() / fiveMinutesInMillis.toFloat()
+    val fraction = differenceInMillis.toFloat() / durationInMillis.toFloat()
     val newAngle = fraction * -360f
     return newAngle
 }
 
 @Composable
-fun myAlert(modifier: Modifier = Modifier, alert: Alert): Boolean {
+fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long) {
     var timeAngle by remember {
         mutableStateOf(0f)
     }
 
-    LaunchedEffect(alert.time) {
+    LaunchedEffect(alert.time, duration) {
+        timeAngle = 0f
         while (timeAngle > -360f) {
-            timeAngle = getNewAngle(alert.time)
-            delay(1000L) // Wait for 1 second
+            timeAngle = getNewAngle(alert.time, duration)
+            delay(100L) // Wait for 0.1 second
         }
     }
 
@@ -77,28 +73,13 @@ fun myAlert(modifier: Modifier = Modifier, alert: Alert): Boolean {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(end = 8.dp)
+                .padding(horizontal = 8.dp)
                 .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-
-            val icon = when (alert.type) {
-                AlertType.HEALTH -> Icons.Outlined.PersonalInjury
-                AlertType.FALL -> Icons.Outlined.SportsMartialArts
-                AlertType.SAFETY -> Icons.Outlined.HealthAndSafety
-                AlertType.FIRE -> Icons.Outlined.FireTruck
-            }
-            val alertType = when (alert.type) {
-                AlertType.HEALTH -> "Health Alert"
-                AlertType.FALL -> "Fall Alert"
-                AlertType.SAFETY -> "Safety Alert"
-                AlertType.FIRE -> "Fire Alert"
-            }
-            val minDistance = (alert.hops - 1) * 100
-            val maxDistance = (alert.hops) * 100
             Icon(
-                imageVector = icon,
+                imageVector = alert.type.toIcon(),
                 contentDescription = "Alert Icon",
                 modifier = Modifier.size(64.dp)
             )
@@ -112,7 +93,7 @@ fun myAlert(modifier: Modifier = Modifier, alert: Alert): Boolean {
                     modifier = Modifier.height(64.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(text = alertType, fontSize = 18.sp)
+                    Text(text = alert.type.toName(), fontSize = 18.sp)
                     Text(
                         text = alert.senderName,
                         fontSize = 16.sp,
@@ -164,6 +145,4 @@ fun myAlert(modifier: Modifier = Modifier, alert: Alert): Boolean {
         }
 
     }
-    if (timeAngle>-360f)
-        return true
 }

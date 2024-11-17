@@ -2,6 +2,7 @@ package com.example.zim.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +41,8 @@ fun FloatingButton(onClick: () -> Unit, content: @Composable () -> Unit) {
                     color = MaterialTheme.colorScheme.primary,
                     shape = RoundedCornerShape(100)
                 )
-                .background(color = MaterialTheme.colorScheme.tertiary),
+                .background(color = MaterialTheme.colorScheme.tertiary)
+                .clickable { onClick() },
             contentAlignment = Alignment.Center
         )
         {

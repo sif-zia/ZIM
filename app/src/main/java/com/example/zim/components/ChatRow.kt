@@ -20,6 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +42,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
 import com.example.zim.navigation.Navigation
 import com.example.zim.ui.theme.Typography
+import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -44,7 +50,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-fun formatDateTime(dateTime: LocalDateTime): String {
+fun formatDateTime(dateTime: LocalDateTime?): String {
+    if(dateTime == null) return ""
 
     val now = LocalDate.now()
     val datePart = dateTime.toLocalDate()
@@ -90,6 +97,19 @@ fun ChatRow(
     id: Int,
     navController: NavController
 ) {
+    var timeString by remember {
+        mutableStateOf(formatDateTime(time))
+    }
+
+    if(time != null) {
+        LaunchedEffect(time) {
+            while (true) {
+                delay(60 * 1000L)
+                timeString = formatDateTime(time)
+            }
+        }
+    }
+
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
     Box(modifier = modifier.clickable {
         if (isDM)
@@ -222,7 +242,7 @@ fun ChatRow(
                     // Last Message time
                     if (time != null)
                         Text(
-                            text = formatDateTime(time),
+                            text = timeString,
                             modifier = Modifier.padding(top = 5.dp),
                             style = Typography.bodyMedium
                         )
