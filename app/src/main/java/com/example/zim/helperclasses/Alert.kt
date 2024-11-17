@@ -7,6 +7,11 @@ import androidx.compose.material.icons.outlined.PersonalInjury
 import androidx.compose.material.icons.outlined.SportsMartialArts
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.zim.helperclasses.AlertType.CUSTOM
+import com.example.zim.helperclasses.AlertType.FALL
+import com.example.zim.helperclasses.AlertType.FIRE
+import com.example.zim.helperclasses.AlertType.HEALTH
+import com.example.zim.helperclasses.AlertType.SAFETY
 import java.time.LocalDateTime
 
 enum class AlertType {
@@ -36,7 +41,19 @@ enum class AlertType {
         }
     }
 }
-data class Alert (
+
+fun String.toAlertType(): AlertType {
+    return when (this) {
+        "Health Alert" -> HEALTH
+        "Fall Alert" -> FALL
+        "Safety Alert" -> SAFETY
+        "Fire Alert" -> FIRE
+        "Custom Alert" -> CUSTOM
+        else -> CUSTOM
+    }
+}
+
+data class Alert(
     val type: AlertType,
     val senderName: String,
     val hops: Int,

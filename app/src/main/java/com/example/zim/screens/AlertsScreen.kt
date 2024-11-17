@@ -170,6 +170,6 @@ fun AlertsScreen(navController: NavController) {
         }
 
         if(showDialog)
-            AddAlertDialog(showDialog = showDialog, onDismiss = {showDialog = false}, onConfirm = {})
+            AddAlertDialog(onDismiss = {showDialog = false}, onConfirm = {})
     }
 }
