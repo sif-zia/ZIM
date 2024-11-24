@@ -1,34 +1,34 @@
 package com.example.zim.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.zim.components.SendMessageRow
+import com.example.zim.components.UserInfoRow
 import java.time.LocalDateTime
 
-data class Sent_Message(
-    val status:String,
-    val text:String,
-)
-data class Recieve_Message(
-    val time:Int,
-    val text:String,
-)
 
-val message = listOf(
-    Sent_Message("sent","hello",),
-    Sent_Message("sent","how are you"),
-    Sent_Message("sent","i hope you are good"),
-
-    Recieve_Message(10,"i am good"),
-    Recieve_Message(20,"how are you"),
-)
 @Composable
 fun UserChat(userId: Int) {
-    return Column(modifier = Modifier.fillMaxSize().padding(top = 32.dp)) {
-        Text(text = "Chat of User with id = ${userId}");
-    };
+    var message by remember {
+        mutableStateOf("")
+    }
+    Column(modifier = Modifier.fillMaxHeight(),verticalArrangement = Arrangement.SpaceBetween) {
+        UserInfoRow()
+        //chats
+        SendMessageRow(message = message, onMessageChange = { message = it })
+    }
 }
