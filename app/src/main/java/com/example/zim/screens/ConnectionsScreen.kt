@@ -49,9 +49,8 @@ fun ConnectionsScreen(
                     onAccept = { onEvent(ConnectionsEvent.MakeConnection(state.promptConnections.last())) },
                     onReject = { onEvent(ConnectionsEvent.HidePrompt) }
                 )
-            }
-            else {
-                val dummyConnection = Connection("","","")
+            } else {
+                val dummyConnection = Connection("", "", "")
                 ConnectionPrompt(
                     dummyConnection,
                     onAccept = {},
@@ -65,28 +64,29 @@ fun ConnectionsScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1F),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Sensors,
-                    contentDescription = "Connection Logo",
-                    modifier = Modifier.size(128.dp),
-                )
-                Text(
-                    text = "Searching For Nearby Devices...",
-                    fontSize = 24.sp,
-                    modifier = Modifier.padding(vertical = verticalPadding)
-                )
-                Text(
-                    text = "Open the app in the other device and make sure its Wifi is turned on!",
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5F),
-                    textAlign = TextAlign.Center,
-                )
-            }
-            HorizontalDivider(modifier = Modifier.fillMaxWidth(0.8f))
+            Icon(
+                imageVector = Icons.Outlined.Sensors,
+                contentDescription = "Connection Logo",
+                modifier = Modifier.size(128.dp),
+            )
+            Text(
+                text = "Searching For Nearby Devices...",
+                fontSize = 22.sp,
+                modifier = Modifier.padding(vertical = verticalPadding)
+            )
+            Text(
+                text = "Open the app in the other device and make sure its Wifi is turned on!",
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5F),
+                textAlign = TextAlign.Center,
+                fontSize = 18.sp,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = verticalPadding)
+            )
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(0.8f),
+                color = MaterialTheme.colorScheme.primary.copy(0.66f)
+            )
             LazyColumn(
                 modifier = Modifier.weight(1F),
                 verticalArrangement = Arrangement.Center,
@@ -103,7 +103,10 @@ fun ConnectionsScreen(
 
                             onEvent(ConnectionsEvent.ShowPrompt(connection))
                         }
-                        HorizontalDivider(modifier = Modifier.fillMaxWidth(0.5f))
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth(0.5f),
+                            color = MaterialTheme.colorScheme.primary.copy(0.5f)
+                        )
                     }
                 }
 
