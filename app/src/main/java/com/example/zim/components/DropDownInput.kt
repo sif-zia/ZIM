@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.zIndex
 
 @Composable
-fun DropDownInput(label: String, options: List<String>, onSelect: (String) -> Unit) {
+fun DropDownInput(label: String, options: List<String>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
     var mExpanded by remember { mutableStateOf(false) }
     var mSelectedText by remember { mutableStateOf("") }
     var mTextFieldSize by remember { mutableStateOf(Size.Zero) }
@@ -48,12 +48,17 @@ fun DropDownInput(label: String, options: List<String>, onSelect: (String) -> Un
     else
         Icons.Filled.KeyboardArrowDown
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(20.dp)
-    ) {
-        Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(33)).background(MaterialTheme.colorScheme.secondary), verticalAlignment = Alignment.CenterVertically) {
+
+    Column {
+
+
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(33))
+                .background(MaterialTheme.colorScheme.secondary),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             TextField(
                 value = mSelectedText,
                 onValueChange = { mSelectedText = it },
@@ -63,7 +68,8 @@ fun DropDownInput(label: String, options: List<String>, onSelect: (String) -> Un
                         // This value is used to assign to
                         // the DropDown the same width
                         mTextFieldSize = coordinates.size.toSize()
-                    }.weight(1f),
+                    }
+                    .weight(1f),
                 label = { Text(label, color = MaterialTheme.colorScheme.primary.copy(0.66f)) },
                 readOnly = true,
                 enabled = false,
@@ -75,7 +81,8 @@ fun DropDownInput(label: String, options: List<String>, onSelect: (String) -> Un
                 ),
             )
             Icon(icon, "Drop Down Expand Icon",
-                Modifier.clickable { mExpanded = !mExpanded }
+                Modifier
+                    .clickable { mExpanded = !mExpanded }
                     .padding(horizontal = 5.dp))
         }
 
@@ -97,4 +104,5 @@ fun DropDownInput(label: String, options: List<String>, onSelect: (String) -> Un
             }
         }
     }
+
 }

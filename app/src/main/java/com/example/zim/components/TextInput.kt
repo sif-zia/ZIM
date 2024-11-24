@@ -31,7 +31,8 @@ fun TextInput(label: String, text: String, onTextChange: (String) -> Unit) {
             focusedIndicatorColor = MaterialTheme.colorScheme.tertiary,
             unfocusedIndicatorColor = Color.Transparent,
             cursorColor = MaterialTheme.colorScheme.onPrimary
-        )
+        ),
+        singleLine = true
     )
 }
 

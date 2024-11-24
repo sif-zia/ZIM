@@ -59,7 +59,7 @@ fun AlertsScreen(navController: NavController) {
         )
     }
 
-    val duration = 5 * 60 * 1000L
+    val duration = 10 * 1000L
 
     LaunchedEffect(currentAlert) {
         if (currentAlert != null) {
@@ -170,6 +170,6 @@ fun AlertsScreen(navController: NavController) {
         }
 
         if(showDialog)
-            AddAlertDialog(onDismiss = {showDialog = false}, onConfirm = {})
+            AddAlertDialog(onDismiss = {showDialog = false}, onConfirm = {currentAlert = Alert(AlertType.CUSTOM, "Itisam", 3, LocalDateTime.now())})
     }
 }
