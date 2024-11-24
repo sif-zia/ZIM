@@ -28,9 +28,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.zim.helperclasses.AlertType
+import com.example.zim.helperclasses.toAlertType
 
 @Composable
-fun AddAlertDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun AddAlertDialog(
+    addAlertType: AlertType?,
+    description: String,
+    onAddAlertTypeChange: (AlertType) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
     val horizontalPadding = 20.dp
     val verticalPadding = 12.dp
     Dialog(
@@ -39,44 +47,48 @@ fun AddAlertDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             usePlatformDefaultWidth = false
         )
     ) {
-        var alertType by remember { mutableStateOf("") }
-        var customAlertDesc by remember { mutableStateOf("") }
         val options = AlertType.entries.map { it.toName() }
 
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.8f),
             elevation = CardDefaults.cardElevation(6.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
-        ) {
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+                    .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+                verticalArrangement = Arrangement.spacedBy(verticalPadding)
             ) {
                 Text(
                     "Add Alert",
-                    modifier = Modifier.fillMaxWidth().padding(bottom = verticalPadding),
+                    modifier = Modifier.fillMaxWidth(),
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center
                 )
-                DropDownInput(label = "Alert Type", options = options, modifier = Modifier.padding(bottom = verticalPadding)) { selected ->
-                    alertType = selected
+                val selectedText = addAlertType?.toName() ?: ""
+                DropDownInput(
+                    label = "Alert Type",
+                    options = options,
+                    selectedText = selectedText
+                ) { selected ->
+                    onAddAlertTypeChange(selected.toAlertType())
                 }
 
 
-                if (alertType == AlertType.CUSTOM.toName()) {
+                if (addAlertType == AlertType.CUSTOM) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(33))
-                            .background(MaterialTheme.colorScheme.secondary)
-                            .padding(bottom = verticalPadding),
+                            .background(MaterialTheme.colorScheme.secondary),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextField(
-                            value = customAlertDesc,
-                            onValueChange = { customAlertDesc = it },
+                            value = description,
+                            onValueChange = onDescriptionChange,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.secondary,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.secondary,
@@ -101,7 +113,7 @@ fun AddAlertDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Button(onClick = { /*TODO*/ }) {
+                    Button(onClick = onDismiss) {
                         Text("Cancel")
                     }
                     Button(onClick = onConfirm) {

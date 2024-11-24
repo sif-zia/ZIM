@@ -38,9 +38,8 @@ import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.zIndex
 
 @Composable
-fun DropDownInput(label: String, options: List<String>, modifier: Modifier = Modifier, onSelect: (String) -> Unit) {
+fun DropDownInput(label: String, options: List<String>, modifier: Modifier = Modifier,selectedText:String,onSelect: (String) -> Unit) {
     var mExpanded by remember { mutableStateOf(false) }
-    var mSelectedText by remember { mutableStateOf("") }
     var mTextFieldSize by remember { mutableStateOf(Size.Zero) }
 
     val icon = if (mExpanded)
@@ -60,8 +59,8 @@ fun DropDownInput(label: String, options: List<String>, modifier: Modifier = Mod
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextField(
-                value = mSelectedText,
-                onValueChange = { mSelectedText = it },
+                value = selectedText,
+                onValueChange =  onSelect ,
                 modifier = Modifier
                     .clickable { mExpanded = !mExpanded }
                     .onGloballyPositioned { coordinates ->
@@ -95,7 +94,6 @@ fun DropDownInput(label: String, options: List<String>, modifier: Modifier = Mod
             options.forEach { itemLabel ->
                 DropdownMenuItem(
                     onClick = {
-                        mSelectedText = itemLabel
                         mExpanded = false
                         onSelect(itemLabel)
                     },

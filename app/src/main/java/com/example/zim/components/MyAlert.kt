@@ -3,6 +3,7 @@ package com.example.zim.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,7 @@ fun getNewAngle(alertTime: LocalDateTime, durationInMillis: Long): Float {
 }
 
 @Composable
-fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long) {
+fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend:()->Unit) {
     var timeAngle by remember {
         mutableStateOf(0f)
     }
@@ -137,6 +138,7 @@ fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long) {
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.padding(8.dp)
+                                    .clickable { onResend() }
                             )
                         }
                     }

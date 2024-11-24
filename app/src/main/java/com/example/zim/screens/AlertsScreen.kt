@@ -48,6 +48,13 @@ fun AlertsScreen(navController: NavController) {
     var showDialog by remember {
         mutableStateOf(false)
     }
+
+    var addAlertType by remember {
+        mutableStateOf<AlertType?>(null)
+    }
+    var description by remember {
+        mutableStateOf("")
+    }
     var alerts by remember {
         mutableStateOf(
             listOf(
@@ -100,7 +107,9 @@ fun AlertsScreen(navController: NavController) {
 
             // MyAlert Section
             currentAlert?.let { alert ->
-                MyAlert(alert = alert, duration = duration)
+                MyAlert(alert = alert, duration = duration){
+                    currentAlert= currentAlert?.copy(time= LocalDateTime.now())
+                }
             } ?: run {
                 Text(
                     text = "No Recent Alerts",
@@ -158,7 +167,10 @@ fun AlertsScreen(navController: NavController) {
         ) {
             FloatingButton(onClick = {
                 // Add Alert Logic
+                addAlertType= null
+                description=""
                 showDialog = true
+
             }) {
                 Icon(
                     imageVector = Icons.Outlined.NotificationAdd,
@@ -169,7 +181,23 @@ fun AlertsScreen(navController: NavController) {
             }
         }
 
-        if(showDialog)
-            AddAlertDialog(onDismiss = {showDialog = false}, onConfirm = {currentAlert = Alert(AlertType.CUSTOM, "Itisam", 3, LocalDateTime.now())})
+        if (showDialog)
+            AddAlertDialog(addAlertType,
+                description,
+                onAddAlertTypeChange = { addAlertType = it },
+                onDescriptionChange = { description = it },
+                onDismiss = { showDialog = false },
+                onConfirm =
+                {
+                    if (addAlertType != null) {
+                        currentAlert = if (addAlertType==AlertType.CUSTOM) {
+                            Alert(addAlertType!!, description, 0, LocalDateTime.now())
+                        } else {
+                            Alert(addAlertType!!, "Me", 0, LocalDateTime.now())
+                        }
+                    }
+                    showDialog = false
+                }
+            )
     }
 }
