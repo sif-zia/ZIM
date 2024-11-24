@@ -88,7 +88,7 @@ fun ConnectionsScreen(
                 color = MaterialTheme.colorScheme.primary.copy(0.66f)
             )
             LazyColumn(
-                modifier = Modifier.weight(1F),
+                modifier = Modifier.weight(1F).fillMaxWidth(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
                 state = rememberLazyListState()

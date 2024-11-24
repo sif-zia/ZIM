@@ -45,14 +45,10 @@ fun ConnectionRow(
         modifier = modifier
             .fillMaxWidth(0.8f)
             .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
     ) {
 
-//        Icon(
-//            imageVector = Icons.Outlined.Smartphone,
-//            contentDescription = "Phone Icon",
-//            modifier = Modifier.size(56.dp)
-//        )
         PhoneIcon(color =MaterialTheme.colorScheme.primary.copy(0.66f))
         Spacer(modifier = Modifier.fillMaxHeight().width(12.dp))
         Column(
@@ -71,8 +67,7 @@ fun ConnectionRow(
         }
         Column(
             modifier = Modifier
-                .height(64.dp)
-                .weight(3f),
+                .height(64.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -82,7 +77,7 @@ fun ConnectionRow(
                     .clickable { onClick() }
                     .border(
                         2.dp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary.copy(0.66f),
                         shape = RoundedCornerShape(25),
                     )
                     .padding(6.dp),

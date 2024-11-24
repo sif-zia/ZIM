@@ -5,6 +5,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -84,54 +86,39 @@ fun NavGraph(
             )
         }
     else
-        Scaffold(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 32.dp),
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = currentRoute in routesWithBottomNavBar,
-                    enter = slideInVertically { it }, // Slide in from the bottom
-                    exit = slideOutVertically { it }, // Slide out t other bottom
-                ) {
-                    BottomNavigationBar(
-                        navController = navController,
-                        currentRoute = currentRoute,
-                        chatsState = chatsState
-                    )
-                }
-
-            },
-            topBar = {
-                AnimatedVisibility(
-                    visible = currentRoute in routesWithLogoRow,
-                    enter = slideInVertically { -it },
-                    exit = slideOutVertically { -it },
-                ) {
-                    LogoRow(
-                        modifier = Modifier.padding(
-                            horizontal = horizontalPadding,
-                        ),
-                        expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
-                    ) {
-                        DropDown(
-                            dropDownMenu = DropDownMenus.ChatsScreen(),
-                            navController = navController,
-                            expanded = chatsState.menuExpanded
-                        ) {
-                            onChatsEvent(ChatsEvent.DismissMenu)
-                        }
-                    }
-                }
-            }
-        ) { paddingValues ->
+                .padding(top = 32.dp)
+        ) {
             val startDestination = if (signUpState.IsLoggedIn == true)
                 Navigation.Chats.route
             else
                 Navigation.SignUp.route
 
+            AnimatedVisibility(
+                visible = currentRoute in routesWithLogoRow,
+                enter = slideInVertically { -it },
+                exit = slideOutVertically { -it },
+            ) {
+                LogoRow(
+                    modifier = Modifier.padding(
+                        horizontal = horizontalPadding,
+                    ),
+                    expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
+                ) {
+                    DropDown(
+                        dropDownMenu = DropDownMenus.ChatsScreen(),
+                        navController = navController,
+                        expanded = chatsState.menuExpanded
+                    ) {
+                        onChatsEvent(ChatsEvent.DismissMenu)
+                    }
+                }
+            }
+
             NavHost(
-                modifier = Modifier.padding(paddingValues),
+                modifier = Modifier.weight(1f),
                 navController = navController,
                 startDestination = startDestination
             ) {
@@ -180,6 +167,18 @@ fun NavGraph(
                 composable(Navigation.Profile.route) {
                     ProfileScreen()
                 }
+            }
+
+            AnimatedVisibility(
+                visible = currentRoute in routesWithBottomNavBar,
+                enter = slideInVertically { it }, // Slide in from the bottom
+                exit = slideOutVertically { it }, // Slide out t other bottom
+            ) {
+                BottomNavigationBar(
+                    navController = navController,
+                    currentRoute = currentRoute,
+                    chatsState = chatsState
+                )
             }
         }
 }

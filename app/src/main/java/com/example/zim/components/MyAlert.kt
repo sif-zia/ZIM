@@ -131,12 +131,11 @@ fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(color = MaterialTheme.colorScheme.primary)
+                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
                         ) {
                             Text(
                                 text = "Resend",
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.padding(8.dp)
                                     .clickable { onResend() }
                             )
