@@ -18,8 +18,8 @@ import com.example.zim.states.ChatsState
 fun BottomNavigationBar(navController: NavController, currentRoute: String?, chatsState: ChatsState) {
 
     NavigationBar {
-        BottomNavigationItems().getBottomNavigationItems(chatsState)
-            .forEachIndexed { index, navigationItem ->
+        BottomNavigationItems().getBottomNavigationItems(chatsState.unReadMsgs)
+            .forEachIndexed { _, navigationItem ->
                 NavigationBarItem(
                     selected = currentRoute == navigationItem.route,
                     label = {

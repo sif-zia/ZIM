@@ -73,7 +73,7 @@ fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeybo
                 keyboardActions = KeyboardActions(onSend = { focusManager.clearFocus() })
             )
             Spacer(modifier = Modifier.width(8.dp))
-            RoundButton(modifier = Modifier.weight(1f), onClick = { /*TODO*/ }) {
+            RoundButton(onClick = { focusManager.clearFocus() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Send,
                     contentDescription = "Send Message Button",

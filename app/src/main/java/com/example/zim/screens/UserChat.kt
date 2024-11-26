@@ -47,9 +47,7 @@ fun UserChat(userId: Int) {
     var hideKeyboard by remember {
         mutableStateOf(false)
     }
-    var visibility by remember {
-        mutableStateOf(false)
-    }
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -63,23 +61,12 @@ fun UserChat(userId: Int) {
         ) {
             UserInfoRow()
             //chats
-            LaunchedEffect(visibility) {
-                delay(1000L)
-                visibility = true
-            }
         }
 
-            AnimatedVisibility(
-                visible = visibility,
-                enter = slideInVertically { it }, // Slide in from the bottom
-                exit = slideOutVertically { it }, // Slide out t other bottom
-            ) {
-                SendMessageRow(
-                    message = message,
-                    onMessageChange = { message = it },
-                    hideKeyboard,
-                    onHideKeyboardChange = { hideKeyboard = it })
-
-            }
+        SendMessageRow(
+            message = message,
+            onMessageChange = { message = it },
+            hideKeyboard,
+            onHideKeyboardChange = { hideKeyboard = it })
     }
 }
