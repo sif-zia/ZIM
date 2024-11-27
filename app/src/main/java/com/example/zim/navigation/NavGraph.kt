@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -29,6 +33,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.zim.R
 import com.example.zim.components.DropDown
 import com.example.zim.components.LogoRow
+import com.example.zim.components.SendMessageRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
 import com.example.zim.screens.AlertsScreen
@@ -76,6 +81,13 @@ fun NavGraph(
 ) {
     val navController = rememberNavController()
 
+    var message by remember {
+        mutableStateOf("")
+    }
+    var hideKeyboard by remember {
+        mutableStateOf(false)
+    }
+
     val routesWithBottomNavBar: List<String> = listOf(
         Navigation.Chats.route,
         Navigation.Connections.route,
@@ -110,37 +122,59 @@ fun NavGraph(
             )
         }
     else
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 32.dp),
-
-            ) {
-            val startDestination = if (signUpState.IsLoggedIn == true)
-                Navigation.Chats.route
-            else
-                Navigation.SignUp.route
-
-            AnimatedVisibility(
-                visible = currentRoute in routesWithLogoRow,
-                enter = slideInVertically { -it },
-                exit = slideOutVertically { -it },
-            ) {
-                LogoRow(
-                    modifier = Modifier.padding(
-                        horizontal = horizontalPadding,
-                    ),
-                    expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
+        Scaffold(
+            topBar = {
+                AnimatedVisibility(
+                    visible = currentRoute in routesWithLogoRow,
+                    enter = slideInVertically { -it },
+                    exit = slideOutVertically { -it },
                 ) {
-                    DropDown(
-                        dropDownMenu = DropDownMenus.ChatsScreen(),
-                        navController = navController,
-                        expanded = chatsState.menuExpanded
+                    LogoRow(
+                        modifier = Modifier
+                            .padding(top = 32.dp)
+                            .padding(
+                                horizontal = horizontalPadding,
+                            ),
+                        expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
                     ) {
-                        onChatsEvent(ChatsEvent.DismissMenu)
+                        DropDown(
+                            dropDownMenu = DropDownMenus.ChatsScreen(),
+                            navController = navController,
+                            expanded = chatsState.menuExpanded
+                        ) {
+                            onChatsEvent(ChatsEvent.DismissMenu)
+                        }
                     }
                 }
+            },
+            bottomBar = {
+                AnimatedVisibility(
+                    visible = currentRoute in routesWithBottomNavBar,
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it },
+                ) {
+                    BottomNavigationBar(
+                        navController = navController,
+                        currentRoute = currentRoute,
+                        chatsState = chatsState
+                    )
+                }
             }
+        ) { paddingValues ->
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+
+                ) {
+                val startDestination = if (signUpState.IsLoggedIn == true)
+                    Navigation.Chats.route
+                else
+                    Navigation.SignUp.route
+
+
+
                 NavHost(
                     modifier = Modifier
                         .weight(1f),
@@ -213,16 +247,7 @@ fun NavGraph(
                     }
                 }
 
-            AnimatedVisibility(
-                visible = currentRoute in routesWithBottomNavBar,
-                enter = slideInVertically { it }, // Slide in from the bottom
-                exit = slideOutVertically { it }, // Slide out t other bottom
-            ) {
-                BottomNavigationBar(
-                    navController = navController,
-                    currentRoute = currentRoute,
-                    chatsState = chatsState
-                )
+
             }
         }
 }
