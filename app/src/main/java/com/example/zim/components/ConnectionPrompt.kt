@@ -14,6 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,6 +29,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon.Companion.Text
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
 
@@ -34,16 +38,15 @@ fun ConnectionPrompt(promptConnection: Connection,onAccept:()->Unit,onReject:()-
     val horizontalPadding = 12.dp
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-        Surface(
-            shadowElevation = 24.dp,
+        Card(
             shape =  RoundedCornerShape(50),
-
+            elevation = CardDefaults.cardElevation(defaultElevation = 24.dp),
         ) {
             Row(
                 modifier = Modifier
                     .height(48.dp)
                     .clip(shape = RoundedCornerShape(50))
-                    .background(color = MaterialTheme.colorScheme.secondary.copy(0.75f))
+                    .background(color = MaterialTheme.colorScheme.secondary)
                     .border(
                         2.dp,
                         Color.LightGray,
@@ -53,7 +56,7 @@ fun ConnectionPrompt(promptConnection: Connection,onAccept:()->Unit,onReject:()-
                 horizontalArrangement = Arrangement.Center
             ) {
                 Spacer(modifier = Modifier.width(horizontalPadding))
-                Text(text = "${promptConnection?.fName} wants to connect")
+                Text(text = "${promptConnection.fName} wants to connect")
                 Spacer(modifier = Modifier.width(horizontalPadding))
                 Icon(
                     imageVector = Icons.Outlined.Check,

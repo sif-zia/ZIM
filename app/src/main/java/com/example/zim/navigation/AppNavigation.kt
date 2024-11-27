@@ -72,10 +72,3 @@ fun routeToNav(route: String?): Navigation? {
             return destination
     return null
 }
-
-
-private val indexNavMap = values().associateBy { it.index }
-
-fun indexToNav(index: Int): Navigation? {
-    return indexNavMap[index]
-}
