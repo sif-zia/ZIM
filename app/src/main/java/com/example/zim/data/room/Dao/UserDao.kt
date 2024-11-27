@@ -83,6 +83,15 @@ interface UserDao {
     )
     fun getUsersByName(name: String): Flow<List<Users>>
 
+    @Transaction
+    @Query("""
+        SELECT *
+        FROM Users AS U
+        WHERE U.User_ID = :id
+    """)
+    suspend fun getUserById(id: Int): Users
+
+    @Transaction
     @Query("""
     SELECT 
         user_info.User_ID AS id,

@@ -27,6 +27,7 @@ import com.example.zim.ui.theme.ZIMTheme
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.SignUpViewModel
+import com.example.zim.viewModels.UserChatViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
     private val signUpViewModel: SignUpViewModel by viewModels()
     private val chatsViewModel: ChatsViewModel by viewModels()
     private val connectionsViewModel: ConnectionsViewModel by viewModels()
+    private val userChatViewModel: UserChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +52,8 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         chatsViewModel,
                         signUpViewModel,
-                        connectionsViewModel
+                        connectionsViewModel,
+                        userChatViewModel
                     )
                 }
             }

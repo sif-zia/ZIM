@@ -13,6 +13,8 @@ import com.example.zim.data.room.models.MessagesWithSentMessages
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
+import com.example.zim.helperclasses.ChatContent
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MessageDao {
@@ -56,21 +58,25 @@ interface MessageDao {
 
     @Transaction
     @Query("""
-        SELECT M.*
-        FROM messages as M
-        INNER JOIN Received_Messages as R
-        ON M.Message_ID = R.Message_ID_FK
-        WHERE  R.User_ID_FK= :userID
-
-        UNION
-
-        SELECT M.*
-        FROM messages as M
-        INNER JOIN Sent_Messages as S
-        ON M.Message_ID = S.Message_ID_FK
-        WHERE  S.User_ID_FK= :userID
+        SELECT *
+        FROM (
+            SELECT M.msg AS message, R.receivedTime AS time, 1 AS isReceived
+            FROM messages as M
+            INNER JOIN Received_Messages as R
+            ON M.Message_ID = R.Message_ID_FK
+            WHERE  R.User_ID_FK= :userID
+    
+            UNION
+    
+            SELECT M.msg AS message, S.sentTime AS time, 0 AS isReceived
+            FROM messages as M
+            INNER JOIN Sent_Messages as S
+            ON M.Message_ID = S.Message_ID_FK
+            WHERE  S.User_ID_FK= :userID
+        )
+        ORDER BY time
     """)
-    suspend fun getAllMessagesOfAUser(userID: Int): List<Messages>
+    fun getAllMessagesOfAUser(userID: Int): Flow<List<ChatContent>>
 
     @Query("""
         SELECT *

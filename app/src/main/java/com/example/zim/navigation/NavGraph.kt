@@ -19,9 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -33,9 +30,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.zim.R
 import com.example.zim.components.DropDown
 import com.example.zim.components.LogoRow
-import com.example.zim.components.SendMessageRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.UserChatEvent
 import com.example.zim.screens.AlertsScreen
 import com.example.zim.screens.ChatsScreen
 import com.example.zim.screens.ConnectionsScreen
@@ -48,6 +45,7 @@ import com.example.zim.screens.UserChat
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.SignUpViewModel
+import com.example.zim.viewModels.UserChatViewModel
 
 fun getEnterAnimation(sourceRoute: String?, destinationRoute: String?): EnterTransition {
     val sourceIndex = routeToNav(sourceRoute)?.index ?: -1
@@ -77,16 +75,10 @@ fun getExitAnimation(sourceRoute: String?, destinationRoute: String?): ExitTrans
 fun NavGraph(
     chatsViewModel: ChatsViewModel,
     signUpViewModel: SignUpViewModel,
-    connectionsViewModel: ConnectionsViewModel
+    connectionsViewModel: ConnectionsViewModel,
+    userChatViewModel: UserChatViewModel
 ) {
     val navController = rememberNavController()
-
-    var message by remember {
-        mutableStateOf("")
-    }
-    var hideKeyboard by remember {
-        mutableStateOf(false)
-    }
 
     val routesWithBottomNavBar: List<String> = listOf(
         Navigation.Chats.route,
@@ -113,6 +105,9 @@ fun NavGraph(
 
     val connectionsState by connectionsViewModel.state.collectAsState()
     val connectionOnEvent = connectionsViewModel::onEvent
+
+    val userChatState by userChatViewModel.state.collectAsState()
+    val userChatOnEvent = userChatViewModel::onEvent
 
     if (signUpState.IsLoggedIn == null)
         Box(modifier = Modifier.fillMaxSize()) {
@@ -228,8 +223,10 @@ fun NavGraph(
                     }
                     composable(Navigation.UserChat.route + "/{userId}") { backStackEntry ->
                         val userId = backStackEntry.arguments?.getString("userId")?.toInt()
-                        if (userId != null)
-                            UserChat(userId = userId)
+                        if (userId != null) {
+                            userChatOnEvent(UserChatEvent.LoadData(userId))
+                            UserChat(userId = userId, onEvent = userChatOnEvent, state = userChatState)
+                        }
                     }
                     composable(Navigation.GroupChat.route + "/{groupId}") { backStackEntry ->
                         val groupId = backStackEntry.arguments?.getString("groupId")?.toInt()
