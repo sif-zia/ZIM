@@ -38,4 +38,28 @@ public interface DropDownMenus {
         }
     }
 
+    class UserChatScreen: DropDownMenus {
+        companion object {
+            fun getItems(): List<DropDownMenuItem> {
+                return listOf(
+                    DropDownMenuItem(
+                        "Search",
+                        Icons.Filled.GroupAdd,
+                        route = Navigation.NewGroup.route
+                    ),
+                    DropDownMenuItem(
+                        "Delete Chat",
+                        Icons.Filled.Settings,
+                        route = Navigation.Settings.route
+                    ),
+                    DropDownMenuItem(
+                        "Remove Connection",
+                        Icons.Filled.ManageAccounts,
+                        route = Navigation.Profile.route
+                    )
+                )
+            }
+        }
+    }
+
 }

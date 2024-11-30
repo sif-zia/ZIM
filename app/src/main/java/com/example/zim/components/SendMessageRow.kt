@@ -1,5 +1,6 @@
 package com.example.zim.components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,9 +28,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -36,10 +44,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zim.R
+import kotlinx.coroutines.delay
 
 @Composable
-fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeyboard: Boolean, onHideKeyboardChange: (Boolean) -> Unit) {
+fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeyboard: Boolean, onHideKeyboardChange: (Boolean) -> Unit, lazyListState: LazyListState, size: Int) {
     val focusManager = LocalFocusManager.current
+    var isFocused by remember {
+        mutableStateOf(false)
+    }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Row(
             modifier = Modifier
@@ -58,7 +70,12 @@ fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeybo
                     )
                 },
                 placeholder = { Text(text = "Message") },
-                modifier = Modifier.clip(RoundedCornerShape(50)).weight(1f),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .weight(1f)
+                    .onFocusChanged {
+                        isFocused = true
+                    },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
                     unfocusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
@@ -87,5 +104,10 @@ fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeybo
         focusManager.clearFocus()
 
         onHideKeyboardChange(false)
+    }
+    LaunchedEffect(isFocused) {
+        delay(1000L)
+        lazyListState.animateScrollToItem(size)
+        isFocused = false
     }
 }

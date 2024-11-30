@@ -1,5 +1,9 @@
 package com.example.zim.navigation
 
+import android.content.Context
+import android.net.wifi.WifiManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -20,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -42,6 +47,7 @@ import com.example.zim.screens.ProfileScreen
 import com.example.zim.screens.SettingsScreen
 import com.example.zim.screens.SignUpScreen
 import com.example.zim.screens.UserChat
+import com.example.zim.states.ConnectionsState
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.SignUpViewModel
@@ -71,6 +77,7 @@ fun getExitAnimation(sourceRoute: String?, destinationRoute: String?): ExitTrans
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun NavGraph(
     chatsViewModel: ChatsViewModel,
@@ -90,6 +97,7 @@ fun NavGraph(
         Navigation.Connections.route,
         Navigation.Alerts.route,
     )
+
 
     val horizontalPadding: Dp = 16.dp
 //    val verticalPadding: Dp = 12.dp
@@ -206,8 +214,6 @@ fun NavGraph(
                         }
                     }
                     composable(Navigation.Connections.route) {
-
-                        connectionOnEvent(ConnectionsEvent.ScanForConnections)
                         SwipeNavigation(navController) {
                             ConnectionsScreen(
                                 navController = navController,
@@ -225,7 +231,7 @@ fun NavGraph(
                         val userId = backStackEntry.arguments?.getString("userId")?.toInt()
                         if (userId != null) {
                             userChatOnEvent(UserChatEvent.LoadData(userId))
-                            UserChat(userId = userId, onEvent = userChatOnEvent, state = userChatState)
+                            UserChat(userId = userId, onEvent = userChatOnEvent, state = userChatState, navController = navController)
                         }
                     }
                     composable(Navigation.GroupChat.route + "/{groupId}") { backStackEntry ->

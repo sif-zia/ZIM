@@ -21,6 +21,7 @@ fun DropDown(
 ) {
     val menuItems: List<DropDownMenuItem> = when (dropDownMenu) {
         is DropDownMenus.ChatsScreen -> DropDownMenus.ChatsScreen.getItems();
+        is DropDownMenus.UserChatScreen -> DropDownMenus.UserChatScreen.getItems();
         else -> emptyList()
     }
 
