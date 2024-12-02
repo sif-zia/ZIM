@@ -1,6 +1,8 @@
 package com.example.zim.screens
 
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -39,15 +41,20 @@ import androidx.navigation.NavController
 import com.example.zim.components.ConnectionPrompt
 import com.example.zim.components.ConnectionRow
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.UserChatEvent
 import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
 import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.UserChatViewModel
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun ConnectionsScreen(
     navController: NavController, state: ConnectionsState, onEvent: (ConnectionsEvent) -> Unit,
-    viewModel: ConnectionsViewModel = hiltViewModel<ConnectionsViewModel>()
+    viewModel: ConnectionsViewModel = hiltViewModel<ConnectionsViewModel>(),
+    userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>()
 ) {
+    val userChatOnEvent = userChatViewModel::onEvent
 
     var lastPromptConnection by remember {
         mutableStateOf<Connection?>(null)
@@ -136,8 +143,8 @@ fun ConnectionsScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1F)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally,
                 state = rememberLazyListState()
             ) {
@@ -149,7 +156,9 @@ fun ConnectionsScreen(
                             description = connection.description
                         ) {
 
-                            onEvent(ConnectionsEvent.ShowPrompt(connection))
+//                            onEvent(ConnectionsEvent.ShowPrompt(connection))
+                            userChatOnEvent(UserChatEvent.TryToConnect(connection))
+                            onEvent(ConnectionsEvent.ConnectToDevice(connection))
                         }
                         HorizontalDivider(
                             modifier = Modifier.fillMaxWidth(0.5f),
@@ -158,6 +167,13 @@ fun ConnectionsScreen(
                     }
                 }
 
+                if(state.connections.isEmpty()){
+                    item {
+                        Box(modifier = Modifier.fillMaxSize().padding(top = 12.dp), contentAlignment = Alignment.Center) {
+                            Text(text = "No Device(s) Found", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary.copy(0.66f))
+                        }
+                    }
+                }
             }
         }
 
@@ -168,7 +184,7 @@ fun ConnectionsScreen(
             exit = slideOutVertically { -it },
         ) {
             ConnectionPrompt(
-                lastPromptConnection ?: Connection("", "", ""),
+                lastPromptConnection ?: Connection("", "", "", ""),
                 onAccept = {
                     onEvent(ConnectionsEvent.MakeConnection(state.promptConnections.last()))
                     Toast.makeText(context, "Connection Made", Toast.LENGTH_SHORT)

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +44,9 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
     }
     val lazyListState = rememberLazyListState()
 
+    onEvent(UserChatEvent.ReadAllMessages(userId))
+    onEvent(UserChatEvent.ConnectToUser(userId))
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
@@ -65,10 +69,16 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
                     }
                 }
 
+                if(state.messages.isEmpty()){
+                    item {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(text = "No messages yet", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+
                 item {
-                    Spacer(modifier = Modifier
-                        .imePadding()
-                        .padding(bottom = 70.dp))
+                    Spacer(modifier = Modifier.imePadding())
                 }
             }
         }
@@ -79,7 +89,11 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
             hideKeyboard,
             onHideKeyboardChange = { hideKeyboard = it },
             lazyListState = lazyListState,
-            size = state.messages.size
+            size = state.messages.size,
+            onMessageSend = {
+                onEvent(UserChatEvent.SendMessage(message))
+                message = ""
+            }
         )
 
         LaunchedEffect(message.length, hideKeyboard) {

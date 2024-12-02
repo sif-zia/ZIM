@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MessageDao {
     @Insert
+    suspend fun insertMessage(message: Messages): Long
+
+    @Insert
     suspend fun insertSentMessage(sentMessage: SentMessages)
 
     @Update
@@ -96,4 +99,11 @@ interface MessageDao {
         WHERE isRead = 0
     """)
     suspend fun getUnReadMsgsCount(): Int
+
+    @Query("""
+        UPDATE Received_Messages
+        SET isRead = 1
+        WHERE User_ID_FK = :userId
+    """)
+    suspend fun readAllMessages(userId: Int)
 }

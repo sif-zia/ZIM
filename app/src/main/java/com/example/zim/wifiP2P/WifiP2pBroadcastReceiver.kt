@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.NetworkInfo
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.zim.wifiP2P.WifiP2pListener
 
 class WifiP2pBroadcastReceiver(

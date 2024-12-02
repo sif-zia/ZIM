@@ -2,6 +2,7 @@ package com.example.zim
 
 import WifiP2pBroadcastReceiver
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -22,7 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
+import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.SignUpEvent
+import com.example.zim.events.UserChatEvent
 import com.example.zim.navigation.NavGraph
 import com.example.zim.ui.theme.ZIMTheme
 import com.example.zim.viewModels.ChatsViewModel
@@ -33,6 +37,7 @@ import com.example.zim.wifiP2P.LocationListener
 import com.example.zim.wifiP2P.WifiP2pListener
 import com.example.zim.wifiP2Pimport.LocationBroadcastReceiver
 import dagger.hilt.android.AndroidEntryPoint
+import java.net.InetAddress
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
@@ -65,6 +70,7 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
 
     )
 
+    @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,10 +108,13 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
 
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
+        userChatViewModel.initWifiP2p(wifiP2pManager, channel)
+
+        val connectionsOnEvent = connectionsViewModel::onEvent
+        connectionsOnEvent(ConnectionsEvent.ScanForConnections)
 
         locationBroadcastReceiver = LocationBroadcastReceiver(this)
         locationIntentFilter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
-
     }
 
     override fun onWifiP2pEnabled() {
@@ -118,18 +127,29 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
     }
 
     override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
-        if(permissionsGranted) {
-            val connectionsOnEvent = connectionsViewModel::onEvent
-            connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
+        val connectionsOnEvent = connectionsViewModel::onEvent
+        connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
+//        connectionsOnEvent(ConnectionsEvent.ConnectToUsers)
+        (chatsViewModel::onEvent)(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
+        val groupOwnerAddress: InetAddress = info.groupOwnerAddress
+
+        if(info.groupFormed && info.isGroupOwner) {
+            Toast.makeText(application, "Host Device", Toast.LENGTH_SHORT).show()
+            userChatViewModel.makeMeHost()
+            userChatViewModel.startServer(8888)
+        }
+        else if(info.groupFormed) {
+            Toast.makeText(application, "Client Device", Toast.LENGTH_SHORT).show()
+            groupOwnerAddress.hostAddress?.let { userChatViewModel.connectToServer(it, 8888) }
         }
     }
 
-    override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
-//        TODO("Handle connection info")
-    }
-
     override fun onDisconnected() {
-//        TODO("Handle disconnection")
+//        Toast.makeText(application, "Device Disconnected", Toast.LENGTH_SHORT).show()
     }
 
     override fun onThisDeviceChanged(device: WifiP2pDevice?) {

@@ -1,27 +1,21 @@
 package com.example.zim.components
 
-import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.NotificationAdd
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,16 +32,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.zim.R
 import kotlinx.coroutines.delay
 
 @Composable
-fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeyboard: Boolean, onHideKeyboardChange: (Boolean) -> Unit, lazyListState: LazyListState, size: Int) {
+fun SendMessageRow(
+    message: String,
+    onMessageChange: (String) -> Unit,
+    hideKeyboard: Boolean,
+    onHideKeyboardChange: (Boolean) -> Unit,
+    lazyListState: LazyListState,
+    size: Int,
+    onMessageSend: () -> Unit
+) {
     val focusManager = LocalFocusManager.current
     var isFocused by remember {
         mutableStateOf(false)
@@ -87,10 +85,16 @@ fun SendMessageRow(message: String, onMessageChange: (String) -> Unit, hideKeybo
                 ),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { focusManager.clearFocus() })
+                keyboardActions = KeyboardActions(onSend = {
+                    focusManager.clearFocus()
+                    onMessageSend()
+                })
             )
             Spacer(modifier = Modifier.width(8.dp))
-            RoundButton(onClick = { focusManager.clearFocus() }) {
+            RoundButton(onClick = {
+                focusManager.clearFocus()
+                onMessageSend()
+            }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Send,
                     contentDescription = "Send Message Button",

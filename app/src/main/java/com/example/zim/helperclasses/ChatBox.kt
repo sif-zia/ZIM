@@ -16,7 +16,8 @@ sealed interface ChatBox {
         val message: String,
         val time: LocalTime,
         val date: LocalDate,
-        var isFirst: Boolean = true
+        var isFirst: Boolean = true,
+        val status: Status = Status.SENT
     ) : ChatBox
 
     data class ReceivedMessage(
@@ -24,7 +25,6 @@ sealed interface ChatBox {
         val time: LocalTime,
         val date: LocalDate,
         var isFirst: Boolean = true,
-        val status: Status = Status.SENT
     ) : ChatBox
 
     data class DateChip(val date: LocalDate) : ChatBox

@@ -1,3 +1,3 @@
 package com.example.zim.helperclasses
 
-data class Connection(val fName: String,val lName: String, val description: String)
+data class Connection(val fName: String,val lName: String, val description: String, val deviceAddress: String)

@@ -1,5 +1,6 @@
 package com.example.zim.viewModels
 
+import android.net.wifi.p2p.WifiP2pDevice
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -52,7 +54,7 @@ class SignUpViewModel @Inject constructor(
                     // Insert the user into the database and get the row ID
                     viewModelScope.launch {
                         val userId: Long = userDao.insertUser(
-                            Users(fName = firstName, lName = lastName, DOB = DOB)
+                            Users(fName = firstName, lName = lastName, DOB = DOB, UUID = UUID.randomUUID().toString())
                         )
                         if (userId >= 0) {
                             userDao.insertCurrUser(
@@ -79,8 +81,6 @@ class SignUpViewModel @Inject constructor(
             is SignUpEvent.SetLastName -> {
                 _state.update { it.copy(lastName = event.lastName) }
             }
-
-
         }
 
     }

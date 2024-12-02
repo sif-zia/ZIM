@@ -6,5 +6,6 @@ data class ConnectionsState(
     val connections: List<Connection> = emptyList(),
     val promptConnections:List<Connection> = emptyList(),
     val isWifiEnabled: Boolean = false,
-    val isLocationEnabled: Boolean = false
+    val isLocationEnabled: Boolean = false,
+    val connectionStatus: Map<String, Boolean> = emptyMap()
 )

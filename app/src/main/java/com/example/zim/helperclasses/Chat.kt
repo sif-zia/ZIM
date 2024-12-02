@@ -10,5 +10,6 @@ data class Chat(
     val time: LocalDateTime? = null,
     val unReadMsgs: Int = 0,
     val isDM: Boolean? = true,
-    val id: Int
+    val id: Int,
+    val UUID: String
 )

@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.net.wifi.WifiManager
+import android.net.wifi.p2p.WifiP2pConfig
+import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.provider.Settings
@@ -49,8 +51,10 @@ class ConnectionsViewModel @Inject constructor(
 
     init {
         updateDependency()
+        connectToUsers()
     }
 
+    @SuppressLint("MissingPermission")
     fun onEvent(event: ConnectionsEvent) {
         when (event) {
             is ConnectionsEvent.AddConnection -> {
@@ -68,11 +72,18 @@ class ConnectionsViewModel @Inject constructor(
 
             is ConnectionsEvent.LoadConnections -> {
                 //wifi direct
-                val names = event.peers.map { it.deviceName }
                 viewModelScope.launch {
+                    val deviceAddresses = userDao.getUUIDs()
+
+                    val newPeers = mutableListOf<WifiP2pDevice>()
+                    event.peers.forEach{peer ->
+                        if (peer.deviceAddress !in deviceAddresses)
+                            newPeers.add(peer)
+                    }
+
                     _state.update {
-                        it.copy(connections = names.map { name ->
-                            Connection(fName = name, lName = "", description = "")
+                        it.copy(connections = newPeers.map { peer ->
+                            Connection(fName = peer.deviceName, lName = "", description = peer.primaryDeviceType, deviceAddress = peer.deviceAddress)
                         })
                     }
                 }
@@ -114,8 +125,28 @@ class ConnectionsViewModel @Inject constructor(
                 }
             }
 
-            ConnectionsEvent.ScanForConnections -> {
+            is ConnectionsEvent.ScanForConnections -> {
                 discoverPeers()
+            }
+
+            is ConnectionsEvent.ConnectToDevice -> {
+                val config = WifiP2pConfig()
+                config.deviceAddress = event.connection.deviceAddress
+                wifiP2pManager?.connect(channel, config, object: WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+//                        addUser(event.connection)
+                        Toast.makeText(application, "Connection Request Sent", Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onFailure(p0: Int) {
+                        Toast.makeText(application, "Connection Request Failed", Toast.LENGTH_SHORT).show()
+                    }
+
+                })
+            }
+
+            is ConnectionsEvent.ConnectToUsers -> {
+//                connectToUsers()
             }
         }
     }
@@ -127,7 +158,8 @@ class ConnectionsViewModel @Inject constructor(
                     Users(
                         fName = newConnection.fName,
                         lName = newConnection.lName,
-                        deviceName = newConnection.description
+                        deviceName = newConnection.description,
+                        UUID = newConnection.deviceAddress
                     )
                 )
             } catch (e: Exception) {
@@ -198,5 +230,27 @@ class ConnectionsViewModel @Inject constructor(
 
     fun updateDependency() {
         _state.update { it.copy(isLocationEnabled = isLocationEnabled(), isWifiEnabled = isWifiEnabled()) }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun connectToUsers() {
+        viewModelScope.launch {
+            val deviceAddresses = userDao.getUUIDs()
+
+            deviceAddresses.forEach { deviceAddress ->
+                val config = WifiP2pConfig()
+                config.deviceAddress = deviceAddress
+                wifiP2pManager?.connect(channel, config, object: WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        _state.update { it.copy(connectionStatus = it.connectionStatus+ (deviceAddress to true)) }
+                    }
+
+                    override fun onFailure(p0: Int) {
+                        _state.update { it.copy(connectionStatus = it.connectionStatus+ (deviceAddress to false)) }
+                    }
+
+                })
+            }
+        }
     }
 }

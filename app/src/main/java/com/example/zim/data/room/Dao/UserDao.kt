@@ -3,7 +3,6 @@ package com.example.zim.data.room.Dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Transaction
@@ -11,8 +10,8 @@ import com.example.zim.data.room.models.CurrentUser
 import com.example.zim.data.room.models.Users
 import com.example.zim.data.room.models.UserWithCurrentUser
 import com.example.zim.helperclasses.Chat
+import com.example.zim.helperclasses.ConnectionMetadata
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDateTime
 
 @Dao
 interface UserDao {
@@ -97,6 +96,7 @@ interface UserDao {
         user_info.User_ID AS id,
         user_info.fName,
         user_info.lName,
+        user_info.UUID,
         MAX(user_info.latest_message_time) AS time,
         user_info.latest_message_content AS lastMsg,
         SUM(user_info.unread_msgs) AS unReadMsgs
@@ -105,6 +105,7 @@ interface UserDao {
                 u.User_ID,
                 u.fName,
                 u.lName,
+                u.UUID,
                 MAX(sm.sentTime) AS latest_message_time,
                 (SELECT msg FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_content,
                 0 AS unread_msgs
@@ -120,6 +121,7 @@ interface UserDao {
                 u.User_ID,
                 u.fName,
                 u.lName,
+                u.UUID,
                 MAX(rm.receivedTime) AS latest_message_time,
                 (SELECT msg FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_content,
                 SUM(CASE WHEN rm.isRead = 0 THEN 1 ELSE 0 END) AS unread_msgs
@@ -134,5 +136,33 @@ interface UserDao {
 """)
     fun getUsersWithLatestMessage(query: String): Flow<List<Chat>>
 
+    @Transaction
+    @Query("""
+        SELECT UUID
+        FROM Users as U
+        INNER JOIN Curr_User as C
+        ON C.User_ID_FK != U.User_ID
+    """)
+    suspend fun getUUIDs(): List<String>
 
+    @Transaction
+    @Query("""
+        SELECT U.UUID, U.fName, U.lName, U.deviceAddress
+        FROM Users as U
+        INNER JOIN Curr_User as C
+        ON C.User_ID_FK == U.User_ID
+        LIMIT 1
+    """)
+    suspend fun getMyData(): ConnectionMetadata?
+
+    @Transaction
+    @Query("SELECT User_ID FROM Users WHERE UUID = :uuid")
+    suspend fun getIdByUUID(uuid: String): Int
+
+
+    @Query("UPDATE Users SET deviceAddress = :deviceAddress WHERE User_ID = (SELECT User_ID_FK FROM Curr_User LIMIT 1)")
+    suspend fun setCurrUserDeviceAddress(deviceAddress: String)
+
+    @Query("UPDATE Users SET deviceName = :deviceName WHERE User_ID = (SELECT User_ID_FK FROM Curr_User LIMIT 1)")
+    suspend fun setCurrUserDeviceName(deviceName: String)
 }

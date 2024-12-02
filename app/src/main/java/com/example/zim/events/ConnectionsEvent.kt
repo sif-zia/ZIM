@@ -11,4 +11,6 @@ sealed interface ConnectionsEvent {
     data object ScanForConnections : ConnectionsEvent
     data class ShowPrompt(val connection: Connection) : ConnectionsEvent
     data object HidePrompt : ConnectionsEvent
+    data object ConnectToUsers : ConnectionsEvent
+    data class ConnectToDevice(val connection: Connection): ConnectionsEvent
 }
