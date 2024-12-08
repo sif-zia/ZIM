@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -50,6 +51,7 @@ import com.example.zim.screens.UserChat
 import com.example.zim.states.ConnectionsState
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import com.example.zim.viewModels.UserChatViewModel
 
@@ -83,7 +85,8 @@ fun NavGraph(
     chatsViewModel: ChatsViewModel,
     signUpViewModel: SignUpViewModel,
     connectionsViewModel: ConnectionsViewModel,
-    userChatViewModel: UserChatViewModel
+    userChatViewModel: UserChatViewModel,
+    protocolViewModel: ProtocolViewModel = hiltViewModel<ProtocolViewModel>()
 ) {
     val navController = rememberNavController()
 
@@ -116,6 +119,8 @@ fun NavGraph(
 
     val userChatState by userChatViewModel.state.collectAsState()
     val userChatOnEvent = userChatViewModel::onEvent
+
+    val protocolState by protocolViewModel.state.collectAsState()
 
     if (signUpState.IsLoggedIn == null)
         Box(modifier = Modifier.fillMaxSize()) {
@@ -218,7 +223,8 @@ fun NavGraph(
                             ConnectionsScreen(
                                 navController = navController,
                                 state = connectionsState,
-                                onEvent = connectionOnEvent
+                                onEvent = connectionOnEvent,
+                                protocolState = protocolState
                             )
                         }
                     }

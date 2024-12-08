@@ -50,7 +50,6 @@ class ConnectionsViewModel @Inject constructor(
     )
 
     init {
-        updateDependency()
         connectToUsers()
     }
 
@@ -214,22 +213,6 @@ class ConnectionsViewModel @Inject constructor(
     private fun isWifiEnabled(): Boolean {
         val wifiManager = application.getSystemService(Context.WIFI_SERVICE) as WifiManager
         return wifiManager.isWifiEnabled
-    }
-
-    fun promptEnableLocation() {
-        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        application.startActivity(intent)
-    }
-
-    fun promptEnableWifi() {
-        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        application.startActivity(intent)
-    }
-
-    fun updateDependency() {
-        _state.update { it.copy(isLocationEnabled = isLocationEnabled(), isWifiEnabled = isWifiEnabled()) }
     }
 
     @SuppressLint("MissingPermission")

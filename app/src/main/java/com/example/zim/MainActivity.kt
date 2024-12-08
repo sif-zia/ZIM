@@ -31,28 +31,26 @@ import com.example.zim.navigation.NavGraph
 import com.example.zim.ui.theme.ZIMTheme
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import com.example.zim.viewModels.UserChatViewModel
-import com.example.zim.wifiP2P.LocationListener
 import com.example.zim.wifiP2P.WifiP2pListener
-import com.example.zim.wifiP2Pimport.LocationBroadcastReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.InetAddress
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
+class MainActivity : ComponentActivity(), WifiP2pListener {
     private val signUpViewModel: SignUpViewModel by viewModels()
     private val chatsViewModel: ChatsViewModel by viewModels()
     private val connectionsViewModel: ConnectionsViewModel by viewModels()
     private val userChatViewModel: UserChatViewModel by viewModels()
+    private val protocolViewModel: ProtocolViewModel by viewModels()
 
     private lateinit var wifiP2pManager: WifiP2pManager
+    private lateinit var locationManager: LocationManager
     private lateinit var channel: WifiP2pManager.Channel
     private lateinit var intentFilter: IntentFilter
     private lateinit var broadcastReceiver: WifiP2pBroadcastReceiver
-
-    private lateinit var locationIntentFilter: IntentFilter
-    private lateinit var locationBroadcastReceiver: LocationBroadcastReceiver
 
     private var permissionsGranted = false
 
@@ -95,35 +93,22 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
         }
 
         wifiP2pManager = getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         channel = wifiP2pManager.initialize(this, mainLooper, null)
 
         intentFilter = IntentFilter().apply {
+            addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
         }
 
-        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, this, this)
+        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel)
 
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
         userChatViewModel.initWifiP2p(wifiP2pManager, channel)
-
-        val connectionsOnEvent = connectionsViewModel::onEvent
-        connectionsOnEvent(ConnectionsEvent.ScanForConnections)
-
-        locationBroadcastReceiver = LocationBroadcastReceiver(this)
-        locationIntentFilter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
-    }
-
-    override fun onWifiP2pEnabled() {
-        connectionsViewModel.updateDependency()
-    }
-
-    override fun onWifiP2pDisabled() {
-//        Toast.makeText(this@MainActivity, "Wifi is Enabled", Toast.LENGTH_SHORT).show()
-        connectionsViewModel.updateDependency()
     }
 
     override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
@@ -159,13 +144,11 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
     override fun onResume() {
         super.onResume()
         registerReceiver(broadcastReceiver, intentFilter)
-        registerReceiver(locationBroadcastReceiver, locationIntentFilter)
     }
 
     override fun onPause() {
         super.onPause()
         unregisterReceiver(broadcastReceiver)
-        unregisterReceiver(locationBroadcastReceiver)
     }
 
     private val PERMISSION_REQUEST_CODE = 1001
@@ -208,9 +191,5 @@ class MainActivity : ComponentActivity(), WifiP2pListener, LocationListener {
                 permissionsGranted = true
             }
         }
-    }
-
-    override fun onLocationChange() {
-        connectionsViewModel.updateDependency()
     }
 }

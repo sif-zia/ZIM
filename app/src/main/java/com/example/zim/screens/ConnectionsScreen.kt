@@ -6,19 +6,15 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material3.HorizontalDivider
@@ -26,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,11 +37,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.ConnectionPrompt
 import com.example.zim.components.ConnectionRow
+import com.example.zim.components.hardwareServicesCheck
 import com.example.zim.events.ConnectionsEvent
 import com.example.zim.events.UserChatEvent
 import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
+import com.example.zim.states.ProtocolState
 import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.UserChatViewModel
 
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -52,12 +52,16 @@ import com.example.zim.viewModels.UserChatViewModel
 fun ConnectionsScreen(
     navController: NavController, state: ConnectionsState, onEvent: (ConnectionsEvent) -> Unit,
     viewModel: ConnectionsViewModel = hiltViewModel<ConnectionsViewModel>(),
-    userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>()
+    userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>(),
+    protocolState: ProtocolState
 ) {
     val userChatOnEvent = userChatViewModel::onEvent
 
     var lastPromptConnection by remember {
         mutableStateOf<Connection?>(null)
+    }
+    var everythingEnabled: Boolean by remember {
+        mutableStateOf(false)
     }
 
     if (state.promptConnections.isNotEmpty())
@@ -78,99 +82,75 @@ fun ConnectionsScreen(
                 modifier = Modifier.size(128.dp),
             )
 
-            if (!state.isLocationEnabled || !state.isWifiEnabled) {
-                if (!state.isLocationEnabled) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("Location is Disabled")
-                        Text(
-                            text = "Enable",
-                            modifier = Modifier
-                                .clickable { viewModel.promptEnableLocation() }
-                                .border(
-                                    2.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(0.66f),
-                                    shape = RoundedCornerShape(25),
-                                )
-                                .padding(6.dp),
-                            fontSize = 16.sp
-                        )
-                    }
-                }
-                if (!state.isWifiEnabled) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Wifi is Disabled")
-                        Text(
-                            text = "Enable",
-                            modifier = Modifier
-                                .clickable { viewModel.promptEnableWifi() }
-                                .border(
-                                    2.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(0.66f),
-                                    shape = RoundedCornerShape(25),
-                                )
-                                .padding(6.dp),
-                            fontSize = 16.sp
-                        )
-                    }
-                }
-            } else {
+            everythingEnabled = hardwareServicesCheck(protocolState)
+            if (everythingEnabled) {
                 onEvent(ConnectionsEvent.ScanForConnections)
                 Text(
                     text = "Searching For Nearby Devices...",
                     fontSize = 22.sp,
                     modifier = Modifier.padding(vertical = verticalPadding)
                 )
+                Text(
+                    text = "Open the app in the other device and make sure its Wifi is turned on!",
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5F),
+                    textAlign = TextAlign.Center,
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = verticalPadding)
+                )
             }
-            Text(
-                text = "Open the app in the other device and make sure its Wifi is turned on!",
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5F),
-                textAlign = TextAlign.Center,
-                fontSize = 18.sp,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = verticalPadding)
-            )
             HorizontalDivider(
                 modifier = Modifier.fillMaxWidth(0.8f),
                 color = MaterialTheme.colorScheme.primary.copy(0.66f)
             )
-            LazyColumn(
+
+            Box(
                 modifier = Modifier
                     .weight(1F)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                state = rememberLazyListState()
+                    .fillMaxSize()
+                    .padding(top = 12.dp), contentAlignment = Alignment.Center
             ) {
-                state.connections.forEach { connection ->
+                if (!everythingEnabled) {
 
-                    item {
-                        ConnectionRow(
-                            phoneName = "${connection.fName} ${connection.lName}",
-                            description = connection.description
-                        ) {
+                    Text(
+                        text = "Please Enable Location and Wifi\nAnd Disable Hotspot",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary.copy(0.66f),
+                        textAlign = TextAlign.Center
+                    )
+                } else if (state.connections.isEmpty()) {
+
+                    Text(
+                        text = "No Device(s) Found",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary.copy(0.66f)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        state = rememberLazyListState()
+                    ) {
+                        state.connections.forEach { connection ->
+
+                            item {
+                                ConnectionRow(
+                                    phoneName = "${connection.fName} ${connection.lName}",
+                                    description = connection.description
+                                ) {
 
 //                            onEvent(ConnectionsEvent.ShowPrompt(connection))
-                            userChatOnEvent(UserChatEvent.TryToConnect(connection))
-                            onEvent(ConnectionsEvent.ConnectToDevice(connection))
-                        }
-                        HorizontalDivider(
-                            modifier = Modifier.fillMaxWidth(0.5f),
-                            color = MaterialTheme.colorScheme.primary.copy(0.5f)
-                        )
-                    }
-                }
-
-                if(state.connections.isEmpty()){
-                    item {
-                        Box(modifier = Modifier.fillMaxSize().padding(top = 12.dp), contentAlignment = Alignment.Center) {
-                            Text(text = "No Device(s) Found", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary.copy(0.66f))
+                                    userChatOnEvent(UserChatEvent.TryToConnect(connection))
+                                    onEvent(ConnectionsEvent.ConnectToDevice(connection))
+                                }
+                                HorizontalDivider(
+                                    modifier = Modifier.fillMaxWidth(0.5f),
+                                    color = MaterialTheme.colorScheme.primary.copy(0.5f)
+                                )
+                            }
                         }
                     }
                 }
