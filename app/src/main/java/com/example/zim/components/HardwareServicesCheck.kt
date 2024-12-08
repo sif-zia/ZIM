@@ -29,49 +29,69 @@ fun hardwareServicesCheck(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (!protocolState.isLocationEnabled || !protocolState.isWifiEnabled) {
-            if (!protocolState.isLocationEnabled) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("Location is Disabled")
-                    Text(
-                        text = "Enable",
-                        modifier = Modifier
-                            .clickable { protocolViewModel.onEvent(ProtocolEvent.LaunchEnableLocation) }
-                            .border(
-                                2.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(0.66f),
-                                shape = RoundedCornerShape(25),
-                            )
-                            .padding(6.dp),
-                        fontSize = 16.sp
-                    )
-                }
-            }
-            if (!protocolState.isWifiEnabled) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Wifi is Disabled")
-                    Text(
-                        text = "Enable",
-                        modifier = Modifier
-                            .clickable { protocolViewModel.onEvent(ProtocolEvent.LaunchEnableWifi) }
-                            .border(
-                                2.dp,
-                                color = MaterialTheme.colorScheme.primary.copy(0.66f),
-                                shape = RoundedCornerShape(25),
-                            )
-                            .padding(6.dp),
-                        fontSize = 16.sp
-                    )
-                }
+
+        if (!protocolState.isLocationEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Location is Disabled")
+                Text(
+                    text = "Enable",
+                    modifier = Modifier
+                        .clickable { protocolViewModel.onEvent(ProtocolEvent.LaunchEnableLocation) }
+                        .border(
+                            2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(0.66f),
+                            shape = RoundedCornerShape(25),
+                        )
+                        .padding(6.dp),
+                    fontSize = 16.sp
+                )
             }
         }
+        if (!protocolState.isWifiEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Wifi is Disabled")
+                Text(
+                    text = "Enable",
+                    modifier = Modifier
+                        .clickable { protocolViewModel.onEvent(ProtocolEvent.LaunchEnableWifi) }
+                        .border(
+                            2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(0.66f),
+                            shape = RoundedCornerShape(25),
+                        )
+                        .padding(6.dp),
+                    fontSize = 16.sp
+                )
+            }
+        }
+        if (protocolState.isHotspotEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Hotspot is Enabled")
+                Text(
+                    text = "Disable",
+                    modifier = Modifier
+                        .clickable { protocolViewModel.onEvent(ProtocolEvent.LaunchEnableHotspot) }
+                        .border(
+                            2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(0.66f),
+                            shape = RoundedCornerShape(25),
+                        )
+                        .padding(6.dp),
+                    fontSize = 16.sp
+                )
+            }
+        }
+
     }
 
-    return protocolState.isLocationEnabled && protocolState.isWifiEnabled
+    return protocolState.isLocationEnabled && protocolState.isWifiEnabled && !protocolState.isHotspotEnabled
 }

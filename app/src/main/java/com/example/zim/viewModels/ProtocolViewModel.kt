@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,7 +33,12 @@ class ProtocolViewModel @Inject constructor(
     )
 
     init {
-        _state.update { it.copy(isLocationEnabled = (application.getSystemService(Context.LOCATION_SERVICE) as LocationManager).isLocationEnabled) }
+        _state.update {
+            it.copy(
+                isLocationEnabled = isLocationEnabled(),
+                isHotspotEnabled = isHotspotEnabled(),
+            )
+        }
     }
 
     fun onEvent(event: ProtocolEvent) {
@@ -52,6 +59,14 @@ class ProtocolViewModel @Inject constructor(
                 _state.update { it.copy(isWifiEnabled = false) }
             }
 
+            is ProtocolEvent.HotspotEnabled -> {
+                _state.update { it.copy(isHotspotEnabled = true) }
+            }
+
+            is ProtocolEvent.HotspotDisabled -> {
+                _state.update { it.copy(isHotspotEnabled = false) }
+            }
+
             is ProtocolEvent.LaunchEnableLocation -> {
                 promptEnableLocation()
             }
@@ -59,18 +74,47 @@ class ProtocolViewModel @Inject constructor(
             is ProtocolEvent.LaunchEnableWifi -> {
                 promptEnableWifi()
             }
+
+            is ProtocolEvent.LaunchEnableHotspot -> {
+                promptEnableHotspot()
+            }
         }
     }
 
-    fun promptEnableLocation() {
+    private fun promptEnableLocation() {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         application.startActivity(intent)
     }
 
-    fun promptEnableWifi() {
+    private fun promptEnableWifi() {
         val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         application.startActivity(intent)
     }
+
+    private fun promptEnableHotspot() {
+        val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        application.startActivity(intent)
+    }
+
+    private fun isHotspotEnabled(): Boolean {
+        return try {
+            val wifiManager = application.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val method = wifiManager.javaClass.getDeclaredMethod("isWifiApEnabled")
+            method.isAccessible = true
+            method.invoke(wifiManager) as Boolean || wifiManager.isWifiPasspointEnabled
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
 }

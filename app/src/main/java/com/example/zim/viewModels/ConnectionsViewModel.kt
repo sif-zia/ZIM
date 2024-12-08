@@ -50,7 +50,7 @@ class ConnectionsViewModel @Inject constructor(
     )
 
     init {
-        connectToUsers()
+//        connectToUsers()
     }
 
     @SuppressLint("MissingPermission")

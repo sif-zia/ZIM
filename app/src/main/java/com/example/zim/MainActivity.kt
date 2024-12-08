@@ -38,6 +38,8 @@ import com.example.zim.wifiP2P.WifiP2pListener
 import dagger.hilt.android.AndroidEntryPoint
 import java.net.InetAddress
 
+val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), WifiP2pListener {
     private val signUpViewModel: SignUpViewModel by viewModels()
@@ -102,6 +104,7 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
             addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
+            addAction(WIFI_AP_STATE_CHANGED)
         }
 
         broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel)

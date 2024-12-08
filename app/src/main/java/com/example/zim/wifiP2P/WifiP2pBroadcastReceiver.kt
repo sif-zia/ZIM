@@ -4,15 +4,15 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.net.NetworkInfo
+import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.zim.WIFI_AP_STATE_CHANGED
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.wifiP2P.WifiP2pListener
 import javax.inject.Inject
+
 
 class WifiP2pBroadcastReceiver @Inject constructor(
     private val wifiP2pManager: WifiP2pManager,
@@ -24,7 +24,18 @@ class WifiP2pBroadcastReceiver @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
+
         when (intent.action) {
+            WIFI_AP_STATE_CHANGED -> {
+                val state = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, 0)
+
+                if (WifiManager.WIFI_STATE_ENABLED == state % 10) {
+                    protocolViewModel.onEvent(ProtocolEvent.HotspotEnabled)
+                } else {
+                    protocolViewModel.onEvent(ProtocolEvent.HotspotDisabled)
+                }
+            }
+
             LocationManager.PROVIDERS_CHANGED_ACTION -> {
                 // Location provider has changed
                 val isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
