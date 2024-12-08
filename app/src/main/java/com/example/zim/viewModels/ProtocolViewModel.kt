@@ -104,7 +104,7 @@ class ProtocolViewModel @Inject constructor(
             val wifiManager = application.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val method = wifiManager.javaClass.getDeclaredMethod("isWifiApEnabled")
             method.isAccessible = true
-            method.invoke(wifiManager) as Boolean || wifiManager.isWifiPasspointEnabled
+            method.invoke(wifiManager) as Boolean
         } catch (e: Exception) {
             e.printStackTrace()
             false

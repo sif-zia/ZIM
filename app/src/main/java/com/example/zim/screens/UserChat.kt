@@ -45,7 +45,7 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
     val lazyListState = rememberLazyListState()
 
     onEvent(UserChatEvent.ReadAllMessages(userId))
-    onEvent(UserChatEvent.ConnectToUser(userId))
+//    onEvent(UserChatEvent.ConnectToUser(userId))
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
