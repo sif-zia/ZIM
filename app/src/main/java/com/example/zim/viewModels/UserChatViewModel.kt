@@ -151,7 +151,15 @@ class UserChatViewModel @Inject constructor(
                 if (isProtocolRunning()) {
                     protocolStep(message)
                 } else {
-                    _state.update { it.copy(messages = it.messages + ChatBox.ReceivedMessage(message, LocalTime.now(), LocalDate.now())) }
+                    _state.update {
+                        it.copy(
+                            messages = it.messages + ChatBox.ReceivedMessage(
+                                message,
+                                LocalTime.now(),
+                                LocalDate.now()
+                            )
+                        )
+                    }
                     insertReceivedMessage(message)
                 }
             }
@@ -175,7 +183,15 @@ class UserChatViewModel @Inject constructor(
     private fun sendMessage(message: String, isProtocolMessage: Boolean = false) {
         viewModelScope.launch {
             if (!isProtocolMessage) {
-                _state.update { it.copy(messages = it.messages + ChatBox.SentMessage(message, LocalTime.now(), LocalDate.now())) }
+                _state.update {
+                    it.copy(
+                        messages = it.messages + ChatBox.SentMessage(
+                            message,
+                            LocalTime.now(),
+                            LocalDate.now()
+                        )
+                    )
+                }
                 insertSentMessage(message)
             }
             socketRepository.sendMessage(message)
@@ -310,7 +326,13 @@ class UserChatViewModel @Inject constructor(
                     val deviceName: String = data.substringAfter("8: ")
                     if (deviceName != "null" && deviceName != "")
                         viewModelScope.launch {
-                            userDao.setCurrUserDeviceName(deviceName)
+                            _state.update {
+                                it.copy(
+                                    connectionMetadata = it.connectionMetadata.copy(
+                                        deviceName = deviceName
+                                    )
+                                )
+                            }
                         }
                     incProtocolNumber()
                     Log.d("Messages2", "8) Received Device Name")
@@ -318,9 +340,21 @@ class UserChatViewModel @Inject constructor(
                 }
 
                 9 -> { // Send Device Name
-                    sendMessage("9: ${_state.value.connectionMetadata.deviceName}", true)
-                    incProtocolNumber()
-                    Log.d("Messages2", "9) Sent Device Name")
+                    viewModelScope.launch {
+                        val deviceName = userDao.getCurrentUser()?.users?.deviceName ?: ""
+                        if (deviceName == "") {
+                            crashConnection()
+                            Toast.makeText(
+                                application,
+                                "Try Restarting Wifi",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@launch
+                        }
+                        sendMessage("9: $deviceName", true)
+                        incProtocolNumber()
+                        Log.d("Messages2", "9) Sent Device Name")
+                    }
                 }
 
                 10 -> { // Receive Goodbye
@@ -467,16 +501,34 @@ class UserChatViewModel @Inject constructor(
                 }
 
                 8 -> { // Send Device Name
-                    sendMessage("8: ${_state.value.connectionMetadata.deviceName}", true)
-                    incProtocolNumber()
-                    Log.d("Messages2", "8) Sent Device Name")
+                    viewModelScope.launch {
+                        val deviceName = userDao.getCurrentUser()?.users?.deviceName ?: ""
+                        if (deviceName == "") {
+                            crashConnection()
+                            Toast.makeText(
+                                application,
+                                "Try Restarting Wifi",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@launch
+                        }
+                        sendMessage("8: $deviceName", true)
+                        incProtocolNumber()
+                        Log.d("Messages2", "8) Sent Device Name")
+                    }
                 }
 
                 9 -> { // Receive Device Name
                     val deviceName: String = data.substringAfter("9: ")
                     if (deviceName != "null" && deviceName != "")
                         viewModelScope.launch {
-                            userDao.setCurrUserDeviceName(deviceName)
+                            _state.update {
+                                it.copy(
+                                    connectionMetadata = it.connectionMetadata.copy(
+                                        deviceName = deviceName
+                                    )
+                                )
+                            }
                         }
                     incProtocolNumber()
                     Log.d("Messages2", "9) Received Device Name")
