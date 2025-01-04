@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.SignUpEvent
 import com.example.zim.events.UserChatEvent
 import com.example.zim.navigation.NavGraph
@@ -141,7 +142,12 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
     }
 
     override fun onThisDeviceChanged(device: WifiP2pDevice?) {
-//        TODO("Handle device change")
+        val deviceName: String? = device?.deviceName
+
+        deviceName?.let {
+            protocolViewModel.onEvent(ProtocolEvent.ChangeMyDeviceName(deviceName))
+            Toast.makeText(application, "Device Name: $deviceName", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onResume() {

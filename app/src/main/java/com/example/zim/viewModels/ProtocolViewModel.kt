@@ -9,6 +9,7 @@ import android.net.wifi.WifiManager
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.states.ProtocolState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,11 +18,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProtocolViewModel @Inject constructor(
-    private val application: Application
+    private val application: Application,
+    private val userDao: UserDao
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProtocolState())
@@ -77,6 +80,12 @@ class ProtocolViewModel @Inject constructor(
 
             is ProtocolEvent.LaunchEnableHotspot -> {
                 promptEnableHotspot()
+            }
+
+            is ProtocolEvent.ChangeMyDeviceName -> {
+                viewModelScope.launch {
+                    userDao.setCurrUserDeviceName(event.newDeviceName);
+                }
             }
         }
     }
