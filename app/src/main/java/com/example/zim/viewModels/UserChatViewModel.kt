@@ -131,17 +131,6 @@ class UserChatViewModel @Inject constructor(
                     }
                 }
             }
-
-            is UserChatEvent.TryToConnect -> {
-                _state.update {
-                    it.copy(
-                        connectionMetadata = it.connectionMetadata.copy(
-                            deviceName = event.connection.fName,
-                            deviceAddress = event.connection.deviceAddress
-                        )
-                    )
-                }
-            }
         }
     }
 

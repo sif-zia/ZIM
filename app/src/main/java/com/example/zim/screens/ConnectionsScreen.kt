@@ -143,7 +143,6 @@ fun ConnectionsScreen(
                                 ) {
 
 //                            onEvent(ConnectionsEvent.ShowPrompt(connection))
-                                    userChatOnEvent(UserChatEvent.TryToConnect(connection))
                                     onEvent(ConnectionsEvent.ConnectToDevice(connection))
                                 }
                                 HorizontalDivider(
