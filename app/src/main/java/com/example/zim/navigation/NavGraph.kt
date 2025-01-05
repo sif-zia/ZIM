@@ -42,6 +42,7 @@ import com.example.zim.events.UserChatEvent
 import com.example.zim.screens.AlertsScreen
 import com.example.zim.screens.ChatsScreen
 import com.example.zim.screens.ConnectionsScreen
+import com.example.zim.screens.FallDetectionScreen
 import com.example.zim.screens.GroupChat
 import com.example.zim.screens.NewGroupScreen
 import com.example.zim.screens.ProfileScreen
@@ -94,11 +95,13 @@ fun NavGraph(
         Navigation.Chats.route,
         Navigation.Connections.route,
         Navigation.Alerts.route,
+        Navigation.FallDetectionModel.route
     )
     val routesWithLogoRow: List<String> = listOf(
         Navigation.Chats.route,
         Navigation.Connections.route,
         Navigation.Alerts.route,
+        Navigation.FallDetectionModel.route
     )
 
 
@@ -253,6 +256,9 @@ fun NavGraph(
                     }
                     composable(Navigation.Profile.route) {
                         ProfileScreen()
+                    }
+                    composable(Navigation.FallDetectionModel.route){
+                        FallDetectionScreen(navController)
                     }
                 }
 

@@ -32,7 +32,13 @@ public interface DropDownMenus {
                         "Profile",
                         Icons.Filled.ManageAccounts,
                         route = Navigation.Profile.route
+                    ),
+                    DropDownMenuItem(
+                        "Fall Detection Model",
+                        Icons.Filled.ManageAccounts,
+                        route = Navigation.FallDetectionModel.route
                     )
+
                 )
             }
         }

@@ -11,7 +11,8 @@ enum class Screen {
     USER_CHAT,
     NEW_GROUP,
     PROFILE,
-    SETTINGS
+    SETTINGS,
+    FALLDETECTIONMODEL
 }
 
 sealed class Navigation(val route: String, val index: Int) {
@@ -24,6 +25,7 @@ sealed class Navigation(val route: String, val index: Int) {
     data object NewGroup : Navigation(Screen.NEW_GROUP.name, -1)
     data object Profile : Navigation(Screen.PROFILE.name, -1)
     data object Settings : Navigation(Screen.SETTINGS.name, -1)
+    data object FallDetectionModel:Navigation(Screen.FALLDETECTIONMODEL.name,-1)
 
     companion object {
         fun values() = listOf(
@@ -35,7 +37,8 @@ sealed class Navigation(val route: String, val index: Int) {
             GroupChat,
             NewGroup,
             Profile,
-            Settings
+            Settings,
+            FallDetectionModel
         )
     }
 }
