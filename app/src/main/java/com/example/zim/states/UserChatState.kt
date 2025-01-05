@@ -15,5 +15,8 @@ data class UserChatState (
     val amIHost: Boolean = false,
     val myData: ConnectionMetadata = ConnectionMetadata(),
     val peersInRange: Collection<WifiP2pDevice> = emptyList(),
-    val userId: Int = -1
+    val userId: Int = -1,
+    val uuid: String = "0",
+    val connectionStatuses: Map<String, Boolean> = emptyMap(),
+    val isNewConnection: Boolean = true,
 )

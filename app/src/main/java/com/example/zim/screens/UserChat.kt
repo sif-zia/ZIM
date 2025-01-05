@@ -4,12 +4,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +33,12 @@ import com.example.zim.helperclasses.ChatBox
 import com.example.zim.states.UserChatState
 
 @Composable
-fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState, navController: NavController) {
+fun UserChat(
+    userId: Int,
+    onEvent: (UserChatEvent) -> Unit,
+    state: UserChatState,
+    navController: NavController
+) {
     var message by remember {
         mutableStateOf("")
     }
@@ -58,27 +61,40 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
                 },
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            UserInfoRow(username = state.username, status = state.connected, userDp = state.dpUri, navController = navController)
-            LazyColumn(modifier = Modifier.fillMaxSize(),
-                state = lazyListState) {
-                state.messages.map { message ->
-                    when(message) {
-                        is ChatBox.DateChip -> item { DateChip(date = message.date)}
-                        is ChatBox.ReceivedMessage -> item { ReceivedChatBox(message)}
-                        is ChatBox.SentMessage ->  item {SentChatBox(message)}
-                    }
+            UserInfoRow(
+                username = state.username,
+                status = state.connected,
+                userDp = state.dpUri,
+                navController = navController
+            )
+            if (state.messages.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No messages yet",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(0.66f)
+                    )
                 }
-
-                if(state.messages.isEmpty()){
-                    item {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "No messages yet", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = lazyListState
+                ) {
+                    state.messages.map { message ->
+                        when (message) {
+                            is ChatBox.DateChip -> item { DateChip(date = message.date) }
+                            is ChatBox.ReceivedMessage -> item { ReceivedChatBox(message) }
+                            is ChatBox.SentMessage -> item { SentChatBox(message) }
                         }
                     }
-                }
 
-                item {
-                    Spacer(modifier = Modifier.imePadding())
+                    item {
+                        Spacer(modifier = Modifier.height(72.dp))
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.imePadding())
+                    }
                 }
             }
         }
@@ -96,8 +112,8 @@ fun UserChat(userId: Int, onEvent: (UserChatEvent) -> Unit, state: UserChatState
             }
         )
 
-        LaunchedEffect(message.length, hideKeyboard) {
-            lazyListState.animateScrollToItem(state.messages.size)
+        LaunchedEffect(state.messages.size, hideKeyboard) {
+            lazyListState.scrollToItem(state.messages.size + 2)
         }
     }
 }

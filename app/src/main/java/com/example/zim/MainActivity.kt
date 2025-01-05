@@ -146,7 +146,6 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
 
         deviceName?.let {
             protocolViewModel.onEvent(ProtocolEvent.ChangeMyDeviceName(deviceName))
-            Toast.makeText(application, "Device Name: $deviceName", Toast.LENGTH_SHORT).show()
         }
     }
 

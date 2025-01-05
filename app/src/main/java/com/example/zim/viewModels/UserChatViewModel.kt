@@ -2,7 +2,6 @@ package com.example.zim.viewModels
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.os.Build
@@ -22,9 +21,11 @@ import com.example.zim.helperclasses.ChatBox
 import com.example.zim.repositories.SocketRepository
 import com.example.zim.states.UserChatState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -46,9 +47,7 @@ class UserChatViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(UserChatState())
     val state: StateFlow<UserChatState> = _state.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
-        UserChatState()
+        viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000), UserChatState()
     )
 
     init {
@@ -66,16 +65,18 @@ class UserChatViewModel @Inject constructor(
                         it.copy(
                             username = "${user.fName} ${user.lName}",
                             dpUri = user.cover,
-                            userId = user.id
+                            userId = user.id,
+                            uuid = user.UUID,
+                            connected = _state.value.connectionStatuses[user.UUID] ?: false
                         )
                     }
-//                    if(_state.value.messages.isEmpty())
-//                        loadChats()
+                    loadChats()
                 }
             }
 
             is UserChatEvent.SendMessage -> {
-                sendMessage(event.message)
+                if(event.message.isNotEmpty())
+                    sendMessage(event.message)
             }
 
             is UserChatEvent.ReadAllMessages -> {
@@ -85,51 +86,7 @@ class UserChatViewModel @Inject constructor(
             }
 
             is UserChatEvent.ConnectToUser -> {
-                viewModelScope.launch {
-                    val user = userDao.getUserById(event.userId)
 
-                    val deviceName = user.deviceName
-
-                    Log.d("Messages2", "Device Name: $deviceName")
-
-                    if (deviceName != null) {
-                        wifiP2pManager?.requestPeers(channel) { peers ->
-                            peers.deviceList.forEach { peer ->
-                                Log.d("Messages2", "Peer Device Name: ${peer.deviceName}")
-                                if (peer.deviceName == deviceName) {
-                                    val config = WifiP2pConfig()
-                                    config.deviceAddress = peer.deviceAddress
-                                    Log.d("Messages2", "Connecting to Existing Connection")
-                                    wifiP2pManager?.connect(
-                                        channel,
-                                        config,
-                                        object : WifiP2pManager.ActionListener {
-                                            override fun onSuccess() {
-                                                Log.d("Messages2", "Existing Connection Made")
-                                                _state.update {
-                                                    it.copy(
-                                                        connectionMetadata = it.connectionMetadata.copy(
-                                                            fName = user.fName,
-                                                            lName = user.lName,
-                                                            deviceName = deviceName,
-                                                            UUID = user.UUID
-                                                        )
-                                                    )
-                                                }
-                                            }
-
-                                            override fun onFailure(reason: Int) {
-                                                Log.d(
-                                                    "Messages2",
-                                                    "Could Not Connect to Existing Connection"
-                                                )
-                                            }
-                                        })
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
@@ -138,34 +95,33 @@ class UserChatViewModel @Inject constructor(
         viewModelScope.launch {
             socketRepository.messages.collect { message ->
                 if (isProtocolRunning()) {
-                    protocolStep(message)
+                    protocolStep(message.second)
                 } else {
                     _state.update {
                         it.copy(
                             messages = it.messages + ChatBox.ReceivedMessage(
-                                message,
-                                LocalTime.now(),
-                                LocalDate.now()
+                                message.second, LocalTime.now(), LocalDate.now()
                             )
                         )
                     }
-                    insertReceivedMessage(message)
+                    insertReceivedMessage(_state.value.uuid to message.second)
+                    loadChats()
                 }
             }
         }
     }
 
-    fun startServer(port: Int) {
+    fun startServer(port: Int, uuid: String = "0") {
         viewModelScope.launch {
             loadMyData()
-            socketRepository.startServer(port)
+            socketRepository.startServer(uuid, port)
         }
     }
 
-    fun connectToServer(ip: String, port: Int) {
+    fun connectToServer(ip: String, port: Int, uuid: String = "0") {
         viewModelScope.launch {
             loadMyData()
-            socketRepository.connectToServer(ip, port)
+            socketRepository.connectToServer(uuid, ip, port)
         }
     }
 
@@ -175,22 +131,23 @@ class UserChatViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         messages = it.messages + ChatBox.SentMessage(
-                            message,
-                            LocalTime.now(),
-                            LocalDate.now()
+                            message, LocalTime.now(), LocalDate.now()
                         )
                     )
                 }
-                insertSentMessage(message)
+                insertSentMessage(_state.value.uuid to message)
+                socketRepository.sendMessage(_state.value.uuid, message)
+                loadChats()
+            } else {
+                socketRepository.sendMessage("0", message)
             }
-            socketRepository.sendMessage(message)
         }
     }
 
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch {
-            socketRepository.closeConnection() // Clean up resources
+            socketRepository.closeAll() // Clean up resources
         }
     }
 
@@ -222,9 +179,7 @@ class UserChatViewModel @Inject constructor(
                     val UUID = data.substringAfter("2: ")
                     if (UUID.length != 36) {
                         Toast.makeText(
-                            application,
-                            "Invalid UUID",
-                            Toast.LENGTH_SHORT
+                            application, "Invalid UUID", Toast.LENGTH_SHORT
                         ).show()
                         crashConnection()
                         return
@@ -233,18 +188,32 @@ class UserChatViewModel @Inject constructor(
                         val UUIDs = userDao.getUUIDs()
                         if (UUIDs.isNotEmpty() && UUID in UUIDs) {
                             Toast.makeText(
-                                application,
-                                "Connection Already Exist",
-                                Toast.LENGTH_SHORT
+                                application, "Connection Already Exist", Toast.LENGTH_SHORT
                             ).show()
-                            crashConnection()
+
+                            // Connect with chat connection
+                            val ip = "192.168.49.1"
+                            val uuid = _state.value.myData.UUID.toString()
+                            val port = uuid.substring(0, 4).toInt(16)
+                            Toast.makeText(
+                                application, "Connecting to new $port Port", Toast.LENGTH_SHORT
+                            ).show()
+                            incProtocolNumber()
+                            protocolStep()
+                            viewModelScope.launch {
+                                delay(1000)
+                                connectToServer(ip, port, UUID)
+                            }
+
+                            // Close Previous Connection
+                            closeDefaultConnection()
                         } else {
                             incProtocolNumber()
                             _state.update {
                                 it.copy(
                                     connectionMetadata = it.connectionMetadata.copy(
                                         UUID = UUID
-                                    )
+                                    ), isNewConnection = true
                                 )
                             }
                             Log.d("Messages2", "2) Received UUID")
@@ -313,16 +282,15 @@ class UserChatViewModel @Inject constructor(
 
                 8 -> { // Receive Device Name
                     val deviceName: String = data.substringAfter("8: ")
-                    if (deviceName != "null" && deviceName != "")
-                        viewModelScope.launch {
-                            _state.update {
-                                it.copy(
-                                    connectionMetadata = it.connectionMetadata.copy(
-                                        deviceName = deviceName
-                                    )
+                    if (deviceName != "null" && deviceName != "") viewModelScope.launch {
+                        _state.update {
+                            it.copy(
+                                connectionMetadata = it.connectionMetadata.copy(
+                                    deviceName = deviceName
                                 )
-                            }
+                            )
                         }
+                    }
                     incProtocolNumber()
                     Log.d("Messages2", "8) Received Device Name")
                     protocolStep()
@@ -334,9 +302,7 @@ class UserChatViewModel @Inject constructor(
                         if (deviceName == "") {
                             crashConnection()
                             Toast.makeText(
-                                application,
-                                "Try Restarting Wifi",
-                                Toast.LENGTH_SHORT
+                                application, "Try Restarting Wifi", Toast.LENGTH_SHORT
                             ).show()
                             return@launch
                         }
@@ -365,10 +331,9 @@ class UserChatViewModel @Inject constructor(
                             )
                         }
                         Toast.makeText(
-                            application,
-                            "Connection Successful",
-                            Toast.LENGTH_SHORT
+                            application, "Connection Successful", Toast.LENGTH_SHORT
                         ).show()
+                        closeDefaultConnection()
                     } else {
                         crashConnection()
                     }
@@ -406,9 +371,7 @@ class UserChatViewModel @Inject constructor(
                     val UUID = data.substringAfter("3: ")
                     if (UUID.length != 36) {
                         Toast.makeText(
-                            application,
-                            "Invalid UUID",
-                            Toast.LENGTH_SHORT
+                            application, "Invalid UUID", Toast.LENGTH_SHORT
                         ).show()
                         crashConnection()
                         return
@@ -417,17 +380,24 @@ class UserChatViewModel @Inject constructor(
                         val UUIDs = userDao.getUUIDs()
                         if (UUID in UUIDs) {
                             Toast.makeText(
-                                application,
-                                "Connection Already Exist",
-                                Toast.LENGTH_SHORT
+                                application, "Connection Already Exist", Toast.LENGTH_SHORT
                             ).show()
-                            crashConnection()
+
+                            // Close Previous Connection
+                            closeDefaultConnection()
+
+                            // Start New Connection for Chat
+                            val port = UUID.substring(0, 4).toInt(16)
+                            Toast.makeText(
+                                application, "Starting a new $port Port", Toast.LENGTH_SHORT
+                            ).show()
+                            startServer(port, UUID)
                         } else {
                             _state.update {
                                 it.copy(
                                     connectionMetadata = it.connectionMetadata.copy(
                                         UUID = UUID
-                                    )
+                                    ), isNewConnection = true
                                 )
                             }
                             incProtocolNumber()
@@ -495,9 +465,7 @@ class UserChatViewModel @Inject constructor(
                         if (deviceName == "") {
                             crashConnection()
                             Toast.makeText(
-                                application,
-                                "Try Restarting Wifi",
-                                Toast.LENGTH_SHORT
+                                application, "Try Restarting Wifi", Toast.LENGTH_SHORT
                             ).show()
                             return@launch
                         }
@@ -509,16 +477,15 @@ class UserChatViewModel @Inject constructor(
 
                 9 -> { // Receive Device Name
                     val deviceName: String = data.substringAfter("9: ")
-                    if (deviceName != "null" && deviceName != "")
-                        viewModelScope.launch {
-                            _state.update {
-                                it.copy(
-                                    connectionMetadata = it.connectionMetadata.copy(
-                                        deviceName = deviceName
-                                    )
+                    if (deviceName != "null" && deviceName != "") viewModelScope.launch {
+                        _state.update {
+                            it.copy(
+                                connectionMetadata = it.connectionMetadata.copy(
+                                    deviceName = deviceName
                                 )
-                            }
+                            )
                         }
+                    }
                     incProtocolNumber()
                     Log.d("Messages2", "9) Received Device Name")
                     protocolStep()
@@ -535,18 +502,14 @@ class UserChatViewModel @Inject constructor(
                         val deviceName = _state.value.connectionMetadata.deviceName ?: ""
                         userDao.insertUser(
                             Users(
-                                fName = fName,
-                                lName = lName,
-                                UUID = UUID,
-                                deviceName = deviceName
+                                fName = fName, lName = lName, UUID = UUID, deviceName = deviceName
                             )
                         )
                     }
                     Toast.makeText(
-                        application,
-                        "Connection Successful",
-                        Toast.LENGTH_SHORT
+                        application, "Connection Successful", Toast.LENGTH_SHORT
                     ).show()
+                    closeDefaultConnection()
                 }
 
                 else -> {
@@ -560,15 +523,15 @@ class UserChatViewModel @Inject constructor(
         _state.update { it.copy(protocolStepNumber = it.protocolStepNumber + 1) }
     }
 
-    private fun crashConnection() {
+    private fun crashConnection(uuid: String = "0") {
         Toast.makeText(application, "Connection Failed", Toast.LENGTH_SHORT).show()
         _state.update { it.copy(protocolStepNumber = -1) }
         viewModelScope.launch {
-            socketRepository.closeConnection()
+            socketRepository.closeConnection(uuid)
         }
     }
 
-    fun loadMyData() {
+    private fun loadMyData() {
         viewModelScope.launch {
             val data = userDao.getMyData()
             data?.let {
@@ -581,65 +544,78 @@ class UserChatViewModel @Inject constructor(
 
     private fun startProtocol() {
         _state.update { it.copy(protocolStepNumber = 0) }
-        protocolStep()
+
+        if (_state.value.amIHost) protocolStep()
     }
 
     private fun observeConnectionStatus() {
         viewModelScope.launch {
             socketRepository.connectionStatus.collect { connectionStatus ->
-                when (connectionStatus) {
-                    true -> {
-                        if (_state.value.amIHost && !isMetadataLoaded())
+                if (connectionStatus.first == "0") {
+                    when (connectionStatus.second) {
+                        true -> {
                             startProtocol()
-                        _state.update { it.copy(connected = true) }
-                        Log.d("Messages2", "Connected")
-                    }
+                            _state.update { it.copy(connected = true) }
+                            Log.d("Messages2", "Connected to ${connectionStatus.first}")
+                        }
 
-                    false -> {
-                        _state.update { it.copy(connected = false) }
-                        Log.d("Messages2", "Disconnected")
+                        false -> {
+                            _state.update { it.copy(connected = false) }
+                            Log.d("Messages2", "Disconnected from ${connectionStatus.first}")
+                        }
+                    }
+                } else {
+                    when (connectionStatus.second) {
+                        true -> {
+                            Log.d("Messages2", "Connected to ${connectionStatus.first}")
+                        }
+
+                        false -> {
+                            Log.d("Messages2", "Disconnected from ${connectionStatus.first}")
+                        }
                     }
                 }
+                _state.update { it.copy(connectionStatuses = _state.value.connectionStatuses + connectionStatus) }
             }
         }
     }
 
-    private fun insertReceivedMessage(message: String) {
+    private fun insertReceivedMessage(message: Pair<String, String>) {
         viewModelScope.launch {
             val messageId = messageDao.insertMessage(
-                Messages(msg = message, isSent = false)
+                Messages(msg = message.second, isSent = false)
             )
-            _state.value.connectionMetadata.UUID?.let { uuid ->
-                userDao.getIdByUUID(uuid).let { userId ->
-                    messageDao.insertReceivedMessage(
-                        ReceivedMessages(
-                            receivedTime = LocalDateTime.now(),
-                            msgIDFK = messageId.toInt(),
-                            userIDFK = userId
-                        )
+
+            userDao.getIdByUUID(message.first).let { userId ->
+                messageDao.insertReceivedMessage(
+                    ReceivedMessages(
+                        receivedTime = LocalDateTime.now(),
+                        msgIDFK = messageId.toInt(),
+                        userIDFK = userId
                     )
-                }
+                )
             }
+
 //            loadChats()
         }
     }
 
-    private fun insertSentMessage(message: String) {
+    private fun insertSentMessage(message: Pair<String, String>) {
         viewModelScope.launch {
             val messageId = messageDao.insertMessage(
-                Messages(msg = message, isSent = true)
+                Messages(msg = message.second, isSent = true)
             )
-            _state.value.connectionMetadata.UUID?.let { uuid ->
-                userDao.getIdByUUID(uuid).let { userId ->
-                    messageDao.insertSentMessage(
-                        SentMessages(
-                            sentTime = LocalDateTime.now(),
-                            msgIDFK = messageId.toInt(),
-                            userIDFK = userId
-                        )
+
+            userDao.getIdByUUID(message.first).let { userId ->
+                messageDao.insertSentMessage(
+                    SentMessages(
+                        sentTime = LocalDateTime.now(),
+                        msgIDFK = messageId.toInt(),
+                        userIDFK = userId
                     )
-                }
+                )
             }
+
 //            loadChats()
         }
     }
@@ -649,84 +625,85 @@ class UserChatViewModel @Inject constructor(
         this.channel = channel
     }
 
-    private fun isMetadataLoaded() = _state.value.connectionMetadata.UUID != null
-
-    private fun loadChats() {
+    private fun closeDefaultConnection() {
         viewModelScope.launch {
-            val chatBoxList = mutableListOf<ChatBox>()
+            _state.update { it.copy(protocolStepNumber = -1, isNewConnection = false) }
+            socketRepository.closeConnection("0")
+            Toast.makeText(application, "Connection Closed", Toast.LENGTH_SHORT).show()
+            if (_state.value.amIHost) socketRepository.closeServer("0")
+        }
+    }
 
-            val userId = _state.value.userId
-            if (userId != -1) {
-                messageDao.getAllMessagesOfAUser(userId)
-                    .collect { chatContentList ->
-                        chatBoxList.clear()
-                        chatBoxList.addAll(
-                            chatContentList.map { chatContent ->
-                                if (chatContent.isReceived)
-                                    ChatBox.ReceivedMessage(
-                                        chatContent.message,
-                                        chatContent.time.toLocalTime(),
-                                        chatContent.time.toLocalDate()
-                                    )
-                                else
-                                    ChatBox.SentMessage(
-                                        chatContent.message,
-                                        chatContent.time.toLocalTime(),
-                                        chatContent.time.toLocalDate()
-                                    )
+    private suspend fun loadChats() {
+        val chatBoxList = mutableListOf<ChatBox>()
+
+        val userId = _state.value.userId
+        if (userId != -1) {
+            messageDao.getAllMessagesOfAUser(userId).collectLatest { chatContentList ->
+                chatBoxList.clear()
+                chatBoxList.addAll(chatContentList.map { chatContent ->
+                    if (chatContent.isReceived) ChatBox.ReceivedMessage(
+                        chatContent.message,
+                        chatContent.time.toLocalTime(),
+                        chatContent.time.toLocalDate()
+                    )
+                    else ChatBox.SentMessage(
+                        chatContent.message,
+                        chatContent.time.toLocalTime(),
+                        chatContent.time.toLocalDate()
+                    )
+                })
+
+                if (chatBoxList.isNotEmpty()) {
+                    val firstMessage = chatBoxList[0]
+                    if (firstMessage is ChatBox.SentMessage) chatBoxList.add(
+                        0,
+                        ChatBox.DateChip(firstMessage.date)
+                    )
+                    else if (firstMessage is ChatBox.ReceivedMessage) chatBoxList.add(
+                        0,
+                        ChatBox.DateChip(firstMessage.date)
+                    )
+
+                    for (index in 2..<chatBoxList.size) {
+                        val currMessage = chatBoxList[index]
+                        val prevMessage = chatBoxList[index - 1]
+
+                        if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.ReceivedMessage) {
+                            currMessage.isFirst = false
+                            if (currMessage.date.isAfter(prevMessage.date)) {
+                                chatBoxList.add(
+                                    index, ChatBox.DateChip(currMessage.date)
+                                )
                             }
-                        )
-
-                        if (chatBoxList.isNotEmpty()) {
-                            val firstMessage = chatBoxList[0]
-                            if (firstMessage is ChatBox.SentMessage)
-                                chatBoxList.add(0, ChatBox.DateChip(firstMessage.date))
-                            else if (firstMessage is ChatBox.ReceivedMessage)
-                                chatBoxList.add(0, ChatBox.DateChip(firstMessage.date))
-
-                            for (index in 2..<chatBoxList.size) {
-                                val currMessage = chatBoxList[index]
-                                val prevMessage = chatBoxList[index - 1]
-
-                                if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.ReceivedMessage) {
-                                    currMessage.isFirst = false
-                                    if (currMessage.date.isAfter(prevMessage.date)) {
-                                        chatBoxList.add(
-                                            index,
-                                            ChatBox.DateChip(currMessage.date)
-                                        )
-                                    }
-                                } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.SentMessage) {
-                                    currMessage.isFirst = false
-                                    if (currMessage.date.isAfter(prevMessage.date)) {
-                                        chatBoxList.add(
-                                            index,
-                                            ChatBox.DateChip(currMessage.date)
-                                        )
-                                    }
-                                } else if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.SentMessage) {
-                                    if (currMessage.date.isAfter(prevMessage.date)) {
-                                        chatBoxList.add(
-                                            index,
-                                            ChatBox.DateChip(currMessage.date)
-                                        )
-                                        currMessage.isFirst = false
-                                    }
-                                } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.ReceivedMessage) {
-                                    if (currMessage.date.isAfter(prevMessage.date)) {
-                                        chatBoxList.add(
-                                            index,
-                                            ChatBox.DateChip(currMessage.date)
-                                        )
-                                        currMessage.isFirst = false
-                                    }
-                                }
+                        } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.SentMessage) {
+                            currMessage.isFirst = false
+                            if (currMessage.date.isAfter(prevMessage.date)) {
+                                chatBoxList.add(
+                                    index, ChatBox.DateChip(currMessage.date)
+                                )
+                            }
+                        } else if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.SentMessage) {
+                            if (currMessage.date.isAfter(prevMessage.date)) {
+                                chatBoxList.add(
+                                    index, ChatBox.DateChip(currMessage.date)
+                                )
+                                currMessage.isFirst = false
+                            }
+                        } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.ReceivedMessage) {
+                            if (currMessage.date.isAfter(prevMessage.date)) {
+                                chatBoxList.add(
+                                    index, ChatBox.DateChip(currMessage.date)
+                                )
+                                currMessage.isFirst = false
                             }
                         }
-
-                        _state.update { it.copy(messages = chatBoxList) }
                     }
+                }
+
+                _state.update { it.copy(messages = chatBoxList) }
             }
         }
+
     }
 }
