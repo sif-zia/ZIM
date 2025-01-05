@@ -107,4 +107,8 @@ dependencies {
 
     // Material Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
+
+    //Fall detection
+    implementation ("com.microsoft.onnxruntime:onnxruntime-android:1.16.0")
+    implementation("org.apache.commons:commons-math3:3.6.1")
 }
