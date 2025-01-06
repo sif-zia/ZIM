@@ -138,11 +138,6 @@ class FallDetectionViewModel @Inject constructor(
             try {
                 val rawInput = (summarizeWindow(acc_window_x, acc_window_y, acc_window_z) + summarizeWindow(gyro_window_x, gyro_window_y, gyro_window_z) + summarizeWindow(ori_window_x, ori_window_y, ori_window_z)).toMutableList()
 
-                for(i in 0 until rawInput.size){
-                    rawInput[i] = (rawInput[i] - meanArray[i])/ stdArray[i]
-
-                }
-
                 // Standardize the input data
                 val standardizedInput = rawInput.mapIndexed { index, value ->
                     (value - meanArray[index]) / stdArray[index]
