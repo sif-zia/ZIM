@@ -70,7 +70,7 @@ class UserChatViewModel @Inject constructor(
                             connected = _state.value.connectionStatuses[user.UUID] ?: false
                         )
                     }
-                    loadChats()
+//                    loadChats()
                 }
             }
 
@@ -105,7 +105,7 @@ class UserChatViewModel @Inject constructor(
                         )
                     }
                     insertReceivedMessage(_state.value.uuid to message.second)
-                    loadChats()
+//                    loadChats()
                 }
             }
         }
@@ -137,7 +137,7 @@ class UserChatViewModel @Inject constructor(
                 }
                 insertSentMessage(_state.value.uuid to message)
                 socketRepository.sendMessage(_state.value.uuid, message)
-                loadChats()
+//                loadChats()
             } else {
                 socketRepository.sendMessage("0", message)
             }
@@ -333,6 +333,20 @@ class UserChatViewModel @Inject constructor(
                         Toast.makeText(
                             application, "Connection Successful", Toast.LENGTH_SHORT
                         ).show()
+
+                        val UUID = _state.value.connectionMetadata.UUID ?: ""
+                        val ip = "192.168.49.1"
+                        val uuid = _state.value.myData.UUID.toString()
+                        val port = uuid.substring(0, 4).toInt(16)
+                        Toast.makeText(
+                            application, "Connecting to new $port Port", Toast.LENGTH_SHORT
+                        ).show()
+                        viewModelScope.launch {
+                            delay(1000)
+                            connectToServer(ip, port, UUID)
+                        }
+
+                        // Close Previous Connection
                         closeDefaultConnection()
                     } else {
                         crashConnection()
@@ -509,7 +523,16 @@ class UserChatViewModel @Inject constructor(
                     Toast.makeText(
                         application, "Connection Successful", Toast.LENGTH_SHORT
                     ).show()
+                    // Close Previous Connection
                     closeDefaultConnection()
+
+                    // Start New Connection for Chat
+                    val UUID = _state.value.connectionMetadata.UUID ?: ""
+                    val port = UUID.substring(0, 4).toInt(16)
+                    Toast.makeText(
+                        application, "Starting a new $port Port", Toast.LENGTH_SHORT
+                    ).show()
+                    startServer(port, UUID)
                 }
 
                 else -> {
