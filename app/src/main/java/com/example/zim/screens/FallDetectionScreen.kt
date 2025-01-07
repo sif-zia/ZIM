@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 
 val predictionMap = mapOf(
     -1 to "Unknown",
-    0 to "BSC: Backward Sitting Chair Falling",
+    0 to "BSC: Backward Sitting Chair",
     1 to "CSI: Car Step In",
     2 to "CSO: Car Step Out",
     3 to "FKL: Forward Knees Lying Falling",
