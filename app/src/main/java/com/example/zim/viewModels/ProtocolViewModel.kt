@@ -4,29 +4,45 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
-import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.provider.Settings
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
+import com.example.zim.data.room.models.Messages
+import com.example.zim.data.room.models.ReceivedMessages
+import com.example.zim.data.room.models.SentMessages
+import com.example.zim.data.room.models.Users
 import com.example.zim.events.ProtocolEvent
+import com.example.zim.helperclasses.NewConnectionProtocol
+import com.example.zim.repositories.SocketService
 import com.example.zim.states.ProtocolState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.Socket
+import java.time.LocalDateTime
 import javax.inject.Inject
+import kotlin.coroutines.EmptyCoroutineContext
 
 @HiltViewModel
 class ProtocolViewModel @Inject constructor(
     private val application: Application,
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val messageDao: MessageDao,
+    private val socketService: SocketService,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(ProtocolState())
 
     val state: StateFlow<ProtocolState> = _state.stateIn(
@@ -36,38 +52,55 @@ class ProtocolViewModel @Inject constructor(
     )
 
     init {
-        _state.update {
-            it.copy(
-                isLocationEnabled = isLocationEnabled(),
-                isHotspotEnabled = isHotspotEnabled(),
-            )
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isLocationEnabled = isLocationEnabled(),
+                    isHotspotEnabled = isHotspotEnabled(),
+                )
+            }
         }
+
+        initNewConnectionProtocol()
+        observeSocketConnection()
     }
 
     fun onEvent(event: ProtocolEvent) {
         when (event) {
             is ProtocolEvent.LocationEnabled -> {
-                _state.update { it.copy(isLocationEnabled = true) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isLocationEnabled = true) }
+                }
             }
 
             is ProtocolEvent.LocationDisabled -> {
-                _state.update { it.copy(isLocationEnabled = false) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isLocationEnabled = false) }
+                }
             }
 
             is ProtocolEvent.WifiEnabled -> {
-                _state.update { it.copy(isWifiEnabled = true) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isWifiEnabled = true) }
+                }
             }
 
             is ProtocolEvent.WifiDisabled -> {
-                _state.update { it.copy(isWifiEnabled = false) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isWifiEnabled = false) }
+                }
             }
 
             is ProtocolEvent.HotspotEnabled -> {
-                _state.update { it.copy(isHotspotEnabled = true) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isHotspotEnabled = true) }
+                }
             }
 
             is ProtocolEvent.HotspotDisabled -> {
-                _state.update { it.copy(isHotspotEnabled = false) }
+                viewModelScope.launch {
+                    _state.update { it.copy(isHotspotEnabled = false) }
+                }
             }
 
             is ProtocolEvent.LaunchEnableLocation -> {
@@ -84,8 +117,41 @@ class ProtocolViewModel @Inject constructor(
 
             is ProtocolEvent.ChangeMyDeviceName -> {
                 viewModelScope.launch {
-                    userDao.setCurrUserDeviceName(event.newDeviceName);
+                    userDao.setCurrUserDeviceName(event.newDeviceName)
                 }
+            }
+
+            is ProtocolEvent.StartClient -> {
+                viewModelScope.launch {
+                    _state.update {
+                        it.copy(
+                            groupOwnerIp = event.groupOwnerIp ?: "192.168.49.1",
+                            amIGroupOwner = false
+                        )
+                    }
+                }
+                _state.value.newConnectionProtocol?.initUser(false)
+                connectToDefaultServer()
+            }
+
+            is ProtocolEvent.StartServer -> {
+                viewModelScope.launch {
+                    _state.update {
+                        it.copy(
+                            groupOwnerIp = event.groupOwnerIp ?: "192.168.49.1",
+                            amIGroupOwner = true
+                        )
+                    }
+                }
+                _state.value.newConnectionProtocol?.initUser(true)
+                startDefaultServer()
+            }
+
+            is ProtocolEvent.SendMessage -> {
+                if (event.message.isNotEmpty())
+                    viewModelScope.launch {
+                        sendMessage(event.id, event.message)
+                    }
             }
         }
     }
@@ -121,9 +187,258 @@ class ProtocolViewModel @Inject constructor(
     }
 
     private fun isLocationEnabled(): Boolean {
-        val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val locationManager =
+            application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    private fun initNewConnectionProtocol() {
+        viewModelScope.launch {
+            val crrUser = userDao.getCurrentUser()?.users
+            if (crrUser != null) {
+                val newConnectionProtocol =
+                    NewConnectionProtocol(
+                        crrUser,
+                        onProtocolStart = ::onProtocolStart,
+                        onProtocolEnd = ::onProtocolEnd,
+                        onProtocolError = ::onProtocolError,
+                        onExistingConnection = ::onExistingConnection,
+                        sendProtocolMessage = ::sendProtocolMessage
+                    )
+                viewModelScope.launch {
+                    _state.update {
+                        it.copy(newConnectionProtocol = newConnectionProtocol)
+                    }
+                }
+            }
+        }
+    }
+
+    fun onProtocolStart() {
+        viewModelScope.launch {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(application, "Protocol started", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+    }
+
+    fun onProtocolEnd(newUser: Users) {
+        viewModelScope.launch {
+            val id = userDao.insertUser(newUser)
+            if (id > 0) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        application,
+                        "Connection Successful",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        application,
+                        "Failed to save user",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            closeDefaultConnection()
+        }
+    }
+
+    fun onProtocolError(error: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(application, error, Toast.LENGTH_SHORT).show()
+            }
+        }
+        Log.d("Messages2", error)
+        closeDefaultConnection()
+    }
+
+    fun onExistingConnection(uuid: String) {
+        closeDefaultConnection()
+        if (_state.value.amIGroupOwner == true) {
+            openCustomServer(uuid)
+            Log.d("Messages2", "Connection already exists")
+            viewModelScope.launch {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Connection already exists", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        } else {
+            connectToCustomServer(uuid)
+            Log.d("Messages2", "Connection already exists")
+            viewModelScope.launch {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Connection already exists", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
+    }
+
+    fun sendProtocolMessage(message: String) {
+        sendDefaultMessage(message)
+    }
+
+    private fun insertReceivedMessage(uuid: String, message: String) {
+        viewModelScope.launch {
+            val msgId = messageDao.insertMessage(Messages(msg = message, isSent = false))
+            val userId = userDao.getIdByUUID(uuid)
+
+            if (msgId > 0 && userId > 0) {
+                messageDao.insertReceivedMessage(
+                    ReceivedMessages(
+                        receivedTime = LocalDateTime.now(),
+                        userIDFK = userId,
+                        msgIDFK = msgId.toInt()
+                    )
+                )
+            }
+        }
+    }
+
+    private fun observeSocketConnection() {
+        viewModelScope.launch {
+            socketService.connectionStatus.collect { (uuid, connected) ->
+
+                _state.update {
+                    it.copy(
+                        connectionStatues = it.connectionStatues + (uuid to connected)
+                    )
+                }
+
+                if (_state.value.amIGroupOwner == true) {
+                    if (uuid == "0" && connected) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(application, "Client connected", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                        startProtocol()
+                    } else if (uuid != "0" && connected) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                application,
+                                "Custom Client connected with $uuid",
+                                Toast.LENGTH_SHORT
+                            )
+                                .show()
+                        }
+                    }
+                } else if (_state.value.amIGroupOwner == false) {
+                    if (uuid == "0" && connected) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(application, "Connected to server", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                        startProtocol()
+                    } else if (uuid != "0" && connected) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                application,
+                                "Connected to custom server with $uuid",
+                                Toast.LENGTH_SHORT
+                            )
+                                .show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun onProtocolMessageReceived(uuid: String, message: String) {
+            _state.value.newConnectionProtocol?.processStep(message)
+    }
+
+    private fun onCustomMessageReceived(uuid: String, message: String) {
+        insertReceivedMessage(uuid, message)
+    }
+
+    private fun startDefaultServer() {
+        viewModelScope.launch {
+            socketService.start(SocketService.Mode.Server, "0", null, 8888, ::onProtocolMessageReceived)
+        }
+    }
+
+    private fun connectToDefaultServer() {
+        viewModelScope.launch {
+            socketService.start(SocketService.Mode.Client, "0", _state.value.groupOwnerIp, 8888, ::onProtocolMessageReceived)
+        }
+    }
+
+    private fun closeDefaultConnection() {
+        viewModelScope.launch {
+            if(_state.value.amIGroupOwner == true) {
+                socketService.disconnect("0")
+            } else {
+                socketService.disconnect("0")
+            }
+        }
+    }
+
+    private fun sendDefaultMessage(message: String) {
+        viewModelScope.launch {
+            socketService.sendMessage("0", message)
+        }
+    }
+
+    private fun startProtocol() {
+        viewModelScope.launch {
+            val uuids = userDao.getUUIDs()
+            _state.value.newConnectionProtocol?.startProtocol(uuids)
+        }
+    }
+
+    private fun openCustomServer(uuid: String) {
+        viewModelScope.launch {
+            val port: Int = uuid.substring(0, 4).toInt(16)
+            socketService.start(SocketService.Mode.Server, uuid, null, port, ::onCustomMessageReceived)
+        }
+    }
+
+    private fun connectToCustomServer(uuid: String) {
+        viewModelScope.launch {
+            delay(500)
+            val port = _state.value.newConnectionProtocol?.currentUser?.UUID?.substring(0, 4)?.toInt(16) ?: 8888
+            socketService.start(SocketService.Mode.Client, uuid, _state.value.groupOwnerIp, port, ::onCustomMessageReceived)
+        }
+    }
+
+    private fun closeCustomConnection(uuid: String) {
+        viewModelScope.launch {
+            socketService.disconnect(uuid)
+        }
+    }
+
+    private fun sendMessage(id: Int, message: String) {
+        viewModelScope.launch {
+            val user = userDao.getUserById(id)
+            socketService.sendMessage(user.UUID, message)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(application, "Sending message to ${user.UUID}", Toast.LENGTH_SHORT)
+                    .show()
+            }
+            insertSentMessage(id, message)
+        }
+    }
+
+    private suspend fun insertSentMessage(userId: Int, message: String) {
+        val msgId = messageDao.insertMessage(Messages(msg = message, isSent = true))
+
+        if (msgId > 0 && userId > 0) {
+            messageDao.insertSentMessage(
+                SentMessages(
+                    sentTime = LocalDateTime.now(),
+                    userIDFK = userId,
+                    msgIDFK = msgId.toInt()
+                )
+            )
+        }
     }
 
 }

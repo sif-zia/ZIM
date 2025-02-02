@@ -18,7 +18,7 @@ data class Users(
     val deviceName: String? = null,
     val deviceAddress: String? = null,
     val fName: String,  // Any
-    val UUID: String,
+    var UUID: String,
     val lName: String? = null, // Any
     val DOB: LocalDate?=null,
     val cover: Uri? = null, // URI

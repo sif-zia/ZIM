@@ -6,11 +6,15 @@ import android.location.LocationManager
 import android.net.NetworkInfo
 import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
+import android.os.Build
+import android.widget.Toast
 import com.example.zim.WIFI_AP_STATE_CHANGED
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.wifiP2P.WifiP2pListener
+import java.net.InetAddress
 import javax.inject.Inject
 
 
@@ -19,7 +23,8 @@ class WifiP2pBroadcastReceiver @Inject constructor(
     private val channel: WifiP2pManager.Channel,
     private val locationManager: LocationManager,
     private val listener: WifiP2pListener, // A custom interface for event handling
-    private val protocolViewModel: ProtocolViewModel
+    private val protocolViewModel: ProtocolViewModel,
+    private val context: Context
 ) : BroadcastReceiver() {
 
     @SuppressLint("MissingPermission")
@@ -64,11 +69,42 @@ class WifiP2pBroadcastReceiver @Inject constructor(
             }
             WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
                 // Connection state has changed
-                val networkInfo = intent.getParcelableExtra<NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
+                val networkInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO, NetworkInfo::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO)
+                }
+
+                @Suppress("DEPRECATION")
                 if (networkInfo?.isConnected == true) {
-                    // We are connected, request connection info
+                    // First get connection info
                     wifiP2pManager.requestConnectionInfo(channel) { info ->
-                        listener.onConnectionInfoAvailable(info)
+                        val groupOwnerAddress: InetAddress = info.groupOwnerAddress
+
+                        // Then request group info to get device names
+                        wifiP2pManager.requestGroupInfo(channel) { group ->
+                            val connectedDevices = group?.clientList ?: emptyList()
+                            val deviceNames = connectedDevices.map { it.deviceName }
+                            val deviceAddresses = connectedDevices.map { it.deviceAddress }
+
+                            if(info.groupFormed && info.isGroupOwner) {
+                                // Host Device
+                                protocolViewModel.onEvent(ProtocolEvent.StartServer(
+                                    deviceName = deviceNames.firstOrNull(),
+                                    deviceAddress = deviceAddresses.firstOrNull(),
+                                    groupOwnerIp = groupOwnerAddress.hostAddress
+                                ))
+                            } else if(info.groupFormed) {
+                                // Client Device
+                                protocolViewModel.onEvent(ProtocolEvent.StartClient(
+                                    deviceName = deviceNames.firstOrNull(),
+                                    deviceAddress = deviceAddresses.firstOrNull(),
+                                    groupOwnerIp = groupOwnerAddress.hostAddress
+                                ))
+                            }
+                        }
                     }
                 } else {
                     listener.onDisconnected()

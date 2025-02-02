@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
             addAction(WIFI_AP_STATE_CHANGED)
         }
 
-        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel)
+        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel, this)
 
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
@@ -120,21 +120,6 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
         connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
 //        connectionsOnEvent(ConnectionsEvent.ConnectToUsers)
         (chatsViewModel::onEvent)(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
-        val groupOwnerAddress: InetAddress = info.groupOwnerAddress
-
-        if(info.groupFormed && info.isGroupOwner) {
-            Toast.makeText(application, "Host Device", Toast.LENGTH_SHORT).show()
-            userChatViewModel.makeMeHost()
-            userChatViewModel.startServer(8888)
-        }
-        else if(info.groupFormed) {
-            Toast.makeText(application, "Client Device", Toast.LENGTH_SHORT).show()
-            groupOwnerAddress.hostAddress?.let { userChatViewModel.connectToServer(it, 8888) }
-        }
     }
 
     override fun onDisconnected() {

@@ -22,22 +22,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.DateChip
 import com.example.zim.components.ReceivedChatBox
 import com.example.zim.components.SendMessageRow
 import com.example.zim.components.SentChatBox
 import com.example.zim.components.UserInfoRow
+import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.UserChatEvent
 import com.example.zim.helperclasses.ChatBox
 import com.example.zim.states.UserChatState
+import com.example.zim.viewModels.ProtocolViewModel
 
 @Composable
 fun UserChat(
     userId: Int,
     onEvent: (UserChatEvent) -> Unit,
     state: UserChatState,
-    navController: NavController
+    navController: NavController,
+    protocolViewModel: ProtocolViewModel = hiltViewModel()
 ) {
     var message by remember {
         mutableStateOf("")
@@ -107,7 +111,8 @@ fun UserChat(
             lazyListState = lazyListState,
             size = state.messages.size,
             onMessageSend = {
-                onEvent(UserChatEvent.SendMessage(message))
+//                onEvent(UserChatEvent.SendMessage(message))
+                protocolViewModel.onEvent(ProtocolEvent.SendMessage(message, userId))
                 message = ""
             }
         )
