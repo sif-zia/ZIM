@@ -50,7 +50,6 @@ fun FallDetectionScreen(navController: NavController, fallDetectionViewModel: Fa
     // Extract the latest readings and prediction from the state
     val latestAccReadings = fallDetectionState.accReadings
     val latestGyroReadings = fallDetectionState.gyroReadings
-    val latestOriReadings = fallDetectionState.oriReadings
     val latestPrediction = fallDetectionState.prediction
 
     Column(
@@ -97,18 +96,6 @@ fun FallDetectionScreen(navController: NavController, fallDetectionViewModel: Fa
             )
         }
 
-        // Display Orientation Readings
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Orientation")
-            Text(
-                "${"%.2f".format(latestOriReadings[0])}, ${
-                    "%.2f".format(latestOriReadings[1])
-                }, ${"%.2f".format(latestOriReadings[2])}",
-                maxLines = 1
-            )
-        }
+
     }
 }
