@@ -3,10 +3,11 @@ package com.example.zim.states
 import android.net.Uri
 import android.net.wifi.p2p.WifiP2pDevice
 import com.example.zim.helperclasses.ChatBox
+import com.example.zim.helperclasses.ChatContent
 import com.example.zim.helperclasses.ConnectionMetadata
 
 data class UserChatState (
-    val messages: List<ChatBox> = emptyList(),
+    val messages: List<ChatContent> = emptyList(),
     val username: String = "",
     val connected: Boolean = false,
     val dpUri: Uri? = null,

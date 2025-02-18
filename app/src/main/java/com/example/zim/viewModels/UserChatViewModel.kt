@@ -5,8 +5,10 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.UserChatEvent
@@ -36,7 +38,6 @@ class UserChatViewModel @Inject constructor(
         viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000), UserChatState()
     )
 
-
     @SuppressLint("MissingPermission")
     fun onEvent(event: UserChatEvent) {
         when (event) {
@@ -52,7 +53,7 @@ class UserChatViewModel @Inject constructor(
                             connected = _state.value.connectionStatuses[user.UUID] ?: false
                         )
                     }
-                    loadChats()
+                    loadChats(event.userId)
                 }
             }
 
@@ -73,76 +74,11 @@ class UserChatViewModel @Inject constructor(
         this.channel = channel
     }
 
-    private suspend fun loadChats() {
-        val chatBoxList = mutableListOf<ChatBox>()
-
-        val userId = _state.value.userId
+    private suspend fun loadChats(userId: Int) {
         if (userId != -1) {
-            messageDao.getAllMessagesOfAUser(userId).collectLatest { chatContentList ->
-                chatBoxList.clear()
-                chatBoxList.addAll(chatContentList.map { chatContent ->
-                    if (chatContent.isReceived) ChatBox.ReceivedMessage(
-                        chatContent.message,
-                        chatContent.time.toLocalTime(),
-                        chatContent.time.toLocalDate()
-                    )
-                    else ChatBox.SentMessage(
-                        chatContent.message,
-                        chatContent.time.toLocalTime(),
-                        chatContent.time.toLocalDate()
-                    )
-                })
-
-                if (chatBoxList.isNotEmpty()) {
-                    val firstMessage = chatBoxList[0]
-                    if (firstMessage is ChatBox.SentMessage) chatBoxList.add(
-                        0,
-                        ChatBox.DateChip(firstMessage.date)
-                    )
-                    else if (firstMessage is ChatBox.ReceivedMessage) chatBoxList.add(
-                        0,
-                        ChatBox.DateChip(firstMessage.date)
-                    )
-
-                    for (index in 2..<chatBoxList.size) {
-                        val currMessage = chatBoxList[index]
-                        val prevMessage = chatBoxList[index - 1]
-
-                        if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.ReceivedMessage) {
-                            currMessage.isFirst = false
-                            if (currMessage.date.isAfter(prevMessage.date)) {
-                                chatBoxList.add(
-                                    index, ChatBox.DateChip(currMessage.date)
-                                )
-                            }
-                        } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.SentMessage) {
-                            currMessage.isFirst = false
-                            if (currMessage.date.isAfter(prevMessage.date)) {
-                                chatBoxList.add(
-                                    index, ChatBox.DateChip(currMessage.date)
-                                )
-                            }
-                        } else if (currMessage is ChatBox.ReceivedMessage && prevMessage is ChatBox.SentMessage) {
-                            if (currMessage.date.isAfter(prevMessage.date)) {
-                                chatBoxList.add(
-                                    index, ChatBox.DateChip(currMessage.date)
-                                )
-                                currMessage.isFirst = false
-                            }
-                        } else if (currMessage is ChatBox.SentMessage && prevMessage is ChatBox.ReceivedMessage) {
-                            if (currMessage.date.isAfter(prevMessage.date)) {
-                                chatBoxList.add(
-                                    index, ChatBox.DateChip(currMessage.date)
-                                )
-                                currMessage.isFirst = false
-                            }
-                        }
-                    }
-                }
-
-                _state.update { it.copy(messages = chatBoxList) }
+            messageDao.getAllMessagesOfAUser(userId).collect { chatContentList ->
+                _state.update { it.copy(messages = chatContentList) }
             }
         }
-
     }
 }

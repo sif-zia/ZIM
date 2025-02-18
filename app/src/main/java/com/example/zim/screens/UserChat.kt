@@ -84,11 +84,36 @@ fun UserChat(
                     modifier = Modifier.fillMaxSize(),
                     state = lazyListState
                 ) {
-                    state.messages.map { message ->
-                        when (message) {
-                            is ChatBox.DateChip -> item { DateChip(date = message.date) }
-                            is ChatBox.ReceivedMessage -> item { ReceivedChatBox(message) }
-                            is ChatBox.SentMessage -> item { SentChatBox(message) }
+                    state.messages.mapIndexed { index, message ->
+//                        when (message) {
+//                            is ChatBox.DateChip -> item { DateChip(date = message.date) }
+//                            is ChatBox.ReceivedMessage -> item { ReceivedChatBox(message) }
+//                            is ChatBox.SentMessage -> item { SentChatBox(message) }
+//                        }
+                        var isFirst: Boolean = false
+                        if (index == 0) {
+                            isFirst = true
+                            item {
+                                DateChip(message.time.toLocalDate())
+                            }
+                        }
+                        else if (state.messages[index - 1].isReceived != message.isReceived) {
+                            isFirst = true
+                        } else if (state.messages[index - 1].time.toLocalDate() < message.time.toLocalDate()) {
+                            isFirst = true
+                            item{
+                                DateChip(message.time.toLocalDate())
+                            }
+                        }
+                        if (message.isReceived) {
+                            item {
+                                ReceivedChatBox(message, isFirst)
+                            }
+                        } else {
+                            item {
+                                SentChatBox(message, isFirst)
+
+                            }
                         }
                     }
 

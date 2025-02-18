@@ -2,6 +2,7 @@ package com.example.zim.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zim.helperclasses.ChatBox
+import com.example.zim.helperclasses.ChatContent
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -40,15 +43,17 @@ fun formatTime(dateTime: LocalTime): String {
 }
 
 @Composable
-fun ReceivedChatBox(message: ChatBox.ReceivedMessage) {
+fun ReceivedChatBox(message: ChatContent, isFirst: Boolean = true) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
+
 
     Box(
         modifier = Modifier
             .padding(start = 5.dp)
-            .padding(vertical = 6.dp)
-    ) {
+            .padding(vertical = if (isFirst) 6.dp else 1.dp)
+    )
+    {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,7 +73,7 @@ fun ReceivedChatBox(message: ChatBox.ReceivedMessage) {
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 18.sp)
                 Text(
-                    formatTime(message.time),
+                    formatTime(message.time.toLocalTime()),
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 13.sp
                 )
@@ -81,7 +86,7 @@ fun ReceivedChatBox(message: ChatBox.ReceivedMessage) {
                 .offset(x = (-15).dp, y = (-15).dp)
         ) {
             val backgroundColor = MaterialTheme.colorScheme.primary
-            if(message.isFirst) {
+            if(isFirst) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawArc(
                         color = backgroundColor,

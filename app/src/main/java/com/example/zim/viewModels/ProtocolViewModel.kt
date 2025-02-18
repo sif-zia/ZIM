@@ -245,6 +245,7 @@ class ProtocolViewModel @Inject constructor(
                 }
             }
             closeDefaultConnection()
+            onExistingConnection(newUser.UUID)
         }
     }
 
