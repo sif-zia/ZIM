@@ -244,7 +244,7 @@ fun ChatRow(
                         Text(
                             text = timeString,
                             modifier = Modifier.padding(top = 5.dp),
-                            style = Typography.bodyMedium
+                            style = Typography.bodyMedium.copy(fontSize = 12.sp)
                         )
                 }
             }

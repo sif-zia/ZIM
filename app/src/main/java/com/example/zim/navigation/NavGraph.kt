@@ -38,6 +38,7 @@ import com.example.zim.components.DropDown
 import com.example.zim.components.LogoRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.UserChatEvent
 import com.example.zim.screens.AlertsScreen
 import com.example.zim.screens.ChatsScreen
@@ -240,7 +241,9 @@ fun NavGraph(
                         val userId = backStackEntry.arguments?.getString("userId")?.toInt()
                         if (userId != null) {
                             userChatOnEvent(UserChatEvent.LoadData(userId))
+                            protocolViewModel.onEvent(ProtocolEvent.AutoConnect(userId))
                             UserChat(userId = userId, onEvent = userChatOnEvent, state = userChatState, navController = navController)
+
                         }
                     }
                     composable(Navigation.GroupChat.route + "/{groupId}") { backStackEntry ->

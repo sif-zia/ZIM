@@ -12,6 +12,7 @@ sealed interface ProtocolEvent {
     data object LaunchEnableHotspot : ProtocolEvent
     data class ChangeMyDeviceName(val newDeviceName: String) : ProtocolEvent
     data class SendMessage(val message: String, val id: Int) : ProtocolEvent
+    data class AutoConnect(val userId: Int) : ProtocolEvent
 
     data class StartServer(val deviceName: String?, val deviceAddress: String?, val groupOwnerIp: String?) : ProtocolEvent
     data class StartClient(val deviceName: String?, val deviceAddress: String?, val groupOwnerIp: String?) : ProtocolEvent

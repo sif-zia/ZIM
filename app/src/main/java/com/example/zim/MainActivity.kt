@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
@@ -113,13 +114,15 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
         userChatViewModel.initWifiP2p(wifiP2pManager, channel)
+        protocolViewModel.initWifiManager(wifiP2pManager,channel)
+
     }
 
     override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
         val connectionsOnEvent = connectionsViewModel::onEvent
         connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
 //        connectionsOnEvent(ConnectionsEvent.ConnectToUsers)
-        (chatsViewModel::onEvent)(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
+        chatsViewModel.onEvent(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
     }
 
     override fun onDisconnected() {
@@ -141,6 +144,12 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
 
     override fun onPause() {
         super.onPause()
+        wifiP2pManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+            }
+
+            override fun onFailure(reason: Int) {}
+        })
         unregisterReceiver(broadcastReceiver)
     }
 

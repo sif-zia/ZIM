@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.zim.helperclasses.ChatBox
 import com.example.zim.helperclasses.ChatContent
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

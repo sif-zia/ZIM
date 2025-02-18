@@ -12,7 +12,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.UserChatEvent
-import com.example.zim.helperclasses.ChatBox
 import com.example.zim.states.UserChatState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

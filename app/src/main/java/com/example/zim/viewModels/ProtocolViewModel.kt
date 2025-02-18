@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.net.wifi.WifiManager
+import android.net.wifi.p2p.WifiP2pConfig
+import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -152,6 +155,46 @@ class ProtocolViewModel @Inject constructor(
                     viewModelScope.launch {
                         sendMessage(event.id, event.message)
                     }
+            }
+
+            is ProtocolEvent.AutoConnect->{
+                viewModelScope.launch{
+                    val user = userDao.getUserById(event.userId)
+                   if(_state.value.connectionStatues[user.UUID] == null ||_state.value.connectionStatues[user.UUID] == false) {
+                       _state.value.wifiP2pManager?.requestPeers(_state.value.wifiChannel) { peers ->
+                           peers.deviceList.forEach { device ->
+                               if (device.deviceName == user.deviceName) {
+
+                                   val config = WifiP2pConfig()
+                                   config.deviceAddress = device.deviceAddress
+                                   _state.value.wifiP2pManager?.connect(
+                                       _state.value.wifiChannel,
+                                       config,
+                                       object : WifiP2pManager.ActionListener {
+                                           override fun onSuccess() {
+                                               Toast.makeText(
+                                                   application,
+                                                   "Connection Request Sent",
+                                                   Toast.LENGTH_SHORT
+                                               ).show()
+                                           }
+
+                                           override fun onFailure(p0: Int) {
+                                               Toast.makeText(
+                                                   application,
+                                                   "Connection Request Failed",
+                                                   Toast.LENGTH_SHORT
+                                               ).show()
+                                           }
+
+                                       })
+
+
+                               }
+                           }
+                       }
+                   }
+                }
             }
         }
     }
@@ -352,6 +395,13 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
+    fun checkConnectionStatus(uuid : String): Boolean{
+        if(!_state.value.connectionStatues.containsKey(uuid)){
+            return false
+        }
+        return _state.value.connectionStatues[uuid] ?: false
+    }
+
     private fun onProtocolMessageReceived(uuid: String, message: String) {
             _state.value.newConnectionProtocol?.processStep(message)
     }
@@ -439,6 +489,11 @@ class ProtocolViewModel @Inject constructor(
                     msgIDFK = msgId.toInt()
                 )
             )
+        }
+    }
+    fun initWifiManager(wifiP2pManager: WifiP2pManager, channel: Channel){
+        _state.update{
+            it.copy(wifiP2pManager=wifiP2pManager, wifiChannel = channel)
         }
     }
 

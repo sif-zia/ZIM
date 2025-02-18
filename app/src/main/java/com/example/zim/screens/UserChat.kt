@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,7 +32,6 @@ import com.example.zim.components.SentChatBox
 import com.example.zim.components.UserInfoRow
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.UserChatEvent
-import com.example.zim.helperclasses.ChatBox
 import com.example.zim.states.UserChatState
 import com.example.zim.viewModels.ProtocolViewModel
 
@@ -43,6 +43,7 @@ fun UserChat(
     navController: NavController,
     protocolViewModel: ProtocolViewModel = hiltViewModel()
 ) {
+    val protocolState by protocolViewModel.state.collectAsState()
     var message by remember {
         mutableStateOf("")
     }
@@ -67,7 +68,7 @@ fun UserChat(
         ) {
             UserInfoRow(
                 username = state.username,
-                status = state.connected,
+                status = protocolState.connectionStatues[state.uuid] ?: false,
                 userDp = state.dpUri,
                 navController = navController
             )
@@ -85,11 +86,6 @@ fun UserChat(
                     state = lazyListState
                 ) {
                     state.messages.mapIndexed { index, message ->
-//                        when (message) {
-//                            is ChatBox.DateChip -> item { DateChip(date = message.date) }
-//                            is ChatBox.ReceivedMessage -> item { ReceivedChatBox(message) }
-//                            is ChatBox.SentMessage -> item { SentChatBox(message) }
-//                        }
                         var isFirst: Boolean = false
                         if (index == 0) {
                             isFirst = true

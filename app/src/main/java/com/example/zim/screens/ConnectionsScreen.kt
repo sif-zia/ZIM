@@ -1,5 +1,6 @@
 package com.example.zim.screens
 
+import android.net.wifi.p2p.WifiP2pDevice
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -58,14 +59,14 @@ fun ConnectionsScreen(
     val userChatOnEvent = userChatViewModel::onEvent
 
     var lastPromptConnection by remember {
-        mutableStateOf<Connection?>(null)
+        mutableStateOf<WifiP2pDevice?>(null)
     }
     var everythingEnabled: Boolean by remember {
         mutableStateOf(false)
     }
 
     if (state.promptConnections.isNotEmpty())
-        lastPromptConnection = state.promptConnections.last().copy()
+        lastPromptConnection = state.promptConnections.last()
 
     val context = LocalContext.current
 
@@ -138,8 +139,8 @@ fun ConnectionsScreen(
 
                             item {
                                 ConnectionRow(
-                                    phoneName = "${connection.fName} ${connection.lName}",
-                                    description = connection.description
+                                    phoneName = connection.deviceName,
+                                    description = connection.deviceAddress
                                 ) {
 
 //                            onEvent(ConnectionsEvent.ShowPrompt(connection))
@@ -163,7 +164,7 @@ fun ConnectionsScreen(
             exit = slideOutVertically { -it },
         ) {
             ConnectionPrompt(
-                lastPromptConnection ?: Connection("", "", "", ""),
+                lastPromptConnection ?: WifiP2pDevice(),
                 onAccept = {
                     onEvent(ConnectionsEvent.MakeConnection(state.promptConnections.last()))
                     Toast.makeText(context, "Connection Made", Toast.LENGTH_SHORT)

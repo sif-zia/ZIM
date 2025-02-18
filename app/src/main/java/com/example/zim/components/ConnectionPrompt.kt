@@ -1,5 +1,6 @@
 package com.example.zim.components
 
+import android.net.wifi.p2p.WifiP2pDevice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +35,7 @@ import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
 
 @Composable
-fun ConnectionPrompt(promptConnection: Connection,onAccept:()->Unit,onReject:()->Unit) {
+fun ConnectionPrompt(promptConnection: WifiP2pDevice, onAccept:()->Unit, onReject:()->Unit) {
     val horizontalPadding = 12.dp
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -56,7 +57,7 @@ fun ConnectionPrompt(promptConnection: Connection,onAccept:()->Unit,onReject:()-
                 horizontalArrangement = Arrangement.Center
             ) {
                 Spacer(modifier = Modifier.width(horizontalPadding))
-                Text(text = "${promptConnection.fName} wants to connect")
+                Text(text = "${promptConnection.deviceName} wants to connect")
                 Spacer(modifier = Modifier.width(horizontalPadding))
                 Icon(
                     imageVector = Icons.Outlined.Check,

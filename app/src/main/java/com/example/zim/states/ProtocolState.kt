@@ -1,5 +1,7 @@
 package com.example.zim.states
 
+import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.WifiP2pManager.Channel
 import com.example.zim.helperclasses.NewConnectionProtocol
 
 data class ProtocolState(
@@ -11,4 +13,8 @@ data class ProtocolState(
     val amIGroupOwner: Boolean? = null,
     val newConnectionProtocol: NewConnectionProtocol? = null,
     val connectionStatues: Map<String, Boolean> = emptyMap(),
+
+    val wifiP2pManager: WifiP2pManager? = null,
+    val wifiChannel: Channel?= null,
+
 )
