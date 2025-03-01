@@ -1,8 +1,10 @@
 package com.example.zim.viewModels
 
+import android.Manifest
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pConfig
@@ -11,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.zim.data.room.Dao.MessageDao
@@ -166,6 +169,22 @@ class ProtocolViewModel @Inject constructor(
                 viewModelScope.launch{
                     val user = userDao.getUserById(event.userId)
                    if(_state.value.connectionStatues[user.UUID] == null ||_state.value.connectionStatues[user.UUID] == false) {
+                       if (ActivityCompat.checkSelfPermission(
+                               application,
+                               Manifest.permission.ACCESS_FINE_LOCATION
+                           ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+                               application,
+                               Manifest.permission.NEARBY_WIFI_DEVICES
+                           ) != PackageManager.PERMISSION_GRANTED
+                       ) {
+                           Toast.makeText(
+                               application,
+                               "Permission not granted",
+                               Toast.LENGTH_SHORT
+                           ).show()
+
+                           return@launch
+                       }
                        _state.value.wifiP2pManager?.requestPeers(_state.value.wifiChannel) { peers ->
                            peers.deviceList.forEach { device ->
                                if (device.deviceName == user.deviceName) {
