@@ -106,4 +106,21 @@ interface MessageDao {
         WHERE User_ID_FK = :userId
     """)
     suspend fun readAllMessages(userId: Int)
+
+    @Query("""
+        SELECT M.msg
+        FROM Messages M 
+        JOIN Sent_Messages SM ON M.Message_ID = SM.Message_ID_FK
+        JOIN Users U ON SM.User_ID_FK = U.User_ID
+        WHERE U.UUID = :receiverUuid AND SM.status= "Sending"
+        ORDER BY SM.sentTime DESC 
+    """)
+    suspend fun getPendingMessages(receiverUuid: String): List<String>
+
+    @Query("""
+    UPDATE Sent_Messages
+    SET status = "Sent"
+    WHERE User_ID_FK IN (SELECT User_ID FROM Users WHERE UUID = :receiverUuid)
+""")
+    suspend fun markPendingMessagesAsSent(receiverUuid: String)
 }

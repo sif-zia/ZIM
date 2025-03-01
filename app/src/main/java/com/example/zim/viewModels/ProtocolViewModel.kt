@@ -37,11 +37,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
+import kotlin.math.log
 
 @HiltViewModel
 class ProtocolViewModel @Inject constructor(
@@ -150,8 +152,16 @@ class ProtocolViewModel @Inject constructor(
                             amIGroupOwner = true
                         )
                     }
+                    _state.value.newConnectionProtocol?.initUser(true)
+                    socketService.start(
+                        SocketService.Mode.UpdateServer,
+                        "0",
+                        null,
+                        8888,
+                        ::onMessageReceive
+                    )
                 }
-                _state.value.newConnectionProtocol?.initUser(true)
+
             }
 
             is ProtocolEvent.InitServer -> {
@@ -330,7 +340,7 @@ class ProtocolViewModel @Inject constructor(
     }
 
     fun onExistingConnection(uuid: String) {
-        closeDefaultConnection()
+//        closeDefaultConnection()
         if (_state.value.amIGroupOwner == true) {
             openCustomServer(uuid)
             Log.d("Messages2", "Connection already exists")
@@ -376,6 +386,48 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
+    private suspend fun sendPendingMessages(uuid: String) {
+        // Use a mutex to ensure thread safety when accessing the pending messages
+        val mutex = kotlinx.coroutines.sync.Mutex()
+
+        mutex.withLock {
+            // Get pending messages within the lock to ensure consistency
+            val messages = messageDao.getPendingMessages(uuid)
+            Log.d("SocketService", "Sending ${messages.size} pending messages for $uuid")
+            val myUuid = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
+            val secretKey = getSecretKey(uuid)
+
+            try {
+                // Process each message within the lock
+                for (message in messages) {
+                    delay(50)
+//                    sendMessage(userDao.getIdByUUID(uuid), message)
+                    // Add a small delay to prevent overwhelming the socket
+                    val encodedMessage = encryptMessage(message, secretKey)
+
+                    val pkg = Package(myUuid, uuid, myUuid, Package.Type.Text(encodedMessage))
+                    socketService.sendPackage(pkg)
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            application,
+                            "Sending message to ${uuid}",
+                            Toast.LENGTH_SHORT
+                        )
+                            .show()
+                    }
+                }
+
+                // Mark messages as sent only if the loop completes successfully
+                messageDao.markPendingMessagesAsSent(uuid)
+                Log.d("SocketService", "Successfully sent all pending messages for $uuid")
+            } catch (e: Exception) {
+                Log.e("SocketService", "Error sending pending messages: ${e.message}", e)
+                // If there's an error, we don't mark messages as sent
+            }
+        }
+    }
+
     private fun observeSocketConnection() {
         viewModelScope.launch {
             socketService.connectionStatus.collect { (uuid, connected) ->
@@ -384,6 +436,10 @@ class ProtocolViewModel @Inject constructor(
                     it.copy(
                         connectionStatues = it.connectionStatues + (uuid to connected)
                     )
+                }
+
+                if (connected && uuid != "0") {
+                    sendPendingMessages(uuid)
                 }
 
                 if (_state.value.amIGroupOwner == true) {
@@ -454,7 +510,7 @@ class ProtocolViewModel @Inject constructor(
                     "0",
                     null,
                     8888,
-                    ::onProtocolMessageReceived
+                    ::onMessageReceive
                 )
             }
         }
@@ -467,16 +523,15 @@ class ProtocolViewModel @Inject constructor(
                 "0",
                 _state.value.groupOwnerIp,
                 8888,
-                ::onProtocolMessageReceived
+                ::onMessageReceive
             )
         }
     }
 
     private fun closeDefaultConnection() {
         viewModelScope.launch {
-            if (_state.value.amIGroupOwner != true) {
+            if (_state.value.amIGroupOwner != true)
                 socketService.disconnect("0")
-            }
         }
     }
 
@@ -499,6 +554,13 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
+    private fun onMessageReceive(pkg: Package) {
+        if (pkg.type is Package.Type.Protocol)
+            onProtocolMessageReceived(pkg)
+        else if (pkg.type is Package.Type.Text)
+            onCustomMessageReceived(pkg)
+    }
+
     private fun openCustomServer(uuid: String) {
         viewModelScope.launch {
 //            val port: Int = uuid.substring(0, 4).toInt(16)
@@ -508,8 +570,10 @@ class ProtocolViewModel @Inject constructor(
                 uuid,
                 null,
                 8888,
-                ::onCustomMessageReceived
+                ::onMessageReceive
             )
+
+
         }
     }
 
@@ -522,7 +586,7 @@ class ProtocolViewModel @Inject constructor(
                 uuid,
                 _state.value.groupOwnerIp,
                 8888,
-                ::onCustomMessageReceived
+                ::onMessageReceive
             )
         }
     }
@@ -582,6 +646,10 @@ class ProtocolViewModel @Inject constructor(
     }
 
     private suspend fun insertSentMessage(userId: Int, message: String) {
+        val uuid = userDao.getUserById(userId).UUID
+        val status =
+            if (_state.value.connectionStatues.containsKey(uuid) && _state.value.connectionStatues[uuid] == true) "Sent" else "Sending"
+
         val msgId = messageDao.insertMessage(Messages(msg = message, isSent = true))
 
         if (msgId > 0 && userId > 0) {
@@ -589,6 +657,7 @@ class ProtocolViewModel @Inject constructor(
                 SentMessages(
                     sentTime = LocalDateTime.now(),
                     userIDFK = userId,
+                    status = status,
                     msgIDFK = msgId.toInt()
                 )
             )
