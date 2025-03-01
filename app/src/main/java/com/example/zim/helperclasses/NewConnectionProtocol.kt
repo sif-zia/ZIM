@@ -1,6 +1,7 @@
 package com.example.zim.helperclasses
 
 import com.example.zim.data.room.models.Users
+import com.example.zim.utils.Package
 
 class NewConnectionProtocol(
     var currentUser: Users,
@@ -8,7 +9,7 @@ class NewConnectionProtocol(
     val onProtocolEnd: (newUser: Users) -> Unit,
     val onProtocolError: (error: String) -> Unit,
     val onExistingConnection: (uuid: String) -> Unit,
-    val sendProtocolMessage: (message: String) -> Unit,
+    val sendProtocolMessage: (stepNo: Int,  message: String) -> Unit,
     var connectedUser: Users? = null,
     var isGroupOwner: Boolean? = null,
     var uuids: List<String> = emptyList(),
@@ -37,9 +38,9 @@ class NewConnectionProtocol(
         onProtocolStart()
     }
 
-    fun processStep(receiveData: String) {
-        val step = receiveData.split(":")[0].toInt()
-        val data = receiveData.split(":")[1]
+    fun processStep(receiveData: Package.Type.Protocol) {
+        val step = receiveData.stepNumber
+        val data = receiveData.msg
 
         if (step != stepNo) {
             onProtocolError("Step number mismatch expected ${stepNo}, received $step")
@@ -56,13 +57,13 @@ class NewConnectionProtocol(
     fun serverStep(receiveData: String? = null) {
         when (stepNo) {
             0 -> { // Send Hello
-                sendProtocolMessage("0:Hello")
+                sendProtocolMessage(0,"Hello")
                 stepNo++
             }
 
             1 -> { // Receive Hello Back and Send UUID
                 if (receiveData == "Hello Back") {
-                    sendProtocolMessage("1:${currentUser.UUID}")
+                    sendProtocolMessage(1,"${currentUser.UUID}")
                     stepNo++
                 } else {
                     onProtocolError("Expected Hello Back, received $receiveData")
@@ -77,7 +78,7 @@ class NewConnectionProtocol(
                     }
 
                     connectedUser = connectedUser?.copy(UUID = receiveData)
-                    sendProtocolMessage("2:${currentUser.deviceName}")
+                    sendProtocolMessage(2,":${currentUser.deviceName}")
                     stepNo++
                 } else {
                     onProtocolError("Expected UUID, received $receiveData")
@@ -87,7 +88,7 @@ class NewConnectionProtocol(
             3 -> { // Receive deviceName and send fName
                 if (!receiveData.isNullOrEmpty()  && receiveData != "null") {
                     connectedUser = connectedUser?.copy(deviceName = receiveData)
-                    sendProtocolMessage("3:${currentUser.fName}")
+                    sendProtocolMessage(3,"${currentUser.fName}")
                     stepNo++
                 } else {
                     onProtocolError("Expected deviceName, received $receiveData")
@@ -97,7 +98,7 @@ class NewConnectionProtocol(
             4 -> { // Receive fName and Send lName
                 if (!receiveData.isNullOrEmpty() && receiveData != "null") {
                     connectedUser = connectedUser?.copy(fName = receiveData)
-                    sendProtocolMessage("4:${currentUser.lName}")
+                    sendProtocolMessage(4,"${currentUser.lName}")
                     stepNo++
                 } else {
                     onProtocolError("Expected fName, received $receiveData")
@@ -124,7 +125,7 @@ class NewConnectionProtocol(
         when (stepNo) {
             0 -> { // Receive Hello and send Hello Back
                 if (receiveData == "Hello") {
-                    sendProtocolMessage("1:Hello Back")
+                    sendProtocolMessage(1,"Hello Back")
                     stepNo++
                 } else {
                     onProtocolError("Expected Hello, received $receiveData")
@@ -134,12 +135,12 @@ class NewConnectionProtocol(
             1 -> { // Receive UUID and send UUID
                 if (receiveData != null && receiveData.length == 36) {
                     if(receiveData in uuids) {
-                        sendProtocolMessage("2:${currentUser.UUID}")
+                        sendProtocolMessage(2,"${currentUser.UUID}")
                         onExistingConnection(receiveData)
                         return
                     }
                     connectedUser = connectedUser?.copy(UUID = receiveData)
-                    sendProtocolMessage("2:${currentUser.UUID}")
+                    sendProtocolMessage(2,"${currentUser.UUID}")
                     stepNo++
                 } else {
                     onProtocolError("Expected UUID, received $receiveData")
@@ -149,7 +150,7 @@ class NewConnectionProtocol(
             2 -> { // Receive deviceName and send deviceName
                 if (!receiveData.isNullOrEmpty() && receiveData != "null") {
                     connectedUser = connectedUser?.copy(deviceName = receiveData)
-                    sendProtocolMessage("3:${currentUser.deviceName}")
+                    sendProtocolMessage(3,"${currentUser.deviceName}")
                     stepNo++
                 } else {
                     onProtocolError("Expected deviceName, received $receiveData")
@@ -159,7 +160,7 @@ class NewConnectionProtocol(
             3 -> { // Receive fName and send fName
                 if (!receiveData.isNullOrEmpty() && receiveData != "null") {
                     connectedUser = connectedUser?.copy(fName = receiveData)
-                    sendProtocolMessage("4:${currentUser.fName}")
+                    sendProtocolMessage(4,"${currentUser.fName}")
                     stepNo++
                 } else {
                     onProtocolError("Expected fName, received $receiveData")
@@ -169,7 +170,7 @@ class NewConnectionProtocol(
             4 -> { // Receive lName and send lName
                 if (!receiveData.isNullOrEmpty() && receiveData != "null") {
                     connectedUser = connectedUser?.copy(lName = receiveData)
-                    sendProtocolMessage("5:${currentUser.lName}")
+                    sendProtocolMessage(5,"${currentUser.lName}")
                     stepNo++
                     if(connectedUser != null) {
                         onProtocolEnd(connectedUser!!)

@@ -21,10 +21,10 @@ import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.helperclasses.NewConnectionProtocol
+import com.example.zim.utils.Package
 import com.example.zim.repositories.SocketService
 import com.example.zim.states.ProtocolState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,10 +34,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.Socket
 import java.time.LocalDateTime
 import javax.inject.Inject
-import kotlin.coroutines.EmptyCoroutineContext
 
 @HiltViewModel
 class ProtocolViewModel @Inject constructor(
@@ -47,6 +45,7 @@ class ProtocolViewModel @Inject constructor(
     private val socketService: SocketService,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
+    private var isServerRunning = false
 
     val state: StateFlow<ProtocolState> = _state.stateIn(
         viewModelScope,
@@ -147,7 +146,13 @@ class ProtocolViewModel @Inject constructor(
                     }
                 }
                 _state.value.newConnectionProtocol?.initUser(true)
-                startDefaultServer()
+            }
+
+            is ProtocolEvent.InitServer ->{
+                viewModelScope.launch{
+                    startDefaultServer()
+
+                }
             }
 
             is ProtocolEvent.SendMessage -> {
@@ -325,8 +330,8 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
-    fun sendProtocolMessage(message: String) {
-        sendDefaultMessage(message)
+    fun sendProtocolMessage(stepNo: Int, message: String) {
+        sendDefaultMessage(stepNo, message)
     }
 
     private fun insertReceivedMessage(uuid: String, message: String) {
@@ -402,17 +407,31 @@ class ProtocolViewModel @Inject constructor(
         return _state.value.connectionStatues[uuid] ?: false
     }
 
-    private fun onProtocolMessageReceived(uuid: String, message: String) {
-            _state.value.newConnectionProtocol?.processStep(message)
+    private fun onProtocolMessageReceived(pkg: Package) {
+            if (pkg.type is Package.Type.Protocol) {
+                _state.value.newConnectionProtocol?.processStep(pkg.type)
+            }
+
     }
 
-    private fun onCustomMessageReceived(uuid: String, message: String) {
-        insertReceivedMessage(uuid, message)
+    private fun onCustomMessageReceived(pkg : Package) {
+        if(pkg.type is Package.Type.Text ) {
+            insertReceivedMessage(pkg.sender,pkg.type.msg)
+        }
     }
 
     private fun startDefaultServer() {
-        viewModelScope.launch {
-            socketService.start(SocketService.Mode.Server, "0", null, 8888, ::onProtocolMessageReceived)
+        if(isServerRunning == false) {
+            isServerRunning = true
+            viewModelScope.launch {
+                socketService.start(
+                    SocketService.Mode.Server,
+                    "0",
+                    null,
+                    8888,
+                    ::onProtocolMessageReceived
+                )
+            }
         }
     }
 
@@ -424,17 +443,21 @@ class ProtocolViewModel @Inject constructor(
 
     private fun closeDefaultConnection() {
         viewModelScope.launch {
-            if(_state.value.amIGroupOwner == true) {
-                socketService.disconnect("0")
-            } else {
+            if(_state.value.amIGroupOwner != true) {
                 socketService.disconnect("0")
             }
         }
     }
 
-    private fun sendDefaultMessage(message: String) {
+    private fun sendDefaultMessage(stepNo: Int, message: String) {
         viewModelScope.launch {
-            socketService.sendMessage("0", message)
+            val pkg = Package(
+                sender = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0",
+                receiver = "0",
+                carrier = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0",
+                type = Package.Type.Protocol(stepNo, message)
+            )
+            socketService.sendPackage(pkg)
         }
     }
 
@@ -447,16 +470,17 @@ class ProtocolViewModel @Inject constructor(
 
     private fun openCustomServer(uuid: String) {
         viewModelScope.launch {
-            val port: Int = uuid.substring(0, 4).toInt(16)
-            socketService.start(SocketService.Mode.Server, uuid, null, port, ::onCustomMessageReceived)
+//            val port: Int = uuid.substring(0, 4).toInt(16)
+//            socketService.start(SocketService.Mode.Server, uuid, null, port, ::onCustomMessageReceived)
+            socketService.start(SocketService.Mode.UpdateServer, uuid,null, 8888,::onCustomMessageReceived)
         }
     }
 
     private fun connectToCustomServer(uuid: String) {
         viewModelScope.launch {
             delay(500)
-            val port = _state.value.newConnectionProtocol?.currentUser?.UUID?.substring(0, 4)?.toInt(16) ?: 8888
-            socketService.start(SocketService.Mode.Client, uuid, _state.value.groupOwnerIp, port, ::onCustomMessageReceived)
+//            val port = _state.value.newConnectionProtocol?.currentUser?.UUID?.substring(0, 4)?.toInt(16) ?: 8888
+            socketService.start(SocketService.Mode.Client, uuid, _state.value.groupOwnerIp, 8888, ::onCustomMessageReceived)
         }
     }
 
@@ -469,7 +493,9 @@ class ProtocolViewModel @Inject constructor(
     private fun sendMessage(id: Int, message: String) {
         viewModelScope.launch {
             val user = userDao.getUserById(id)
-            socketService.sendMessage(user.UUID, message)
+            val myUuid=_state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
+            val pkg = Package(myUuid, user.UUID, myUuid, Package.Type.Text(message))
+            socketService.sendPackage(pkg)
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Sending message to ${user.UUID}", Toast.LENGTH_SHORT)
                     .show()

@@ -16,4 +16,5 @@ sealed interface ProtocolEvent {
 
     data class StartServer(val deviceName: String?, val deviceAddress: String?, val groupOwnerIp: String?) : ProtocolEvent
     data class StartClient(val deviceName: String?, val deviceAddress: String?, val groupOwnerIp: String?) : ProtocolEvent
+    data object InitServer : ProtocolEvent
 }

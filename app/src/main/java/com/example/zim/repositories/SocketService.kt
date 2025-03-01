@@ -1,19 +1,33 @@
 package com.example.zim.repositories
 
 import android.util.Log
+import com.example.zim.utils.Package
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.json.JSONObject
 import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.*
+import java.net.SocketTimeoutException
+import java.util.concurrent.ConcurrentHashMap
 
 class SocketService(private val scope: CoroutineScope) {
 
-    private var socket: Socket? = null // For client mode
-    private var serverSocket: ServerSocket? = null // For server mode
-    private val connections = mutableMapOf<String, Connection>() // Map of UUID to Connection
+    private var socket: Socket? = null
+    private var serverSocket: ServerSocket? = null
+    private val connections = ConcurrentHashMap<String, Connection>()
+
+    private val connectionsMutex = Mutex()
+
+    // Connection timeout in milliseconds
+    private val CONNECTION_TIMEOUT = 10000
+
+    // UUID for default connections
+    private var uuid: String? = null
+    private var onPackageReceived: ((Package) -> Unit)? = null
 
     // SharedFlow to emit connection status (UUID to Boolean)
     private val _connectionStatus = MutableSharedFlow<Pair<String, Boolean>>(replay = 10)
@@ -23,52 +37,71 @@ class SocketService(private val scope: CoroutineScope) {
     private data class Connection(
         val socket: Socket,
         val reader: BufferedReader,
-        val writer: PrintWriter
+        val writer: PrintWriter,
+        var job: Job? = null
     )
 
     sealed class Mode {
         object Client : Mode()
         object Server : Mode()
+        object UpdateServer : Mode()
     }
 
     /**
-     * Starts the socket service in either client or server mode.
-     *
-     * @param mode The mode (Client or Server).
-     * @param uuid The UUID to identify the connection.
-     * @param host The host to connect to (for client mode).
-     * @param port The port to connect to or listen on.
-     * @param onMessageReceived Callback to handle received messages (UUID, message).
+     * Starts the socket service in client, server or update mode.
      */
-    fun start(mode: Mode, uuid: String, host: String? = null, port: Int, onMessageReceived: (String, String) -> Unit) {
+    fun start(mode: Mode, uuid: String, host: String? = null, port: Int, onPackageReceived: (Package) -> Unit) {
         when (mode) {
-            is Mode.Client -> connectAsClient(uuid, host ?: "192.168.49.1", port, onMessageReceived)
-            is Mode.Server -> startAsServer(uuid, port, onMessageReceived)
+            is Mode.Client -> connectAsClient(uuid, host ?: "192.168.49.1", port, onPackageReceived)
+            is Mode.Server -> startAsServer(uuid, port, onPackageReceived)
+            is Mode.UpdateServer -> updateServerParameters(uuid, onPackageReceived)
         }
     }
 
-    private fun connectAsClient(uuid: String, host: String, port: Int, onMessageReceived: (String, String) -> Unit) {
+    private fun updateServerParameters(uuid: String, onPackageReceived: (Package) -> Unit) {
+        this.uuid = uuid
+        this.onPackageReceived = onPackageReceived
+        Log.d("SocketService", "Updated server parameters with UUID: $uuid")
+    }
+
+    private fun connectAsClient(uuid: String, host: String, port: Int, onPackageReceived: (Package) -> Unit) {
         scope.launch(Dispatchers.IO) {
             try {
-                socket = Socket(host, port)
-                val reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-                val writer = PrintWriter(socket!!.getOutputStream(), true)
+                Log.d("SocketService", "Attempting to connect to $host:$port with UUID: $uuid")
+
+                // Create socket with timeout
+                val socket = Socket()
+                socket.connect(java.net.InetSocketAddress(host, port), CONNECTION_TIMEOUT)
+
+                val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+                val writer = PrintWriter(socket.getOutputStream(), true)
 
                 // Store the connection
-                connections[uuid] = Connection(socket!!, reader, writer)
+                connectionsMutex.withLock {
+                    connections[uuid] = Connection(socket, reader, writer, coroutineContext.job)
+                }
 
                 // Emit connection status: connected
-                Log.d("SocketService", "Connected to $host:$port with UUID: $uuid")
                 _connectionStatus.emit(uuid to true)
+                Log.d("SocketService", "Connected to $host:$port with UUID: $uuid")
 
-                while (true) {
-                    val message = reader.readLine() ?: break
-                    onMessageReceived(uuid, message) // Pass the UUID and message
-                    Log.d("SocketService", "Received message from $uuid: $message")
+                try {
+                    while (isActive) {
+                        val messageStr = reader.readLine() ?: break
+                        val pkg = deserializePackage(messageStr)
+                        onPackageReceived(pkg)
+                        Log.d("SocketService", "Received package from $uuid: $messageStr")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SocketService", "Error reading from client $uuid: ${e.message}")
+                } finally {
+                    disconnect(uuid)
                 }
+            } catch (e: SocketTimeoutException) {
+                Log.e("SocketService", "Connection timeout to $host:$port: ${e.message}")
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.d("SocketService", "Error occurred while connecting to $host:$port: ${e.message}")
+                Log.e("SocketService", "Error connecting to $host:$port: ${e.message}")
             } finally {
                 // Emit connection status: disconnected
                 _connectionStatus.emit(uuid to false)
@@ -77,30 +110,81 @@ class SocketService(private val scope: CoroutineScope) {
         }
     }
 
-    private fun startAsServer(uuid: String, port: Int, onMessageReceived: (String, String) -> Unit) {
+    private fun handleClientConnection(clientSocket: Socket) {
+        if (this.uuid == null || this.onPackageReceived == null) {
+            Log.e("SocketService", "Server parameters not set")
+            clientSocket.close()
+            return
+        }
+
+        val clientId = this.uuid!!
+        val packageHandler = this.onPackageReceived!!
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                val reader = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
+                val writer = PrintWriter(clientSocket.getOutputStream(), true)
+
+                // Store the connection
+                connectionsMutex.withLock {
+                    connections[clientId] = Connection(clientSocket, reader, writer, coroutineContext.job)
+                }
+
+                // Emit connection status: client connected
+                _connectionStatus.emit(clientId to true)
+                Log.d("SocketService", "Client connected with UUID: $clientId")
+
+                try {
+                    while (isActive) {
+                        val messageStr = reader.readLine() ?: break
+                        val pkg = deserializePackage(messageStr)
+                        packageHandler(pkg)
+                        Log.d("SocketService", "Received package from $clientId: $messageStr")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SocketService", "Error reading from client $clientId: ${e.message}")
+                } finally {
+                    disconnect(clientId)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("SocketService", "Error handling client connection: ${e.message}")
+            } finally {
+                // Emit connection status: client disconnected
+                _connectionStatus.emit(clientId to false)
+            }
+        }
+    }
+
+    private fun startAsServer(uuid: String, port: Int, onPackageReceived: (Package) -> Unit) {
+        this.uuid = uuid
+        this.onPackageReceived = onPackageReceived
+
         scope.launch(Dispatchers.IO) {
             try {
                 serverSocket = ServerSocket(port)
+                Log.d("SocketService", "Server started on port $port with UUID: $uuid")
 
-                while (true) {
-                    val clientSocket = serverSocket?.accept()
-                    if (clientSocket != null) {
-                        val reader = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
-                        val writer = PrintWriter(clientSocket.getOutputStream(), true)
+                // Emit connection status: server started
+                _connectionStatus.emit(uuid to true)
 
-                        // Store the connection
-                        connections[uuid] = Connection(clientSocket, reader, writer)
-
-                        // Emit connection status: client connected
-                        Log.d("SocketService", "Client with UUID: $uuid connected")
-                        _connectionStatus.emit(uuid to true)
-
-                        handleClient(uuid, onMessageReceived)
+                while (isActive) {
+                    try {
+                        val clientSocket = serverSocket?.accept() ?: break
+                        handleClientConnection(clientSocket)
+                    } catch (e: SocketTimeoutException) {
+                        // Timeout is expected, continue
+                        continue
+                    } catch (e: Exception) {
+                        if (isActive && serverSocket?.isClosed == false) {
+                            Log.e("SocketService", "Error accepting connection: ${e.message}")
+                        }
+                        break
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.d("SocketService", "Error occurred while starting server: ${e.message}")
+                Log.e("SocketService", "Error starting server on port $port: ${e.message}")
             } finally {
                 // Emit connection status: server stopped
                 _connectionStatus.emit(uuid to false)
@@ -109,66 +193,125 @@ class SocketService(private val scope: CoroutineScope) {
         }
     }
 
-    private fun handleClient(
-        clientId: String,
-        onMessageReceived: (String, String) -> Unit
-    ) {
+    fun sendPackage(pkg: Package) {
         scope.launch(Dispatchers.IO) {
             try {
-                val reader = connections[clientId]?.reader
-                while (true) {
-                    val message = reader?.readLine() ?: break
-                    onMessageReceived(clientId, message) // Pass the client UUID and message
-                    Log.d("SocketService", "Received message from $clientId: $message")
+                val serializedPackage = serializePackage(pkg)
+
+                connectionsMutex.withLock {
+                    val connection = connections[pkg.receiver]
+                    if (connection != null && !connection.socket.isClosed) {
+                        connection.writer.println(serializedPackage)
+                        Log.d("SocketService", "Sent package to ${pkg.receiver}: $serializedPackage")
+                    } else {
+                        Log.e("SocketService", "Failed to send package to ${pkg.receiver}: Connection not found or closed")
+                        _connectionStatus.emit(pkg.receiver to false)
+                    }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
-                Log.d("SocketService", "Error occurred while reading message from $clientId: ${e.message}")
-            } finally {
-                // Emit connection status: client disconnected
-                _connectionStatus.emit(clientId to false)
-                disconnect(clientId)
+                Log.e("SocketService", "Error sending package to ${pkg.receiver}: ${e.message}")
+                _connectionStatus.emit(pkg.receiver to false)
             }
-        }
-    }
-
-    fun sendMessage(uuid: String, message: String) {
-        scope.launch(Dispatchers.IO) {
-            val connection = connections[uuid]
-            connection?.writer?.println(message)
-            Log.d("SocketService", "Sent message to $uuid: $message")
         }
     }
 
     fun disconnect(uuid: String) {
         scope.launch(Dispatchers.IO) {
-            val connection = connections[uuid]
-            connection?.let {
-                it.writer.close()
-                it.reader.close()
-                it.socket.close()
-            }
-            connections.remove(uuid)
+            connectionsMutex.withLock {
+                val connection = connections[uuid]
+                if (connection != null) {
+                    try {
+                        connection.job?.cancel()
+                        connection.writer.close()
+                        connection.reader.close()
 
-            // Emit connection status: disconnected
-            _connectionStatus.emit(uuid to false)
-            Log.d("SocketService", "Disconnected from $uuid")
+                        if (!connection.socket.isClosed) {
+                            connection.socket.close()
+                        }
+
+                        connections.remove(uuid)
+                        Log.d("SocketService", "Disconnected from $uuid")
+                    } catch (e: Exception) {
+                        Log.e("SocketService", "Error disconnecting from $uuid: ${e.message}")
+                    } finally {
+                        _connectionStatus.emit(uuid to false)
+                    }
+                }
+            }
         }
     }
 
     fun stopServer() {
         scope.launch(Dispatchers.IO) {
-            connections.values.forEach { connection ->
-                connection.writer.close()
-                connection.reader.close()
-                connection.socket.close()
-            }
-            connections.clear()
-            serverSocket?.close()
+            try {
+                connectionsMutex.withLock {
+                    // Close all connections
+                    connections.forEach { (uuid, connection) ->
+                        try {
+                            connection.job?.cancel()
+                            connection.writer.close()
+                            connection.reader.close()
+                            if (!connection.socket.isClosed) {
+                                connection.socket.close()
+                            }
+                            _connectionStatus.emit(uuid to false)
+                        } catch (e: Exception) {
+                            Log.e("SocketService", "Error closing connection to $uuid: ${e.message}")
+                        }
+                    }
+                    connections.clear()
 
-            // Emit connection status: server stopped
-            _connectionStatus.emit("0" to false)
-            Log.d("SocketService", "Server stopped")
+                    // Close server socket
+                    if (serverSocket != null && !serverSocket!!.isClosed) {
+                        serverSocket!!.close()
+                    }
+                    serverSocket = null
+
+                    Log.d("SocketService", "Server stopped")
+                }
+            } catch (e: Exception) {
+                Log.e("SocketService", "Error stopping server: ${e.message}")
+            }
         }
+    }
+
+    // Serialization/Deserialization methods
+    private fun serializePackage(pkg: Package): String {
+        val json = JSONObject().apply {
+            put("sender", pkg.sender)
+            put("receiver", pkg.receiver)
+            put("carrier", pkg.carrier)
+
+            when (val type = pkg.type) {
+                is Package.Type.Text -> {
+                    put("type", "Text")
+                    put("msg", type.msg)
+                }
+                is Package.Type.Protocol -> {
+                    put("type", "Protocol")
+                    put("stepNumber", type.stepNumber)
+                    put("msg", type.msg)
+                }
+
+                else -> { put("type", "Other")}
+            }
+
+        }
+        return json.toString()
+    }
+
+    private fun deserializePackage(jsonStr: String): Package {
+        val json = JSONObject(jsonStr)
+        val sender = json.getString("sender")
+        val receiver = json.getString("receiver")
+        val carrier = json.getString("carrier")
+
+        val type: Package.Type = when (json.getString("type")) {
+            "Text" -> Package.Type.Text(json.getString("msg"))
+            "Protocol" -> Package.Type.Protocol(json.getInt("stepNumber"), json.getString("msg"))
+            else -> throw IllegalArgumentException("Unknown package type")
+        }
+
+        return Package(sender, receiver, carrier, type)
     }
 }
