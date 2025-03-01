@@ -11,6 +11,7 @@ import com.example.zim.data.room.models.CurrentUser
 import com.example.zim.data.room.models.Users
 import com.example.zim.events.SignUpEvent
 import com.example.zim.states.SignUpState
+import com.example.zim.utils.Crypto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,13 +54,18 @@ class SignUpViewModel @Inject constructor(
                 try {
                     // Insert the user into the database and get the row ID
                     viewModelScope.launch {
+                        val crypto = Crypto()
+                        val keyPair= crypto.generateECKeyPair()
+                        val encodedPublicKey = crypto.encodePublicKey(keyPair.public)
+                        val encodedPrivateKey = crypto.encodePrivateKey(keyPair.private)
                         val userId: Long = userDao.insertUser(
-                            Users(fName = firstName, lName = lastName, DOB = DOB, UUID = UUID.randomUUID().toString())
+                            Users(fName = firstName, lName = lastName, DOB = DOB, UUID = encodedPublicKey)
                         )
                         if (userId >= 0) {
                             userDao.insertCurrUser(
                                 CurrentUser(
-                                    userIDFK = userId.toInt()
+                                    userIDFK = userId.toInt(),
+                                    prKey = encodedPrivateKey
                                 )
                             )
                         }

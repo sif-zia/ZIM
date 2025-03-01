@@ -27,6 +27,7 @@ import com.example.zim.helperclasses.NewConnectionProtocol
 import com.example.zim.utils.Package
 import com.example.zim.repositories.SocketService
 import com.example.zim.states.ProtocolState
+import com.example.zim.utils.Crypto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -38,6 +39,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 
 @HiltViewModel
@@ -151,8 +154,8 @@ class ProtocolViewModel @Inject constructor(
                 _state.value.newConnectionProtocol?.initUser(true)
             }
 
-            is ProtocolEvent.InitServer ->{
-                viewModelScope.launch{
+            is ProtocolEvent.InitServer -> {
+                viewModelScope.launch {
                     startDefaultServer()
 
                 }
@@ -165,59 +168,59 @@ class ProtocolViewModel @Inject constructor(
                     }
             }
 
-            is ProtocolEvent.AutoConnect->{
-                viewModelScope.launch{
+            is ProtocolEvent.AutoConnect -> {
+                viewModelScope.launch {
                     val user = userDao.getUserById(event.userId)
-                   if(_state.value.connectionStatues[user.UUID] == null ||_state.value.connectionStatues[user.UUID] == false) {
-                       if (ActivityCompat.checkSelfPermission(
-                               application,
-                               Manifest.permission.ACCESS_FINE_LOCATION
-                           ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
-                               application,
-                               Manifest.permission.NEARBY_WIFI_DEVICES
-                           ) != PackageManager.PERMISSION_GRANTED
-                       ) {
-                           Toast.makeText(
-                               application,
-                               "Permission not granted",
-                               Toast.LENGTH_SHORT
-                           ).show()
+                    if (_state.value.connectionStatues[user.UUID] == null || _state.value.connectionStatues[user.UUID] == false) {
+                        if (ActivityCompat.checkSelfPermission(
+                                application,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+                                application,
+                                Manifest.permission.NEARBY_WIFI_DEVICES
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            Toast.makeText(
+                                application,
+                                "Permission not granted",
+                                Toast.LENGTH_SHORT
+                            ).show()
 
-                           return@launch
-                       }
-                       _state.value.wifiP2pManager?.requestPeers(_state.value.wifiChannel) { peers ->
-                           peers.deviceList.forEach { device ->
-                               if (device.deviceName == user.deviceName) {
+                            return@launch
+                        }
+                        _state.value.wifiP2pManager?.requestPeers(_state.value.wifiChannel) { peers ->
+                            peers.deviceList.forEach { device ->
+                                if (device.deviceName == user.deviceName) {
 
-                                   val config = WifiP2pConfig()
-                                   config.deviceAddress = device.deviceAddress
-                                   _state.value.wifiP2pManager?.connect(
-                                       _state.value.wifiChannel,
-                                       config,
-                                       object : WifiP2pManager.ActionListener {
-                                           override fun onSuccess() {
-                                               Toast.makeText(
-                                                   application,
-                                                   "Connection Request Sent",
-                                                   Toast.LENGTH_SHORT
-                                               ).show()
-                                           }
+                                    val config = WifiP2pConfig()
+                                    config.deviceAddress = device.deviceAddress
+                                    _state.value.wifiP2pManager?.connect(
+                                        _state.value.wifiChannel,
+                                        config,
+                                        object : WifiP2pManager.ActionListener {
+                                            override fun onSuccess() {
+                                                Toast.makeText(
+                                                    application,
+                                                    "Connection Request Sent",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
 
-                                           override fun onFailure(p0: Int) {
-                                               Toast.makeText(
-                                                   application,
-                                                   "Connection Request Failed",
-                                                   Toast.LENGTH_SHORT
-                                               ).show()
-                                           }
+                                            override fun onFailure(p0: Int) {
+                                                Toast.makeText(
+                                                    application,
+                                                    "Connection Request Failed",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
 
-                                       })
+                                        })
 
 
-                               }
-                           }
-                       }
-                   }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -355,7 +358,10 @@ class ProtocolViewModel @Inject constructor(
 
     private fun insertReceivedMessage(uuid: String, message: String) {
         viewModelScope.launch {
-            val msgId = messageDao.insertMessage(Messages(msg = message, isSent = false))
+            val secretKey = getSecretKey(uuid)
+            val decryptedMessage = decryptMessage(message, secretKey)
+
+            val msgId = messageDao.insertMessage(Messages(msg = decryptedMessage, isSent = false))
             val userId = userDao.getIdByUUID(uuid)
 
             if (msgId > 0 && userId > 0) {
@@ -419,28 +425,28 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
-    fun checkConnectionStatus(uuid : String): Boolean{
-        if(!_state.value.connectionStatues.containsKey(uuid)){
+    fun checkConnectionStatus(uuid: String): Boolean {
+        if (!_state.value.connectionStatues.containsKey(uuid)) {
             return false
         }
         return _state.value.connectionStatues[uuid] ?: false
     }
 
     private fun onProtocolMessageReceived(pkg: Package) {
-            if (pkg.type is Package.Type.Protocol) {
-                _state.value.newConnectionProtocol?.processStep(pkg.type)
-            }
+        if (pkg.type is Package.Type.Protocol) {
+            _state.value.newConnectionProtocol?.processStep(pkg.type)
+        }
 
     }
 
-    private fun onCustomMessageReceived(pkg : Package) {
-        if(pkg.type is Package.Type.Text ) {
-            insertReceivedMessage(pkg.sender,pkg.type.msg)
+    private fun onCustomMessageReceived(pkg: Package) {
+        if (pkg.type is Package.Type.Text) {
+            insertReceivedMessage(pkg.sender, pkg.type.msg)
         }
     }
 
     private fun startDefaultServer() {
-        if(isServerRunning == false) {
+        if (isServerRunning == false) {
             isServerRunning = true
             viewModelScope.launch {
                 socketService.start(
@@ -456,13 +462,19 @@ class ProtocolViewModel @Inject constructor(
 
     private fun connectToDefaultServer() {
         viewModelScope.launch {
-            socketService.start(SocketService.Mode.Client, "0", _state.value.groupOwnerIp, 8888, ::onProtocolMessageReceived)
+            socketService.start(
+                SocketService.Mode.Client,
+                "0",
+                _state.value.groupOwnerIp,
+                8888,
+                ::onProtocolMessageReceived
+            )
         }
     }
 
     private fun closeDefaultConnection() {
         viewModelScope.launch {
-            if(_state.value.amIGroupOwner != true) {
+            if (_state.value.amIGroupOwner != true) {
                 socketService.disconnect("0")
             }
         }
@@ -491,7 +503,13 @@ class ProtocolViewModel @Inject constructor(
         viewModelScope.launch {
 //            val port: Int = uuid.substring(0, 4).toInt(16)
 //            socketService.start(SocketService.Mode.Server, uuid, null, port, ::onCustomMessageReceived)
-            socketService.start(SocketService.Mode.UpdateServer, uuid,null, 8888,::onCustomMessageReceived)
+            socketService.start(
+                SocketService.Mode.UpdateServer,
+                uuid,
+                null,
+                8888,
+                ::onCustomMessageReceived
+            )
         }
     }
 
@@ -499,7 +517,13 @@ class ProtocolViewModel @Inject constructor(
         viewModelScope.launch {
             delay(500)
 //            val port = _state.value.newConnectionProtocol?.currentUser?.UUID?.substring(0, 4)?.toInt(16) ?: 8888
-            socketService.start(SocketService.Mode.Client, uuid, _state.value.groupOwnerIp, 8888, ::onCustomMessageReceived)
+            socketService.start(
+                SocketService.Mode.Client,
+                uuid,
+                _state.value.groupOwnerIp,
+                8888,
+                ::onCustomMessageReceived
+            )
         }
     }
 
@@ -509,11 +533,45 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
+    private suspend fun getSecretKey(receiverUuid: String): SecretKeySpec {
+
+        val crypto = Crypto()
+        val privateKeyStr = userDao.getCurrentUser().currentUser.prKey ?: ""
+        val privateKey = crypto.decodePrivateKey(privateKeyStr)
+        val publicKey = crypto.decodePublicKey(receiverUuid)
+        val sharedSecret = crypto.generateSharedSecret(privateKey, publicKey)
+        val secretKey = crypto.deriveAESKey(sharedSecret)
+        return secretKey
+
+    }
+
+    private fun encryptMessage(message: String, secretKey: SecretKeySpec): String {
+        val crypto = Crypto()
+
+        val encryptedMessage = crypto.encryptText(message, secretKey)
+        val encodedMessage = crypto.encodeEncryptedData(encryptedMessage)
+
+        return encodedMessage
+    }
+
+    private fun decryptMessage(message: String, secretKey: SecretKeySpec): String {
+        val crypto = Crypto()
+
+        val decodedMessage = crypto.decodeEncryptedData(message)
+        val decryptedMessages = crypto.decryptText(decodedMessage, secretKey)
+
+        return decryptedMessages
+    }
+
     private fun sendMessage(id: Int, message: String) {
         viewModelScope.launch {
             val user = userDao.getUserById(id)
-            val myUuid=_state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
-            val pkg = Package(myUuid, user.UUID, myUuid, Package.Type.Text(message))
+            val myUuid = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
+
+            val secretKey = getSecretKey(user.UUID)
+            val encodedMessage = encryptMessage(message, secretKey)
+
+            val pkg = Package(myUuid, user.UUID, myUuid, Package.Type.Text(encodedMessage))
             socketService.sendPackage(pkg)
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Sending message to ${user.UUID}", Toast.LENGTH_SHORT)
@@ -536,9 +594,10 @@ class ProtocolViewModel @Inject constructor(
             )
         }
     }
-    fun initWifiManager(wifiP2pManager: WifiP2pManager, channel: Channel){
-        _state.update{
-            it.copy(wifiP2pManager=wifiP2pManager, wifiChannel = channel)
+
+    fun initWifiManager(wifiP2pManager: WifiP2pManager, channel: Channel) {
+        _state.update {
+            it.copy(wifiP2pManager = wifiP2pManager, wifiChannel = channel)
         }
     }
 

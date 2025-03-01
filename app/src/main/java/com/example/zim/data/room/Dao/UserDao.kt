@@ -44,7 +44,7 @@ interface UserDao {
         LIMIT 1
     """
     )
-    suspend fun getCurrentUser(): UserWithCurrentUser?  // Return nullable UserWithCurrentUser to avoid issues if no result found
+    suspend fun getCurrentUser(): UserWithCurrentUser // Return nullable UserWithCurrentUser to avoid issues if no result found
 
     // Get Connected Users
     @Transaction
