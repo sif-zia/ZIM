@@ -6,12 +6,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.provider.Settings
 import android.util.Log
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
@@ -39,6 +41,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.time.LocalDateTime
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
@@ -54,11 +58,14 @@ class ProtocolViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
     private var isServerRunning = false
+    private val TAG = "Protocol"
+
 
     val state: StateFlow<ProtocolState> = _state.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
         ProtocolState()
+
     )
 
     init {
@@ -297,10 +304,8 @@ class ProtocolViewModel @Inject constructor(
 
     fun onProtocolStart() {
         viewModelScope.launch {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(application, "Protocol started", Toast.LENGTH_SHORT)
-                    .show()
-            }
+            Log.d(TAG, "Protocol started")
+
         }
     }
 
@@ -343,22 +348,10 @@ class ProtocolViewModel @Inject constructor(
 //        closeDefaultConnection()
         if (_state.value.amIGroupOwner == true) {
             openCustomServer(uuid)
-            Log.d("Messages2", "Connection already exists")
-            viewModelScope.launch {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(application, "Connection already exists", Toast.LENGTH_SHORT)
-                        .show()
-                }
-            }
+            Log.d(TAG, "Connection already exists")
         } else {
             connectToCustomServer(uuid)
-            Log.d("Messages2", "Connection already exists")
-            viewModelScope.launch {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(application, "Connection already exists", Toast.LENGTH_SHORT)
-                        .show()
-                }
-            }
+            Log.d(TAG, "Connection already exists")
         }
     }
 
@@ -393,12 +386,12 @@ class ProtocolViewModel @Inject constructor(
         mutex.withLock {
             // Get pending messages within the lock to ensure consistency
             val messages = messageDao.getPendingMessages(uuid)
-            Log.d("SocketService", "Sending ${messages.size} pending messages for $uuid")
             val myUuid = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
             val secretKey = getSecretKey(uuid)
 
             try {
                 // Process each message within the lock
+
                 for (message in messages) {
                     delay(50)
 //                    sendMessage(userDao.getIdByUUID(uuid), message)
@@ -408,25 +401,19 @@ class ProtocolViewModel @Inject constructor(
                     val pkg = Package(myUuid, uuid, myUuid, Package.Type.Text(encodedMessage))
                     socketService.sendPackage(pkg)
 
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            application,
-                            "Sending message to ${uuid}",
-                            Toast.LENGTH_SHORT
-                        )
-                            .show()
-                    }
+
+                    Log.d(TAG, "Sending message to ${uuid}")
                 }
 
                 // Mark messages as sent only if the loop completes successfully
                 messageDao.markPendingMessagesAsSent(uuid)
-                Log.d("SocketService", "Successfully sent all pending messages for $uuid")
             } catch (e: Exception) {
                 Log.e("SocketService", "Error sending pending messages: ${e.message}", e)
                 // If there's an error, we don't mark messages as sent
             }
         }
     }
+
 
     private fun observeSocketConnection() {
         viewModelScope.launch {
@@ -444,10 +431,8 @@ class ProtocolViewModel @Inject constructor(
 
                 if (_state.value.amIGroupOwner == true) {
                     if (uuid == "0" && connected) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(application, "Client connected", Toast.LENGTH_SHORT)
-                                .show()
-                        }
+                        Log.d(TAG, "Client connected")
+
                         startProtocol()
                     } else if (uuid != "0" && connected) {
                         withContext(Dispatchers.Main) {
@@ -461,10 +446,7 @@ class ProtocolViewModel @Inject constructor(
                     }
                 } else if (_state.value.amIGroupOwner == false) {
                     if (uuid == "0" && connected) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(application, "Connected to server", Toast.LENGTH_SHORT)
-                                .show()
-                        }
+                        Log.d(TAG, "Connected to server")
                         startProtocol()
                     } else if (uuid != "0" && connected) {
                         withContext(Dispatchers.Main) {
@@ -554,11 +536,37 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
+    private fun onImageMessageReceived(pkg: Package) {
+        if (pkg.type is Package.Type.Image) {
+            _state.update { state ->
+                val currentChunks = state.imageArrays[pkg.sender] ?: emptyList()
+                state.copy(
+                    imageArrays = state.imageArrays + (pkg.sender to (currentChunks + pkg.type))
+                )
+            }
+
+            val receivedChunks = _state.value.imageArrays[pkg.sender] ?: emptyList()
+            if (receivedChunks.size == pkg.type.totalChunks) {
+                // Sort chunks by chunk number
+                val sortedChunks = receivedChunks.sortedBy { it.chunkNo }
+
+                // Merge chunks into a single ByteArray
+                val fullImageData =
+                    sortedChunks.fold(ByteArrayOutputStream()) { outputStream, chunk ->
+                        outputStream.apply { write(chunk.chunk) }
+                    }.toByteArray()
+
+            }
+        }
+    }
+
     private fun onMessageReceive(pkg: Package) {
         if (pkg.type is Package.Type.Protocol)
             onProtocolMessageReceived(pkg)
         else if (pkg.type is Package.Type.Text)
             onCustomMessageReceived(pkg)
+        else if (pkg.type is Package.Type.Image)
+            onImageMessageReceived(pkg)
     }
 
     private fun openCustomServer(uuid: String) {
@@ -637,10 +645,7 @@ class ProtocolViewModel @Inject constructor(
 
             val pkg = Package(myUuid, user.UUID, myUuid, Package.Type.Text(encodedMessage))
             socketService.sendPackage(pkg)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(application, "Sending message to ${user.UUID}", Toast.LENGTH_SHORT)
-                    .show()
-            }
+            Log.d(TAG, "Sending message to ${user.UUID}")
             insertSentMessage(id, message)
         }
     }
@@ -669,5 +674,70 @@ class ProtocolViewModel @Inject constructor(
             it.copy(wifiP2pManager = wifiP2pManager, wifiChannel = channel)
         }
     }
+
+    private fun uriToByteArray(uri: Uri): ByteArray? {
+        return try {
+            val inputStream: InputStream? = application.contentResolver.openInputStream(uri)
+            inputStream?.use { stream ->
+                val buffer = ByteArrayOutputStream()
+                val bufferSize = 1024
+                val data = ByteArray(bufferSize)
+                var bytesRead: Int
+                while (stream.read(data, 0, bufferSize).also { bytesRead = it } != -1) {
+                    buffer.write(data, 0, bytesRead)
+                }
+                buffer.toByteArray()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun getImageType(uri: Uri): String? {
+        val contentResolver = application.contentResolver
+        val mimeType = contentResolver.getType(uri)  // Get MIME type
+        return mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
+    }
+
+    private fun sendImage(uri: Uri, userId: Int) {
+        viewModelScope.launch {
+            val uuid = userDao.getUserById(userId).UUID
+            val imageByteArray = uriToByteArray(uri)
+            val imageType = getImageType(uri)
+            val imageHash = imageByteArray.contentHashCode().toString()
+            val myUuid = _state.value.newConnectionProtocol?.currentUser?.UUID ?: "0"
+
+            if (imageByteArray != null && imageType != null) {
+                val chunkSize = 1024  // Each chunk is 1024 bytes
+                val totalChunks =
+                    (imageByteArray.size + chunkSize - 1) / chunkSize  // Calculate total chunks
+
+                for (i in 0 until totalChunks) {
+                    val start = i * chunkSize
+                    val end = minOf(start + chunkSize, imageByteArray.size)
+                    val chunk = imageByteArray.copyOfRange(start, end)  // Extract chunk
+
+                    val imageChunk = Package.Type.Image(
+                        chunkNo = i,
+                        totalChunks = totalChunks,
+                        imageHash = imageHash,
+                        chunk = chunk,
+                        imageType = imageType
+                    )
+
+                    val pkg = Package(myUuid, uuid, myUuid, imageChunk)
+                    socketService.sendPackage(pkg)
+
+                    Log.d("SocketService", "Sent chunk ${i + 1}/$totalChunks of type: $imageType")
+                }
+            } else {
+                Log.e("SocketService", "Failed to convert URI to byte array or get image type")
+            }
+
+        }
+
+    }
+
 
 }

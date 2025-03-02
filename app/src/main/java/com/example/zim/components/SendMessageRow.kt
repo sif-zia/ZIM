@@ -1,5 +1,8 @@
 package com.example.zim.components
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +19,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -44,12 +51,23 @@ fun SendMessageRow(
     onHideKeyboardChange: (Boolean) -> Unit,
     lazyListState: LazyListState,
     size: Int,
-    onMessageSend: () -> Unit
+    onMessageSend: () -> Unit,
+    onImagePicked: (Uri) -> Unit // New parameter for handling picked images
 ) {
     val focusManager = LocalFocusManager.current
-    var isFocused by remember {
-        mutableStateOf(false)
+    var isFocused by remember { mutableStateOf(false) }
+    var showAttachMenu by remember { mutableStateOf(false) }
+
+    // Register the image picker launcher
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            onImagePicked(it)
+        }
+        showAttachMenu = false
     }
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Row(
             modifier = Modifier
@@ -57,58 +75,90 @@ fun SendMessageRow(
                 .padding(16.dp)
                 .imePadding()
         ) {
-            TextField(
-                value = message,
-                onValueChange = onMessageChange,
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.AttachFile,
-                        contentDescription = "Attach File Button",
-                        tint = MaterialTheme.colorScheme.secondary
+            Box {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextField(
+                        value = message,
+                        onValueChange = onMessageChange,
+                        trailingIcon = {
+                            IconButton(onClick = { showAttachMenu = !showAttachMenu }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AttachFile,
+                                    contentDescription = "Attach File Button",
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        },
+                        placeholder = { Text(text = "Message") },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .weight(1f)
+                            .onFocusChanged {
+                                isFocused = true
+                            },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
+                            cursorColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(onSend = {
+                            focusManager.clearFocus()
+                            onMessageSend()
+                        })
+
                     )
-                },
-                placeholder = { Text(text = "Message") },
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .weight(1f)
-                    .onFocusChanged {
-                        isFocused = true
-                    },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
-                    cursorColor = MaterialTheme.colorScheme.secondary,
-                    focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
-                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = {
-                    focusManager.clearFocus()
-                    onMessageSend()
-                })
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            RoundButton(onClick = {
-                focusManager.clearFocus()
-                onMessageSend()
-            }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Send,
-                    contentDescription = "Send Message Button",
-                    modifier = Modifier.size(25.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    RoundButton(onClick = {
+                        focusManager.clearFocus()
+                        onMessageSend()
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Send,
+                            contentDescription = "Send Message Button",
+                            modifier = Modifier.size(25.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                // Attachment dropdown menu
+                DropdownMenu(
+                    expanded = showAttachMenu,
+                    onDismissRequest = { showAttachMenu = false },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Gallery", color = MaterialTheme.colorScheme.onBackground) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = "Gallery"
+                            )
+                        },
+                        onClick = {
+                            // Launch image picker
+                            imagePicker.launch("image/*")
+                        }
+                    )
+                    // You can add more attachment options here if needed
+                }
             }
+
+
         }
     }
+
     if (hideKeyboard) {
         focusManager.clearFocus()
-
         onHideKeyboardChange(false)
     }
+
     LaunchedEffect(isFocused) {
         delay(1000L)
         lazyListState.animateScrollToItem(size)

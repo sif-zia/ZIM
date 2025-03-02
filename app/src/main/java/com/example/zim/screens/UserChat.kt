@@ -1,5 +1,7 @@
 package com.example.zim.screens
 
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -135,6 +137,10 @@ fun UserChat(
 //                onEvent(UserChatEvent.SendMessage(message))
                 protocolViewModel.onEvent(ProtocolEvent.SendMessage(message, userId))
                 message = ""
+            },
+            onImagePicked =  { uri ->
+                Log.d("UserChat", uri.toString())
+
             }
         )
 
