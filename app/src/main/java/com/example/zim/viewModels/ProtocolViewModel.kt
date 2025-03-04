@@ -11,11 +11,13 @@ import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pManager
 import android.net.wifi.p2p.WifiP2pManager.Channel
+import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.zim.data.room.Dao.MessageDao
@@ -42,7 +44,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
+import java.lang.Thread.yield
 import java.time.LocalDateTime
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
@@ -183,6 +188,13 @@ class ProtocolViewModel @Inject constructor(
                     viewModelScope.launch {
                         sendMessage(event.id, event.message)
                     }
+            }
+
+            is ProtocolEvent.SendImage -> {
+                sendImage(event.imageUri, event.userId)
+                viewModelScope.launch {
+                    insertSentMessage(event.userId, event.imageUri.toString(), "Image")
+                }
             }
 
             is ProtocolEvent.AutoConnect -> {
@@ -359,12 +371,18 @@ class ProtocolViewModel @Inject constructor(
         sendDefaultMessage(stepNo, message)
     }
 
-    private fun insertReceivedMessage(uuid: String, message: String) {
+    private fun insertReceivedMessage(uuid: String, message: String, msgType: String = "Text") {
         viewModelScope.launch {
             val secretKey = getSecretKey(uuid)
             val decryptedMessage = decryptMessage(message, secretKey)
 
-            val msgId = messageDao.insertMessage(Messages(msg = decryptedMessage, isSent = false))
+            val msgId = messageDao.insertMessage(
+                Messages(
+                    msg = decryptedMessage,
+                    isSent = false,
+                    type = msgType
+                )
+            )
             val userId = userDao.getIdByUUID(uuid)
 
             if (msgId > 0 && userId > 0) {
@@ -539,13 +557,15 @@ class ProtocolViewModel @Inject constructor(
     private fun onImageMessageReceived(pkg: Package) {
         if (pkg.type is Package.Type.Image) {
             _state.update { state ->
-                val currentChunks = state.imageArrays[pkg.sender] ?: emptyList()
+                val currentChunks = state.imageArrays[pkg.type.imageHash] ?: emptyList()
                 state.copy(
-                    imageArrays = state.imageArrays + (pkg.sender to (currentChunks + pkg.type))
+                    imageArrays = state.imageArrays + (pkg.type.imageHash to (currentChunks + pkg.type))
                 )
             }
 
-            val receivedChunks = _state.value.imageArrays[pkg.sender] ?: emptyList()
+            val receivedChunks = _state.value.imageArrays[pkg.type.imageHash] ?: emptyList()
+            val receivedImageExtension = pkg.type.imageType
+
             if (receivedChunks.size == pkg.type.totalChunks) {
                 // Sort chunks by chunk number
                 val sortedChunks = receivedChunks.sortedBy { it.chunkNo }
@@ -556,17 +576,86 @@ class ProtocolViewModel @Inject constructor(
                         outputStream.apply { write(chunk.chunk) }
                     }.toByteArray()
 
+                if (fullImageData.contentHashCode().toString() == pkg.type.imageHash) {
+                    val fullImageUri = saveImageOnDisk(fullImageData, receivedImageExtension)
+                    insertReceivedMessage(pkg.sender, fullImageUri.toString(), "Image")
+
+                }
+                // Clear the chunks from state after successful processing
+                _state.update { state ->
+                    state.copy(imageArrays = state.imageArrays - pkg.type.imageHash)
+                }
             }
+
+        }
+    }
+
+    /**
+     * Saves an image byte array to the device's storage using a chunked approach
+     * @param imageData The byte array containing the image data
+     * @param fileExtension The file extension of the image (e.g., "jpg", "png")
+     * @return The content URI of the saved image
+     */
+    private fun saveImageOnDisk(imageData: ByteArray, fileExtension: String = "jpg"): Uri? {
+        return try {
+            // Create a safe file extension (remove any dots and ensure lowercase)
+            val safeExtension = fileExtension.replace(".", "").lowercase()
+
+            // Generate a unique filename with timestamp
+            val timestamp = System.currentTimeMillis()
+            val filename = "IMG_${timestamp}.$safeExtension"
+
+            // Get the app's private pictures directory
+            val imagesDir = File(
+                application.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                "received_images"
+            )
+            if (!imagesDir.exists()) {
+                imagesDir.mkdirs()
+            }
+
+            // Create the file
+            val imageFile = File(imagesDir, filename)
+
+            // Write the image data in chunks to avoid OutOfMemory errors with large images
+            FileOutputStream(imageFile).use { fos ->
+                val bufferSize = 1024 * 8 // 8KB chunks for writing
+                var offset = 0
+
+                while (offset < imageData.size) {
+                    val chunkSize = minOf(bufferSize, imageData.size - offset)
+                    fos.write(imageData, offset, chunkSize)
+                    offset += chunkSize
+
+                    // Optional: yield to prevent blocking the thread for too long
+                    if (offset % (bufferSize * 10) == 0) {
+                        yield() // Allow other coroutines to execute if needed
+                    }
+                }
+
+                fos.flush()
+            }
+
+            // Create a content URI for the saved image using FileProvider
+            val imageUri = FileProvider.getUriForFile(
+                application,
+                "${application.packageName}.fileprovider",
+                imageFile
+            )
+
+            imageUri
+        } catch (e: Exception) {
+            Log.e("ImageReceiver", "Failed to save image", e)
+            null // Return null if saving fails
         }
     }
 
     private fun onMessageReceive(pkg: Package) {
+
         if (pkg.type is Package.Type.Protocol)
             onProtocolMessageReceived(pkg)
         else if (pkg.type is Package.Type.Text)
             onCustomMessageReceived(pkg)
-        else if (pkg.type is Package.Type.Image)
-            onImageMessageReceived(pkg)
     }
 
     private fun openCustomServer(uuid: String) {
@@ -650,12 +739,12 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
-    private suspend fun insertSentMessage(userId: Int, message: String) {
+    private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text") {
         val uuid = userDao.getUserById(userId).UUID
         val status =
             if (_state.value.connectionStatues.containsKey(uuid) && _state.value.connectionStatues[uuid] == true) "Sent" else "Sending"
 
-        val msgId = messageDao.insertMessage(Messages(msg = message, isSent = true))
+        val msgId = messageDao.insertMessage(Messages(msg = message, isSent = true, type = msgType))
 
         if (msgId > 0 && userId > 0) {
             messageDao.insertSentMessage(

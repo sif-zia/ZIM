@@ -6,4 +6,5 @@ data class ChatContent (
     val message: String,
     val time: LocalDateTime,
     val isReceived: Boolean,
+    val type: String,
 )

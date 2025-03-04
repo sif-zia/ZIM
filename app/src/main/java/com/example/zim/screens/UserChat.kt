@@ -29,8 +29,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.DateChip
 import com.example.zim.components.ReceivedChatBox
+import com.example.zim.components.ReceivedImageChatBox
 import com.example.zim.components.SendMessageRow
 import com.example.zim.components.SentChatBox
+import com.example.zim.components.SentImageChatBox
 import com.example.zim.components.UserInfoRow
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.UserChatEvent
@@ -103,14 +105,23 @@ fun UserChat(
                                 DateChip(message.time.toLocalDate())
                             }
                         }
-                        if (message.isReceived) {
+                        if (message.isReceived && message.type=="Text") {
                             item {
                                 ReceivedChatBox(message, isFirst)
                             }
-                        } else {
+                        } else if(!message.isReceived && message.type=="Text"){
                             item {
                                 SentChatBox(message, isFirst)
 
+                            }
+                        }
+                        else if (message.isReceived && message.type=="Image") {
+                            item {
+                                ReceivedImageChatBox(message, Uri.parse(message.message), isFirst)
+                            }
+                        } else if(!message.isReceived && message.type=="Image"){
+                            item {
+                                SentImageChatBox(message, Uri.parse(message.message), isFirst)
                             }
                         }
                     }
@@ -140,6 +151,7 @@ fun UserChat(
             },
             onImagePicked =  { uri ->
                 Log.d("UserChat", uri.toString())
+                protocolViewModel.onEvent(ProtocolEvent.SendImage(uri, userId))
 
             }
         )

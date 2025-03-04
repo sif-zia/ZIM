@@ -63,17 +63,17 @@ interface MessageDao {
     @Query("""
         SELECT *
         FROM (
-            SELECT M.msg AS message, R.receivedTime AS time, 1 AS isReceived
-            FROM messages as M
-            INNER JOIN Received_Messages as R
+            SELECT M.msg AS message, M.type AS type, R.receivedTime AS time, 1 AS isReceived
+            FROM messages AS M
+            INNER JOIN Received_Messages AS R
             ON M.Message_ID = R.Message_ID_FK
             WHERE  R.User_ID_FK= :userID
     
             UNION
     
-            SELECT M.msg AS message, S.sentTime AS time, 0 AS isReceived
-            FROM messages as M
-            INNER JOIN Sent_Messages as S
+            SELECT M.msg AS message, M.type AS type, S.sentTime AS time, 0 AS isReceived
+            FROM messages AS M
+            INNER JOIN Sent_Messages AS S
             ON M.Message_ID = S.Message_ID_FK
             WHERE  S.User_ID_FK= :userID
         )
@@ -112,7 +112,7 @@ interface MessageDao {
         FROM Messages M 
         JOIN Sent_Messages SM ON M.Message_ID = SM.Message_ID_FK
         JOIN Users U ON SM.User_ID_FK = U.User_ID
-        WHERE U.UUID = :receiverUuid AND SM.status= "Sending"
+        WHERE U.UUID = :receiverUuid AND SM.status= "Sending" AND M.type= "Text"
         ORDER BY SM.sentTime DESC 
     """)
     suspend fun getPendingMessages(receiverUuid: String): List<String>
