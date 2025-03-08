@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-kapt") // Add this line
     id("com.google.dagger.hilt.android")
+    kotlin("plugin.serialization") version "1.9.0"
 }
 kapt {
     correctErrorTypes = true // Ensure proper error handling for kapt
@@ -50,6 +51,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST" // Add this line
+            excludes += "/META-INF/io.netty.versions.properties"
         }
     }
 }
@@ -111,4 +114,19 @@ dependencies {
     //Fall detection
     implementation ("com.microsoft.onnxruntime:onnxruntime-android:1.16.0")
     implementation("org.apache.commons:commons-math3:3.6.1")
+
+    //Ktor (API)
+    implementation("io.ktor:ktor-server-core:2.3.8")
+    implementation("io.ktor:ktor-server-netty:2.3.8")  // Netty engine
+    implementation("io.ktor:ktor-server-content-negotiation:2.3.8")
+
+    // Ktor Client Core Dependencies
+    implementation("io.ktor:ktor-client-core:2.3.8")
+    implementation("io.ktor:ktor-client-android:2.3.8")  // Android engine
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
+
+    // Shared Serialization
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
 }

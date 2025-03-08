@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.zim.api.ClientRepository
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
@@ -60,6 +61,7 @@ class ProtocolViewModel @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val socketService: SocketService,
+    private val clientRepository: ClientRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
     private var isServerRunning = false
@@ -151,9 +153,10 @@ class ProtocolViewModel @Inject constructor(
                             amIGroupOwner = false
                         )
                     }
+                    clientRepository.handshake(event.groupOwnerIp ?: "192.168.49.1")
                 }
-                _state.value.newConnectionProtocol?.initUser(false)
-                connectToDefaultServer()
+//                _state.value.newConnectionProtocol?.initUser(false)
+//                connectToDefaultServer()
             }
 
             is ProtocolEvent.StartServer -> {
@@ -164,14 +167,14 @@ class ProtocolViewModel @Inject constructor(
                             amIGroupOwner = true
                         )
                     }
-                    _state.value.newConnectionProtocol?.initUser(true)
-                    socketService.start(
-                        SocketService.Mode.UpdateServer,
-                        "0",
-                        null,
-                        8888,
-                        ::onMessageReceive
-                    )
+//                    _state.value.newConnectionProtocol?.initUser(true)
+//                    socketService.start(
+//                        SocketService.Mode.UpdateServer,
+//                        "0",
+//                        null,
+//                        8888,
+//                        ::onMessageReceive
+//                    )
                 }
 
             }
@@ -385,14 +388,16 @@ class ProtocolViewModel @Inject constructor(
             )
             val userId = userDao.getIdByUUID(uuid)
 
-            if (msgId > 0 && userId > 0) {
-                messageDao.insertReceivedMessage(
-                    ReceivedMessages(
-                        receivedTime = LocalDateTime.now(),
-                        userIDFK = userId,
-                        msgIDFK = msgId.toInt()
+            if (userId != null) {
+                if (msgId > 0 && userId > 0) {
+                    messageDao.insertReceivedMessage(
+                        ReceivedMessages(
+                            receivedTime = LocalDateTime.now(),
+                            userIDFK = userId,
+                            msgIDFK = msgId.toInt()
+                        )
                     )
-                )
+                }
             }
         }
     }

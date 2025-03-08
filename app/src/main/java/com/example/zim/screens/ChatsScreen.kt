@@ -19,6 +19,8 @@ import com.example.zim.components.Search
 import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,17 +34,20 @@ import com.example.zim.events.ChatsEvent
 import com.example.zim.helperclasses.Chat
 import com.example.zim.navigation.DropDownMenus
 import com.example.zim.states.ChatsState
+import com.example.zim.viewModels.ApiViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 
 
 @Composable
-fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (ChatsEvent) -> Unit, protocolViewModel: ProtocolViewModel = hiltViewModel()) {
+fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (ChatsEvent) -> Unit, protocolViewModel: ProtocolViewModel = hiltViewModel(),apiViewModel: ApiViewModel = hiltViewModel()) {
 
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
     val focusManager: FocusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
     val protocolState by protocolViewModel.state.collectAsState()
+    val posts by apiViewModel.posts.collectAsState()
+
 
     return Column(
         modifier = Modifier
@@ -63,10 +68,15 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
             onQueryChange = {onEvent(ChatsEvent.ChangeQuery(newQuery = it))}
         )
 
+        Button(onClick = {apiViewModel.loadPosts()}) {
+            Text(text = "Load Post")
+        }
+
+
         LazyColumn(
             modifier = Modifier
                 .padding(top = verticalPadding)
-                .fillMaxHeight(),
+               ,
             state = rememberLazyListState()
         ) {
             items(state.chats) { chat ->
@@ -80,6 +90,9 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
                     isConnected = protocolState.connectionStatues[chat.UUID] ?: false
                 )
             }
+        }
+        LazyColumn {
+            items(posts){post-> Text(text = post.toString())}
         }
     };
 }

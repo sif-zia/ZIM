@@ -157,7 +157,7 @@ interface UserDao {
 
     @Transaction
     @Query("SELECT User_ID FROM Users WHERE UUID = :uuid")
-    suspend fun getIdByUUID(uuid: String): Int
+    suspend fun getIdByUUID(uuid: String): Int?
 
 
     @Query("UPDATE Users SET deviceAddress = :deviceAddress WHERE User_ID = (SELECT User_ID_FK FROM Curr_User LIMIT 1)")
