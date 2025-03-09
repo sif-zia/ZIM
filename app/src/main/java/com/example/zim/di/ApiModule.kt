@@ -2,7 +2,6 @@
 package com.example.zim.di
 
 import com.example.zim.api.ActiveUserManager
-import com.example.zim.api.Post
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

@@ -13,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +25,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
+import com.example.zim.api.ClientRepository
+import com.example.zim.api.ServerRepository
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
 import com.example.zim.events.ProtocolEvent
@@ -38,12 +41,21 @@ import com.example.zim.viewModels.SignUpViewModel
 import com.example.zim.viewModels.UserChatViewModel
 import com.example.zim.wifiP2P.WifiP2pListener
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import java.net.InetAddress
+import javax.inject.Inject
 
 val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), WifiP2pListener {
+    @Inject
+    lateinit var clientRepository: ClientRepository
+
     private val signUpViewModel: SignUpViewModel by viewModels()
     private val chatsViewModel: ChatsViewModel by viewModels()
     private val connectionsViewModel: ConnectionsViewModel by viewModels()
@@ -109,13 +121,12 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
             addAction(WIFI_AP_STATE_CHANGED)
         }
 
-        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel, this)
+        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel)
 
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
         userChatViewModel.initWifiP2p(wifiP2pManager, channel)
         protocolViewModel.initWifiManager(wifiP2pManager,channel)
-
     }
 
     override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
@@ -145,12 +156,6 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
 
     override fun onPause() {
         super.onPause()
-        wifiP2pManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-            }
-
-            override fun onFailure(reason: Int) {}
-        })
         unregisterReceiver(broadcastReceiver)
     }
 
@@ -194,5 +199,16 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
                 permissionsGranted = true
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        wifiP2pManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+            }
+
+            override fun onFailure(reason: Int) {}
+        })
     }
 }

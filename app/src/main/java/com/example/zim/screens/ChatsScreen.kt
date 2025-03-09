@@ -1,6 +1,5 @@
 package com.example.zim.screens
 
-import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -8,45 +7,39 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.zim.components.ChatRow
-import com.example.zim.components.LogoRow
-import com.example.zim.components.Search
-import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.zim.components.DropDown
+import androidx.navigation.NavController
+import com.example.zim.components.ChatRow
+import com.example.zim.components.Search
 import com.example.zim.events.ChatsEvent
-import com.example.zim.helperclasses.Chat
-import com.example.zim.navigation.DropDownMenus
 import com.example.zim.states.ChatsState
-import com.example.zim.viewModels.ApiViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 
 
 @Composable
-fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (ChatsEvent) -> Unit, protocolViewModel: ProtocolViewModel = hiltViewModel(),apiViewModel: ApiViewModel = hiltViewModel()) {
+fun ChatsScreen(
+    navController: NavController,
+    state: ChatsState,
+    onEvent: (ChatsEvent) -> Unit,
+    protocolViewModel: ProtocolViewModel = hiltViewModel()
+) {
 
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
     val focusManager: FocusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
-    val protocolState by protocolViewModel.state.collectAsState()
-    val posts by apiViewModel.posts.collectAsState()
+    val activeUsers by protocolViewModel.activeUsers.collectAsState()
 
 
     return Column(
@@ -65,18 +58,14 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
                 vertical = verticalPadding
             ),
             query = state.query,
-            onQueryChange = {onEvent(ChatsEvent.ChangeQuery(newQuery = it))}
+            onQueryChange = { onEvent(ChatsEvent.ChangeQuery(newQuery = it)) }
         )
-
-        Button(onClick = {apiViewModel.loadPosts()}) {
-            Text(text = "Load Post")
-        }
 
 
         LazyColumn(
             modifier = Modifier
                 .padding(top = verticalPadding)
-               ,
+                .fillMaxHeight(),
             state = rememberLazyListState()
         ) {
             items(state.chats) { chat ->
@@ -87,12 +76,9 @@ fun ChatsScreen(navController: NavController, state: ChatsState, onEvent: (Chats
                     unReadMsgs = chat.unReadMsgs,
                     id = chat.id,
                     navController = navController,
-                    isConnected = protocolState.connectionStatues[chat.UUID] ?: false
+                    isConnected = activeUsers[chat.UUID] != null
                 )
             }
         }
-        LazyColumn {
-            items(posts){post-> Text(text = post.toString())}
-        }
-    };
+    }
 }

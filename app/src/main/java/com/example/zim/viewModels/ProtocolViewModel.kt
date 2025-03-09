@@ -16,11 +16,14 @@ import android.provider.Settings
 import android.util.Log
 import android.webkit.MimeTypeMap
 import android.widget.Toast
+import androidx.compose.runtime.collectAsState
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
+import com.example.zim.api.ServerRepository
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
@@ -61,12 +64,15 @@ class ProtocolViewModel @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val socketService: SocketService,
-    private val clientRepository: ClientRepository
+    private val clientRepository: ClientRepository,
+    private val activeUserManager: ActiveUserManager,
+    private val serverRepository: ServerRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
     private var isServerRunning = false
     private val TAG = "Protocol"
 
+    val activeUsers = activeUserManager.activeUsers
 
     val state: StateFlow<ProtocolState> = _state.stateIn(
         viewModelScope,
@@ -84,6 +90,10 @@ class ProtocolViewModel @Inject constructor(
                 )
             }
         }
+
+        if(!serverRepository.isServerRunning.value)
+            serverRepository.startServer()
+
 
         initNewConnectionProtocol()
         observeSocketConnection()
@@ -179,6 +189,10 @@ class ProtocolViewModel @Inject constructor(
 
             }
 
+            is ProtocolEvent.Disconnect -> {
+                activeUserManager.clearAllUsers()
+            }
+
             is ProtocolEvent.InitServer -> {
                 viewModelScope.launch {
                     startDefaultServer()
@@ -189,7 +203,7 @@ class ProtocolViewModel @Inject constructor(
             is ProtocolEvent.SendMessage -> {
                 if (event.message.isNotEmpty())
                     viewModelScope.launch {
-                        sendMessage(event.id, event.message)
+                        clientRepository.sendMessage(event.message, event.id)
                     }
             }
 

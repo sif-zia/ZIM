@@ -1,8 +1,13 @@
 package com.example.zim.api
 
+import android.app.Application
 import android.util.Log
 import android.widget.Toast
+import androidx.lifecycle.viewModelScope
+import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
+import com.example.zim.data.room.models.Messages
+import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.Users
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -16,9 +21,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,8 +35,13 @@ import javax.inject.Singleton
 @Singleton
 class ServerRepository @Inject constructor(
     private val userDao: UserDao,
+    private val messageDao: MessageDao,
     private val activeUserManager: ActiveUserManager,
+    private val cryptoHelper: CryptoHelper,
+    private val app: Application
 ) {
+    private val TAG = "ApiRepository"
+
     // Create a coroutine scope for server operations
     private val serverScope = CoroutineScope(Dispatchers.IO)
 
@@ -37,18 +51,6 @@ class ServerRepository @Inject constructor(
 
     // Store server instance to control it later
     private var server: ApplicationEngine? = null
-
-    // Generate dummy Post data
-    private fun generateDummyPosts(): List<Post> {
-        return (1..100).map { id ->
-            Post(
-                userId = (id - 1) / 10 + 1,
-                id = id,
-                title = "Post $id title",
-                body = "This is the body of post $id with some sample content."
-            )
-        }
-    }
 
     // Start the server
     fun startServer() {
@@ -65,7 +67,11 @@ class ServerRepository @Inject constructor(
 
                     // Configure routing
                     routing {
-                        post("/user") {
+                        post(ApiRoute.USER) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(app, "Hand shake Detected", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
                             try {
                                 // Receive the user data from the request body
                                 val userData = call.receive<UserData>()
@@ -86,11 +92,10 @@ class ServerRepository @Inject constructor(
                                     )
                                     userDao.insertUser(user)
                                     Log.d(
-                                        "ServerRepository",
-                                        "New user inserted: ${userData.fName} ${userData.lName}"
+                                        TAG,
+                                        "Server: New user inserted: ${userData.fName} ${userData.lName}"
                                     )
-                                }
-                                else {
+                                } else {
                                     // Update IP address if needed
                                     val existingUser = userDao.getUserById(existingUserId)
                                     if (existingUser.fName != userData.fName || existingUser.lName != userData.lName) {
@@ -100,13 +105,13 @@ class ServerRepository @Inject constructor(
                                         )
                                         userDao.updateUser(updatedUser) // Using REPLACE conflict strategy
                                         Log.d(
-                                            "ServerRepository",
-                                            "Updated Name: ${existingUser.fName} ${existingUser.lName}"
+                                            TAG,
+                                            "Server: Updated Name: ${existingUser.fName} ${existingUser.lName}"
                                         )
                                     } else {
                                         Log.d(
-                                            "ServerRepository",
-                                            "User exists: ${existingUser.fName} ${existingUser.lName}"
+                                            TAG,
+                                            "Server: User exists: ${existingUser.fName} ${existingUser.lName}"
                                         )
                                     }
                                 }
@@ -120,9 +125,17 @@ class ServerRepository @Inject constructor(
                                     fName = currentUser.users.fName,
                                     lName = currentUser.users.lName ?: "",
                                 )
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(app, "Hand shake Successful", Toast.LENGTH_SHORT)
+                                        .show()
+                                }
                                 call.respond(responseData)
                             } catch (e: Exception) {
-                                Log.e("ServerRepository", "Error processing user data", e)
+                                Log.e(TAG, "Server: Error processing user data", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(app, "Hand shake Failed", Toast.LENGTH_SHORT)
+                                        .show()
+                                }
                                 call.respond(
                                     HttpStatusCode.BadRequest,
                                     "Invalid user data: ${e.message}"
@@ -130,17 +143,45 @@ class ServerRepository @Inject constructor(
                             }
                         }
 
-                        get("/posts") {
-                            call.respond(generateDummyPosts())
+                        post(ApiRoute.MESSAGE) {
+                            try {
+                                val messageData = call.receive<MessageData>()
+
+                                val senderUUID = messageData.sender
+                                val receiverUUID = messageData.receiver
+                                val encryptedMessage = messageData.msg
+                                val carrier = messageData.carrier
+
+                                val carrierIp = call.request.origin.remoteHost
+                                val myUuid = userDao.getCurrentUser().users.UUID
+
+                                activeUserManager.addUser(carrier, carrierIp)
+
+                                if (myUuid == receiverUUID) {
+                                    val decryptedMessage = cryptoHelper.decryptMessage(
+                                        encryptedMessage,
+                                        senderUUID
+                                    )
+                                    insertReceivedMessage(senderUUID, decryptedMessage)
+                                    call.respond(HttpStatusCode.OK, "Message received successfully")
+                                }
+
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing message data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid message data: ${e.message}"
+                                )
+                            }
                         }
                     }
                 }
 
                 server?.start(wait = false)
                 _isServerRunning.value = true
-                Log.d("ServerProvider", "Server started successfully on port 8080")
+                Log.d(TAG, "Server: Server started successfully on port 8080")
             } catch (e: Exception) {
-                Log.e("ServerProvider", "Failed to start server", e)
+                Log.e(TAG, "Server: Failed to start server", e)
             }
         }
     }
@@ -153,9 +194,36 @@ class ServerRepository @Inject constructor(
                 server = null
                 _isServerRunning.value = false
                 activeUserManager.clearAllUsers()
-                Log.d("ServerProvider", "Server stopped successfully")
+                Log.d(TAG, "Server: Server stopped successfully")
             } catch (e: Exception) {
-                Log.e("ServerProvider", "Failed to stop server", e)
+                Log.e(TAG, "Server: Failed to stop server", e)
+            }
+        }
+    }
+
+    private suspend fun insertReceivedMessage(
+        uuid: String,
+        message: String,
+        msgType: String = "Text"
+    ) {
+        val msgId = messageDao.insertMessage(
+            Messages(
+                msg = message,
+                isSent = false,
+                type = msgType
+            )
+        )
+        val userId = userDao.getIdByUUID(uuid)
+
+        if (userId != null) {
+            if (msgId > 0 && userId > 0) {
+                messageDao.insertReceivedMessage(
+                    ReceivedMessages(
+                        receivedTime = LocalDateTime.now(),
+                        userIDFK = userId,
+                        msgIDFK = msgId.toInt()
+                    )
+                )
             }
         }
     }

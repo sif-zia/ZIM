@@ -47,7 +47,6 @@ fun UserChat(
     navController: NavController,
     protocolViewModel: ProtocolViewModel = hiltViewModel()
 ) {
-    val protocolState by protocolViewModel.state.collectAsState()
     var message by remember {
         mutableStateOf("")
     }
@@ -55,6 +54,8 @@ fun UserChat(
         mutableStateOf(false)
     }
     val lazyListState = rememberLazyListState()
+
+    val activeUsers by protocolViewModel.activeUsers.collectAsState()
 
     onEvent(UserChatEvent.ReadAllMessages(userId))
 //    onEvent(UserChatEvent.ConnectToUser(userId))
@@ -72,7 +73,7 @@ fun UserChat(
         ) {
             UserInfoRow(
                 username = state.username,
-                status = protocolState.connectionStatues[state.uuid] ?: false,
+                status = activeUsers[state.uuid] != null,
                 userDp = state.dpUri,
                 navController = navController
             )

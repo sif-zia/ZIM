@@ -24,7 +24,6 @@ class WifiP2pBroadcastReceiver @Inject constructor(
     private val locationManager: LocationManager,
     private val listener: WifiP2pListener, // A custom interface for event handling
     private val protocolViewModel: ProtocolViewModel,
-    private val context: Context
 ) : BroadcastReceiver() {
 
     @SuppressLint("MissingPermission")
@@ -107,6 +106,7 @@ class WifiP2pBroadcastReceiver @Inject constructor(
                         }
                     }
                 } else {
+                    protocolViewModel.onEvent(ProtocolEvent.Disconnect)
                     listener.onDisconnected()
                 }
             }
