@@ -88,14 +88,7 @@ class WifiP2pBroadcastReceiver @Inject constructor(
                             val deviceNames = connectedDevices.map { it.deviceName }
                             val deviceAddresses = connectedDevices.map { it.deviceAddress }
 
-                            if(info.groupFormed && info.isGroupOwner) {
-                                // Host Device
-                                protocolViewModel.onEvent(ProtocolEvent.StartServer(
-                                    deviceName = deviceNames.firstOrNull(),
-                                    deviceAddress = deviceAddresses.firstOrNull(),
-                                    groupOwnerIp = groupOwnerAddress.hostAddress
-                                ))
-                            } else if(info.groupFormed) {
+                            if(info.groupFormed && !info.isGroupOwner) {
                                 // Client Device
                                 protocolViewModel.onEvent(ProtocolEvent.StartClient(
                                     deviceName = deviceNames.firstOrNull(),

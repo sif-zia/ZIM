@@ -8,7 +8,6 @@ import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
-import com.example.zim.utils.Package
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*

@@ -132,8 +132,6 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
     override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
         val connectionsOnEvent = connectionsViewModel::onEvent
         connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
-        protocolViewModel.onEvent(ProtocolEvent.InitServer)
-//        connectionsOnEvent(ConnectionsEvent.ConnectToUsers)
         chatsViewModel.onEvent(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
     }
 
