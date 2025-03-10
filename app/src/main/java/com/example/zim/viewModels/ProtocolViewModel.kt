@@ -5,10 +5,13 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pManager
+import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +28,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -140,9 +147,15 @@ class ProtocolViewModel @Inject constructor(
             }
 
             is ProtocolEvent.SendImage -> {
-              viewModelScope.launch{
-                  clientRepository.sendImage(event.imageUri,event.userId)
-              }
+                val permanentImageUri= savePermanentImage(application, event.imageUri)
+                if(permanentImageUri == null){
+                    Toast.makeText(application, "Send Failed.", Toast.LENGTH_SHORT).show()
+                }
+                else {
+                    viewModelScope.launch {
+                        clientRepository.sendImage(permanentImageUri, event.userId)
+                    }
+                }
 
             }
 
@@ -230,6 +243,32 @@ class ProtocolViewModel @Inject constructor(
                     wifiChannel = channel
                 )
             }
+        }
+    }
+    fun savePermanentImage(context: Context, sourceUri: Uri): Uri? {
+        try {
+            // Create a directory for our images if it doesn't exist
+            val imageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "send_images")
+            if (!imageDir.exists()) {
+                imageDir.mkdirs()
+            }
+
+            // Generate a unique filename
+            val imageFileName = "img_${UUID.randomUUID()}.jpg"
+            val destFile = File(imageDir, imageFileName)
+
+            // Copy the file
+            context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Create a URI from the saved file
+            return Uri.fromFile(destFile)
+        } catch (e: IOException) {
+            Log.e("ProtocolViewModel", "Error saving image: ${e.message}")
+            return null
         }
     }
 }

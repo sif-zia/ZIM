@@ -76,7 +76,8 @@ fun ChatsScreen(
                     unReadMsgs = chat.unReadMsgs,
                     id = chat.id,
                     navController = navController,
-                    isConnected = activeUsers[chat.UUID] != null
+                    isConnected = activeUsers[chat.UUID] != null,
+                    lastMsgType = chat.lastMsgType
                 )
             }
         }

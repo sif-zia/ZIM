@@ -11,5 +11,6 @@ data class Chat(
     val unReadMsgs: Int = 0,
     val isDM: Boolean? = true,
     val id: Int,
-    val UUID: String
+    val UUID: String,
+    val lastMsgType: String,
 )
