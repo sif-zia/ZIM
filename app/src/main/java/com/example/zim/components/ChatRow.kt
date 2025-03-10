@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,17 +98,20 @@ fun ChatRow(
     id: Int,
     navController: NavController
 ) {
-    var timeString by remember {
-        mutableStateOf(formatDateTime(time))
+    // This state will be used to trigger recomposition
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+
+    // Launch a coroutine to update the refresh trigger every minute
+    LaunchedEffect(Unit) {
+        while(true) {
+            delay(60000) // 60000 milliseconds = 1 minute
+            refreshTrigger += 1 // Increment to trigger recomposition
+        }
     }
 
-    if(time != null) {
-        LaunchedEffect(time) {
-            while (true) {
-                delay(60 * 1000L)
-                timeString = formatDateTime(time)
-            }
-        }
+    // Every time refreshTrigger changes, formattedTime will be recalculated
+    val formattedTime = remember(time, refreshTrigger) {
+        formatDateTime(time)
     }
 
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
@@ -239,10 +243,10 @@ fun ChatRow(
                             .width(10.dp)
                     )
 
-                    // Last Message time
+                    // Last Message time - now using the auto-updating formattedTime
                     if (time != null)
                         Text(
-                            text = timeString,
+                            text = formattedTime,
                             modifier = Modifier.padding(top = 5.dp),
                             style = Typography.bodyMedium.copy(fontSize = 12.sp)
                         )

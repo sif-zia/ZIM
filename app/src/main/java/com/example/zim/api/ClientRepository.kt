@@ -1,6 +1,10 @@
 package com.example.zim.api
 
 import android.app.Application
+import android.database.Cursor
+import android.net.Uri
+import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import com.example.zim.data.room.Dao.MessageDao
@@ -11,8 +15,12 @@ import com.example.zim.data.room.models.Users
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.utils.EmptyContent.contentType
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -168,6 +177,65 @@ class ClientRepository @Inject constructor(
             throw e
         }
     }
+    suspend fun sendImage(imageUri: Uri, receiverId: Int) {
+        val receiver = userDao.getUserById(receiverId).UUID
+        try {
+            if(!activeUserManager.hasUser(receiver)) {
+                // Log the error here
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
+
+            val byteArray = application.contentResolver.openInputStream(imageUri)?.use {
+                it.readBytes()
+            } ?: throw IOException("Could not read image")
+
+            // Get the file's mime type
+            val mimeType = application.contentResolver.getType(imageUri) ?: "image/jpeg"
+
+            // Extract the file extension from the mime type or URI
+            val fileExtension = when {
+                mimeType != "application/octet-stream" -> mimeType.split("/").lastOrNull() ?: "jpeg"
+                else -> {
+                    // Fallback: try to get extension from URI path
+                    val path = getFilePathFromUri(imageUri)
+                    path?.substringAfterLast('.')?.takeIf { it.isNotEmpty() } ?: "jpeg"
+                }
+            }
+
+            // Get original filename if possible
+            val filename = getFileNameFromUri(imageUri) ?: "image.$fileExtension"
+            val myUuid = userDao.getCurrentUser().users.UUID
+
+            insertSentMessage(receiverId, imageUri.toString(),"Image")
+
+            val response = client.submitFormWithBinaryData(
+                url = getURL(activeUserManager.getIpAddressForUser(receiver)!!, ApiRoute.IMAGE),
+                formData = formData {
+                    append("receiver", receiver)
+                    append("sender", myUuid)
+                    append("fileExtension", fileExtension)
+                    append("fileName", filename)
+                    append("image", byteArray, Headers.build {
+                        append(HttpHeaders.ContentType, mimeType)
+                        append(HttpHeaders.ContentDisposition, "filename=$filename")
+                    })
+                }
+            )
+
+            response.body()
+        } catch (e: Exception) {
+            // Log the error here
+            withContext(Dispatchers.Main) {
+                Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
+            }
+            Log.d(TAG,"Client: Error sending message: ${e.message}")
+        }
+    }
+
+
 
     private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text") {
         val uuid = userDao.getUserById(userId).UUID
@@ -230,5 +298,49 @@ class ClientRepository @Inject constructor(
                 }
             }
         }
+    }
+    private fun getFileNameFromUri(uri: Uri): String? {
+        var fileName: String? = null
+
+        // Try query for display name
+        application.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (displayNameIndex != -1) {
+                    fileName = cursor.getString(displayNameIndex)
+                }
+            }
+        }
+
+        // If we couldn't get it from the content provider, try the path
+        if (fileName == null) {
+            fileName = uri.path?.substringAfterLast('/')
+        }
+
+        return fileName
+    }
+    private fun getFilePathFromUri(uri: Uri): String? {
+        // Handle different URI schemes
+        when {
+            // File URI
+            uri.scheme.equals("file", ignoreCase = true) -> return uri.path
+
+            // Content URI
+            uri.scheme.equals("content", ignoreCase = true) -> {
+                var cursor: Cursor? = null
+                try {
+                    cursor = application.contentResolver.query(uri, null, null, null, null)
+                    if (cursor != null && cursor.moveToFirst()) {
+                        val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+                        return cursor.getString(columnIndex)
+                    }
+                } catch (e: Exception) {
+                    Log.e("URI_HELPER", "Failed to get path from URI", e)
+                } finally {
+                    cursor?.close()
+                }
+            }
+        }
+        return null
     }
 }

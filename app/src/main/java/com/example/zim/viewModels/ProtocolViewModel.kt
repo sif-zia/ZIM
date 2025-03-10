@@ -140,6 +140,9 @@ class ProtocolViewModel @Inject constructor(
             }
 
             is ProtocolEvent.SendImage -> {
+              viewModelScope.launch{
+                  clientRepository.sendImage(event.imageUri,event.userId)
+              }
 
             }
 

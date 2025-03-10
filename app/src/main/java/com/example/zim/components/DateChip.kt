@@ -20,28 +20,25 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun formatDate(dateTime: LocalDate?): String {
-    if (dateTime == null) return ""
-
+fun formatDateForChip(date: LocalDate): String {
     val now = LocalDate.now()
 
     return when {
-        dateTime.isEqual(now.minusDays(1)) -> {
-            // If the date is yesterday, return "Yesterday"
+        date.isEqual(now) -> {
+            "Today"
+        }
+        date.isEqual(now.minusDays(1)) -> {
             "Yesterday"
         }
-
-        dateTime.isAfter(now.minusWeeks(1)) -> {
-            // If the date is within the last week, return the day of the week (e.g., "Monday")
-            dateTime.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+        date.isAfter(now.minusWeeks(1)) -> {
+            // If the date is within the last week, return the day of the week
+            date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
         }
-
         else -> {
             // Otherwise, return the date in the format "dd/MM/yyyy"
-            dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         }
     }
-
 }
 
 @Composable
@@ -58,7 +55,7 @@ fun DateChip(date: LocalDate) {
                 .background(MaterialTheme.colorScheme.primary)
         ) {
             Text(
-                text = formatDate(date),
+                text = formatDateForChip(date),
                 color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(7.dp),
                 fontSize = 18.sp

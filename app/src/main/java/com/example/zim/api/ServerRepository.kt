@@ -1,34 +1,44 @@
 package com.example.zim.api
 
 import android.app.Application
+import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.viewModelScope
+import androidx.core.content.FileProvider
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.Users
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.http.content.streamProvider
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.engine.ApplicationEngine
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.origin
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
+import java.io.File
+import java.io.FileOutputStream
 import java.time.LocalDateTime
-import java.util.concurrent.ConcurrentHashMap
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -174,6 +184,67 @@ class ServerRepository @Inject constructor(
                                 )
                             }
                         }
+
+                        post(ApiRoute.IMAGE) {
+                            val multipart = call.receiveMultipart()
+                            var receiver = ""
+                            var sender = ""
+                            var fileName = ""
+                            var fileExtension = "jpg" // Default extension
+                            var fileBytes: ByteArray? = null
+
+                            multipart.forEachPart { part ->
+                                when (part) {
+                                    is PartData.FormItem -> {
+                                        when (part.name) {
+                                            "receiver" -> receiver = part.value
+                                            "sender" -> sender = part.value
+                                            "fileExtension" -> fileExtension = part.value
+                                            "fileName" -> fileName = part.value
+                                        }
+                                    }
+                                    is PartData.FileItem -> {
+                                        // If fileName already set from FormItem, use that, otherwise use the original
+                                        if (fileName.isEmpty()) {
+                                            fileName = part.originalFileName ?: "image.$fileExtension"
+                                        }
+
+                                        // If we don't have the extension yet, try to extract it from the filename
+                                        if (fileExtension == "jpg" && fileName.contains(".")) {
+                                            fileExtension = fileName.substringAfterLast('.', "jpg")
+                                        }
+
+                                        fileBytes = part.streamProvider().readBytes()
+                                    }
+                                    else -> {}
+                                }
+                                part.dispose()
+                            }
+
+                            val myUuid = userDao.getCurrentUser().users.UUID
+                            if (receiver != myUuid) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(app, "Invalid image receiver", Toast.LENGTH_SHORT).show()
+                                }
+                                call.respond(HttpStatusCode.BadRequest, "Invalid image receiver")
+                                return@post
+                            }
+
+                            fileBytes?.let {
+                                // Save the image to disk with the proper extension
+                                val uri = saveImageOnDisk(fileBytes!!, fileName, fileExtension)
+                                if (uri != null) {
+                                    insertReceivedMessage(sender, uri.toString(), "Image")
+                                    call.respond(HttpStatusCode.OK, "Image received successfully")
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(app, "Unable to save image", Toast.LENGTH_SHORT).show()
+                                    }
+                                    call.respond(HttpStatusCode.InternalServerError, "Unable to save image")
+                                }
+                            } ?: call.respond(HttpStatusCode.BadRequest, "Image not received")
+                        }
+
                     }
                 }
 
@@ -225,6 +296,63 @@ class ServerRepository @Inject constructor(
                     )
                 )
             }
+        }
+    }
+
+    private suspend fun saveImageOnDisk(imageData: ByteArray, fileName: String, fileExtension: String = "jpg"): Uri? {
+        return try {
+            // Create a safe file extension (remove any dots and ensure lowercase)
+            val safeExtension = fileExtension.replace(".", "").lowercase()
+
+            // Generate a unique filename with timestamp
+            val timestamp = System.currentTimeMillis()
+            val originalFileName = fileName.substringBeforeLast('.', "IMG")
+            val finalFileName = "${originalFileName}_${timestamp}.$safeExtension"
+
+            // Get the app's private pictures directory
+            val imagesDir = File(
+                app.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                "received_images"
+            )
+            if (!imagesDir.exists()) {
+                imagesDir.mkdirs()
+            }
+
+            // Create the file
+            val imageFile = File(imagesDir, finalFileName)
+
+            // Write the image data in chunks to avoid OutOfMemory errors with large images
+            withContext(Dispatchers.IO) {
+                FileOutputStream(imageFile).use { fos ->
+                    val bufferSize = 1024 * 8 // 8KB chunks for writing
+                    var offset = 0
+
+                    while (offset < imageData.size) {
+                        val chunkSize = minOf(bufferSize, imageData.size - offset)
+                        fos.write(imageData, offset, chunkSize)
+                        offset += chunkSize
+
+                        // Optional: yield to prevent blocking the thread for too long
+                        if (offset % (bufferSize * 10) == 0) {
+                            yield() // Allow other coroutines to execute if needed
+                        }
+                    }
+
+                    fos.flush()
+                }
+            }
+
+            // Create a content URI for the saved image using FileProvider
+            val imageUri = FileProvider.getUriForFile(
+                app,
+                "${app.packageName}.fileprovider",
+                imageFile
+            )
+
+            imageUri
+        } catch (e: Exception) {
+            Log.e("ImageReceiver", "Failed to save image", e)
+            null // Return null if saving fails
         }
     }
 }
