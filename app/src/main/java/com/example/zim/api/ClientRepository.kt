@@ -50,11 +50,20 @@ class ClientRepository @Inject constructor(
         observeConnection()
     }
 
+    val ips: MutableList<String> = mutableListOf()
+
     private fun getURL(ip: String, route: String): String {
         return "${ApiRoute.BASE_URL}$ip${ApiRoute.PORT}$route"
     }
 
     suspend fun handshake(ip: String): Boolean {
+        ips.forEach {
+            if(it == ip) {
+                return false
+            }
+        }
+        ips.add(ip)
+
         withContext(Dispatchers.Main) {
             Toast.makeText(application, "Hand shake initiated", Toast.LENGTH_SHORT).show()
         }
@@ -110,13 +119,14 @@ class ClientRepository @Inject constructor(
                     )
                 }
             }
-            activeUserManager.addUser(response.publicKey,ip)
+            activeUserManager.addUser(response.publicKey, ip)
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Hand shake successful", Toast.LENGTH_SHORT).show()
             }
             return true
         } catch (e: Exception) {
             // Log the error here
+            ips.remove(ip)
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Hand shake Failed", Toast.LENGTH_SHORT).show()
             }

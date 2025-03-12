@@ -9,8 +9,5 @@ data class ProtocolState(
     val isHotspotEnabled: Boolean = true,
 
     val groupOwnerIp: String = "192.168.49.1",
-    val amIGroupOwner: Boolean? = null,
-
-    val wifiP2pManager: WifiP2pManager? = null,
-    val wifiChannel: Channel?= null,
+    val amIGroupOwner: Boolean? = null
 )

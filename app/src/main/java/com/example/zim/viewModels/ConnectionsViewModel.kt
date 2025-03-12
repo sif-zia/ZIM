@@ -3,23 +3,15 @@ package com.example.zim.viewModels
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.location.LocationManager
 import android.net.wifi.WifiManager
-import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
-import android.net.wifi.p2p.WifiP2pManager
-import android.net.wifi.p2p.WifiP2pManager.Channel
-import android.provider.Settings
 import android.util.Log
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.zim.data.room.Dao.UserDao
-import com.example.zim.data.room.models.Users
 import com.example.zim.events.ConnectionsEvent
-import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
+import com.example.zim.wifiP2P.WifiDirectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,12 +27,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ConnectionsViewModel @Inject constructor(
-    private val userDao: UserDao,
-    private val application: Application
+    private val application: Application,
+    private val wifiDirectManager: WifiDirectManager
 ) : ViewModel() {
-    private var wifiP2pManager: WifiP2pManager? = null
-    private var channel: Channel? = null
-
     private val _state = MutableStateFlow(ConnectionsState())
 
     val state: StateFlow<ConnectionsState> = _state.stateIn(
@@ -50,9 +39,12 @@ class ConnectionsViewModel @Inject constructor(
     )
 
     init {
-//        connectToUsers()
+        wifiDirectManager.addOnPeersDiscoveredCallback(::onPeersDiscovered)
     }
 
+    private fun onPeersDiscovered(peers: List<WifiP2pDevice>) {
+        _state.update { it.copy(connections = peers) }
+    }
 
     @SuppressLint("MissingPermission")
     fun onEvent(event: ConnectionsEvent) {
@@ -67,13 +59,6 @@ class ConnectionsViewModel @Inject constructor(
 
             is ConnectionsEvent.RemoveConnection -> {
                 _state.update { it.copy(connections = _state.value.connections - event.connection) }
-            }
-
-            is ConnectionsEvent.LoadConnections -> {
-                //wifi direct
-                viewModelScope.launch {
-                    _state.update { it.copy(connections = event.peers.map { peer -> peer }) }
-                }
             }
 
             is ConnectionsEvent.HidePrompt -> {
@@ -116,69 +101,7 @@ class ConnectionsViewModel @Inject constructor(
             }
 
             is ConnectionsEvent.ConnectToDevice -> {
-                if (event.connection.status == WifiP2pDevice.CONNECTED) {
-                    wifiP2pManager?.removeGroup(channel, object : WifiP2pManager.ActionListener {
-                        override fun onSuccess() {
-                            Toast.makeText(application,"Disconnected",Toast.LENGTH_LONG)
-                            val config = WifiP2pConfig()
-                            config.deviceAddress = event.connection.deviceAddress
-                            wifiP2pManager?.connect(
-                                channel,
-                                config,
-                                object : WifiP2pManager.ActionListener {
-                                    override fun onSuccess() {
-                                        Toast.makeText(
-                                            application,
-                                            "Connection Request Sent",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-
-                                    override fun onFailure(p0: Int) {
-                                        Toast.makeText(
-                                            application,
-                                            "Connection Request Failed",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-
-                                })
-                        }
-
-                        override fun onFailure(reason: Int) {}
-                    })
-                }
-                else {
-                    val config = WifiP2pConfig()
-                    config.deviceAddress = event.connection.deviceAddress
-                    wifiP2pManager?.connect(
-                        channel,
-                        config,
-                        object : WifiP2pManager.ActionListener {
-                            override fun onSuccess() {
-                                Toast.makeText(
-                                    application,
-                                    "Connection Request Sent",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
-                            override fun onFailure(p0: Int) {
-                                Toast.makeText(
-                                    application,
-                                    "Connection Request Failed",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-
-                        })
-                }
-
-
-            }
-
-            is ConnectionsEvent.ConnectToUsers -> {
-//                connectToUsers()
+                wifiDirectManager.connect(event.connection)
             }
         }
     }
@@ -193,30 +116,7 @@ class ConnectionsViewModel @Inject constructor(
             return
         }
 
-
-        wifiP2pManager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d("ConnectionsViewModel", "Discovery started successfully")
-            }
-
-            override fun onFailure(reason: Int) {
-                Log.d("ConnectionsViewModel", "Discovery Failed")
-                val message = when (reason) {
-                    WifiP2pManager.P2P_UNSUPPORTED -> "P2P is unsupported on this device"
-                    WifiP2pManager.BUSY -> "System is busy, please retry"
-                    WifiP2pManager.ERROR -> "An internal error occurred"
-                    WifiP2pManager.NO_SERVICE_REQUESTS -> "No service requests found"
-                    else -> "Unknown error code: $reason"
-                }
-                Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
-            }
-        })
-
-    }
-
-    fun initWifiP2p(wifiP2pManager: WifiP2pManager, channel: Channel) {
-        this.wifiP2pManager = wifiP2pManager
-        this.channel = channel
+        wifiDirectManager.discoverPeers()
     }
 
     private fun isLocationEnabled(): Boolean {
@@ -231,25 +131,8 @@ class ConnectionsViewModel @Inject constructor(
         return wifiManager.isWifiEnabled
     }
 
-    @SuppressLint("MissingPermission")
-    fun connectToUsers() {
-        viewModelScope.launch {
-            val deviceAddresses = userDao.getUUIDs()
-
-            deviceAddresses.forEach { deviceAddress ->
-                val config = WifiP2pConfig()
-                config.deviceAddress = deviceAddress
-                wifiP2pManager?.connect(channel, config, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() {
-                        _state.update { it.copy(connectionStatus = it.connectionStatus + (deviceAddress to true)) }
-                    }
-
-                    override fun onFailure(p0: Int) {
-                        _state.update { it.copy(connectionStatus = it.connectionStatus + (deviceAddress to false)) }
-                    }
-
-                })
-            }
-        }
+    override fun onCleared() {
+        super.onCleared()
+        wifiDirectManager.removeOnPeersDiscoveredCallback(::onPeersDiscovered)
     }
 }

@@ -44,13 +44,6 @@ class ChatsViewModel @Inject constructor(
                 _state.update { it.copy(query = event.newQuery) }
                 fetchUsers(event.newQuery)
             }
-            is ChatsEvent.UpdateStatus -> {
-                _state.update {
-                    it.copy(chats = it.chats.map { chat ->
-                        chat.copy(isConnected = event.connectionStatus[chat.UUID])
-                    })
-                }
-            }
         }
 
     }

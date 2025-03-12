@@ -84,11 +84,11 @@ fun getExitAnimation(sourceRoute: String?, destinationRoute: String?): ExitTrans
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun NavGraph(
-    chatsViewModel: ChatsViewModel,
-    signUpViewModel: SignUpViewModel,
-    connectionsViewModel: ConnectionsViewModel,
-    userChatViewModel: UserChatViewModel,
-    protocolViewModel: ProtocolViewModel = hiltViewModel<ProtocolViewModel>()
+    chatsViewModel: ChatsViewModel = hiltViewModel(),
+    signUpViewModel: SignUpViewModel = hiltViewModel(),
+    connectionsViewModel: ConnectionsViewModel = hiltViewModel(),
+    userChatViewModel: UserChatViewModel = hiltViewModel(),
+    protocolViewModel: ProtocolViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
 

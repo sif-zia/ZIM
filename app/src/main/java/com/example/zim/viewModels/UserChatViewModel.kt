@@ -29,9 +29,6 @@ class UserChatViewModel @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
 ) : ViewModel() {
-    private var wifiP2pManager: WifiP2pManager? = null
-    private var channel: Channel? = null
-
     private val _state = MutableStateFlow(UserChatState())
     val state: StateFlow<UserChatState> = _state.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000), UserChatState()
@@ -66,11 +63,6 @@ class UserChatViewModel @Inject constructor(
 
             }
         }
-    }
-
-    fun initWifiP2p(wifiP2pManager: WifiP2pManager, channel: Channel) {
-        this.wifiP2pManager = wifiP2pManager
-        this.channel = channel
     }
 
     private suspend fun loadChats(userId: Int) {

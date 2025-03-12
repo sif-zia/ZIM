@@ -7,8 +7,8 @@ import android.content.Intent
 import android.location.LocationManager
 import android.net.Uri
 import android.net.wifi.WifiManager
-import android.net.wifi.p2p.WifiP2pConfig
-import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.WifiP2pGroup
+import android.net.wifi.p2p.WifiP2pInfo
 import android.os.Environment
 import android.provider.Settings
 import android.util.Log
@@ -21,6 +21,7 @@ import com.example.zim.api.ServerRepository
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.states.ProtocolState
+import com.example.zim.wifiP2P.WifiDirectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,7 @@ class ProtocolViewModel @Inject constructor(
     private val userDao: UserDao,
     private val clientRepository: ClientRepository,
     private val activeUserManager: ActiveUserManager,
+    private val wifiDirectManager: WifiDirectManager,
     serverRepository: ServerRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
@@ -58,52 +60,76 @@ class ProtocolViewModel @Inject constructor(
                 it.copy(
                     isLocationEnabled = isLocationEnabled(),
                     isHotspotEnabled = isHotspotEnabled(),
+                    isWifiEnabled = isWifiEnabled()
                 )
             }
         }
 
         if (!serverRepository.isServerRunning.value)
             serverRepository.startServer()
+
+        wifiDirectManager.addOnHotspotStateChangedCallback(::onHotspotStateChanged)
+        wifiDirectManager.addOnLocationStateChangedCallback(::onLocationStateChanged)
+        wifiDirectManager.addOnWifiStateChangedCallback(::onWifiStateChanged)
+        wifiDirectManager.addOnConnectionCallback(::onConnection)
+        wifiDirectManager.addOnDisconnectCallback(::onDisconnect)
+        wifiDirectManager.addOnDeviceNameChangedCallback(::onDeviceNameChanged)
+    }
+
+    private fun onHotspotStateChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(isHotspotEnabled = enabled)
+            }
+        }
+    }
+
+    private fun onLocationStateChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(isLocationEnabled = enabled)
+            }
+        }
+    }
+
+    private fun onWifiStateChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(isWifiEnabled = enabled)
+            }
+        }
+    }
+
+    private fun onConnection(info: WifiP2pInfo, group: WifiP2pGroup) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    amIGroupOwner = info.isGroupOwner,
+                    groupOwnerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
+                )
+            }
+            if (info.groupFormed && !info.isGroupOwner) {
+                clientRepository.handshake(info.groupOwnerAddress?.hostAddress ?: "192.168.49.1")
+            }
+        }
+    }
+
+    private fun onDisconnect() {
+        viewModelScope.launch {
+            activeUserManager.clearAllUsers()
+            clientRepository.ips.clear()
+        }
+    }
+
+    private fun onDeviceNameChanged(newName: String) {
+        viewModelScope.launch {
+            userDao.setCurrUserDeviceName(newName)
+        }
     }
 
     @SuppressLint("MissingPermission")
     fun onEvent(event: ProtocolEvent) {
         when (event) {
-            is ProtocolEvent.LocationEnabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isLocationEnabled = true) }
-                }
-            }
-
-            is ProtocolEvent.LocationDisabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isLocationEnabled = false) }
-                }
-            }
-
-            is ProtocolEvent.WifiEnabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isWifiEnabled = true) }
-                }
-            }
-
-            is ProtocolEvent.WifiDisabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isWifiEnabled = false) }
-                }
-            }
-
-            is ProtocolEvent.HotspotEnabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isHotspotEnabled = true) }
-                }
-            }
-
-            is ProtocolEvent.HotspotDisabled -> {
-                viewModelScope.launch {
-                    _state.update { it.copy(isHotspotEnabled = false) }
-                }
-            }
 
             is ProtocolEvent.LaunchEnableLocation -> {
                 promptEnableLocation()
@@ -117,28 +143,6 @@ class ProtocolViewModel @Inject constructor(
                 promptEnableHotspot()
             }
 
-            is ProtocolEvent.ChangeMyDeviceName -> {
-                viewModelScope.launch {
-                    userDao.setCurrUserDeviceName(event.newDeviceName)
-                }
-            }
-
-            is ProtocolEvent.StartClient -> {
-                viewModelScope.launch {
-                    _state.update {
-                        it.copy(
-                            groupOwnerIp = event.groupOwnerIp ?: "192.168.49.1",
-                            amIGroupOwner = false
-                        )
-                    }
-                    clientRepository.handshake(event.groupOwnerIp ?: "192.168.49.1")
-                }
-            }
-
-            is ProtocolEvent.Disconnect -> {
-                activeUserManager.clearAllUsers()
-            }
-
             is ProtocolEvent.SendMessage -> {
                 if (event.message.isNotEmpty())
                     viewModelScope.launch {
@@ -147,11 +151,10 @@ class ProtocolViewModel @Inject constructor(
             }
 
             is ProtocolEvent.SendImage -> {
-                val permanentImageUri= savePermanentImage(application, event.imageUri)
-                if(permanentImageUri == null){
+                val permanentImageUri = savePermanentImage(application, event.imageUri)
+                if (permanentImageUri == null) {
                     Toast.makeText(application, "Send Failed.", Toast.LENGTH_SHORT).show()
-                }
-                else {
+                } else {
                     viewModelScope.launch {
                         clientRepository.sendImage(permanentImageUri, event.userId)
                     }
@@ -161,38 +164,8 @@ class ProtocolViewModel @Inject constructor(
 
             is ProtocolEvent.AutoConnect -> {
                 viewModelScope.launch {
-                    val user = userDao.getUserById(event.userId)
-
-                    _state.value.wifiP2pManager?.requestPeers(_state.value.wifiChannel) { peers ->
-                        peers.deviceList.forEach { device ->
-                            if (device.deviceName == user.deviceName) {
-
-                                val config = WifiP2pConfig()
-                                config.deviceAddress = device.deviceAddress
-                                _state.value.wifiP2pManager?.connect(
-                                    _state.value.wifiChannel,
-                                    config,
-                                    object : WifiP2pManager.ActionListener {
-                                        override fun onSuccess() {
-                                            Toast.makeText(
-                                                application,
-                                                "Connection Request Sent",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-
-                                        override fun onFailure(p0: Int) {
-                                            Toast.makeText(
-                                                application,
-                                                "Connection Request Failed",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    })
-                            }
-                        }
-
-                    }
+                    val deviceName = userDao.getUserById(event.userId).deviceName
+                    wifiDirectManager.connectByName(deviceName)
                 }
             }
         }
@@ -235,20 +208,21 @@ class ProtocolViewModel @Inject constructor(
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    fun initWifiManager(wifiP2pManager: WifiP2pManager, channel: WifiP2pManager.Channel) {
-        viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    wifiP2pManager = wifiP2pManager,
-                    wifiChannel = channel
-                )
-            }
+    private fun isWifiEnabled(): Boolean {
+        return try {
+            val wifiManager = application.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiManager.isWifiEnabled
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
-    fun savePermanentImage(context: Context, sourceUri: Uri): Uri? {
+
+    private fun savePermanentImage(context: Context, sourceUri: Uri): Uri? {
         try {
             // Create a directory for our images if it doesn't exist
-            val imageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "send_images")
+            val imageDir =
+                File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "send_images")
             if (!imageDir.exists()) {
                 imageDir.mkdirs()
             }
@@ -270,5 +244,15 @@ class ProtocolViewModel @Inject constructor(
             Log.e("ProtocolViewModel", "Error saving image: ${e.message}")
             return null
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        wifiDirectManager.removeOnHotspotStateChangedCallback(::onHotspotStateChanged)
+        wifiDirectManager.removeOnLocationStateChangedCallback(::onLocationStateChanged)
+        wifiDirectManager.removeOnWifiStateChangedCallback(::onWifiStateChanged)
+        wifiDirectManager.removeOnConnectionCallback(::onConnection)
+        wifiDirectManager.removeOnDisconnectCallback(::onDisconnect)
+        wifiDirectManager.removeOnDeviceNameChangedCallback(::onDeviceNameChanged)
     }
 }
