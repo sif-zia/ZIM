@@ -11,9 +11,12 @@ import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import android.widget.Toast
 import com.example.zim.WIFI_AP_STATE_CHANGED
+import com.example.zim.events.ChatsEvent
+import com.example.zim.events.ConnectionsEvent
 import com.example.zim.events.ProtocolEvent
+import com.example.zim.viewModels.ChatsViewModel
+import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
-import com.example.zim.wifiP2P.WifiP2pListener
 import java.net.InetAddress
 import javax.inject.Inject
 
@@ -22,8 +25,9 @@ class WifiP2pBroadcastReceiver @Inject constructor(
     private val wifiP2pManager: WifiP2pManager,
     private val channel: WifiP2pManager.Channel,
     private val locationManager: LocationManager,
-    private val listener: WifiP2pListener, // A custom interface for event handling
     private val protocolViewModel: ProtocolViewModel,
+    private val chatsViewModel: ChatsViewModel,
+    private val connectionsViewModel: ConnectionsViewModel
 ) : BroadcastReceiver() {
 
     @SuppressLint("MissingPermission")
@@ -63,7 +67,7 @@ class WifiP2pBroadcastReceiver @Inject constructor(
             }
             WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                 wifiP2pManager.requestPeers(channel) { peers ->
-                    listener.onPeersAvailable(peers.deviceList)
+                    onPeersAvailable(peers.deviceList)
                 }
             }
             WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
@@ -100,14 +104,27 @@ class WifiP2pBroadcastReceiver @Inject constructor(
                     }
                 } else {
                     protocolViewModel.onEvent(ProtocolEvent.Disconnect)
-                    listener.onDisconnected()
                 }
             }
             WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
                 // Device details have changed
                 val thisDevice = intent.getParcelableExtra<WifiP2pDevice>(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)
-                listener.onThisDeviceChanged(thisDevice)
+                onThisDeviceChanged(thisDevice)
             }
         }
+    }
+
+    fun onThisDeviceChanged(device: WifiP2pDevice?) {
+        val deviceName: String? = device?.deviceName
+
+        deviceName?.let {
+            protocolViewModel.onEvent(ProtocolEvent.ChangeMyDeviceName(deviceName))
+        }
+    }
+
+    fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
+        val connectionsOnEvent = connectionsViewModel::onEvent
+        connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
+        chatsViewModel.onEvent(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
     }
 }

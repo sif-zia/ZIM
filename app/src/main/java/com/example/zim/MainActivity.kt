@@ -39,7 +39,6 @@ import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import com.example.zim.viewModels.UserChatViewModel
-import com.example.zim.wifiP2P.WifiP2pListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +51,7 @@ import javax.inject.Inject
 val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity(), WifiP2pListener {
+class MainActivity : ComponentActivity() {
     @Inject
     lateinit var clientRepository: ClientRepository
 
@@ -121,30 +120,12 @@ class MainActivity : ComponentActivity(), WifiP2pListener {
             addAction(WIFI_AP_STATE_CHANGED)
         }
 
-        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, this, protocolViewModel)
+        broadcastReceiver = WifiP2pBroadcastReceiver(wifiP2pManager, channel, locationManager, protocolViewModel, chatsViewModel, connectionsViewModel)
 
         checkAndRequestPermissions()
         connectionsViewModel.initWifiP2p(wifiP2pManager, channel)
         userChatViewModel.initWifiP2p(wifiP2pManager, channel)
         protocolViewModel.initWifiManager(wifiP2pManager,channel)
-    }
-
-    override fun onPeersAvailable(peers: Collection<WifiP2pDevice>) {
-        val connectionsOnEvent = connectionsViewModel::onEvent
-        connectionsOnEvent(ConnectionsEvent.LoadConnections(peers))
-        chatsViewModel.onEvent(ChatsEvent.UpdateStatus(connectionsViewModel.state.value.connectionStatus))
-    }
-
-    override fun onDisconnected() {
-//        Toast.makeText(application, "Device Disconnected", Toast.LENGTH_SHORT).show()
-    }
-
-    override fun onThisDeviceChanged(device: WifiP2pDevice?) {
-        val deviceName: String? = device?.deviceName
-
-        deviceName?.let {
-            protocolViewModel.onEvent(ProtocolEvent.ChangeMyDeviceName(deviceName))
-        }
     }
 
     override fun onResume() {
