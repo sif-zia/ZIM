@@ -97,7 +97,7 @@ fun ChatRow(
     isDM: Boolean = true,
     id: Int,
     navController: NavController,
-    lastMsgType: String,
+    lastMsgType: String? = null,
 ) {
     // This state will be used to trigger recomposition
     var refreshTrigger by remember { mutableIntStateOf(0) }
@@ -202,7 +202,7 @@ fun ChatRow(
                     }
 
                     // Last Message
-                    if (lastMsg != null) {
+                    if (lastMsg != null && lastMsgType != null) {
                         val text: String =
                             if (lastMsgType == "Text") lastMsg else if (lastMsgType == "Image") "Received an image." else "Unknown"
                         Text(

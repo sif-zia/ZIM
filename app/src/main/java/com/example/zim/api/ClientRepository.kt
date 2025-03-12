@@ -177,6 +177,7 @@ class ClientRepository @Inject constructor(
             throw e
         }
     }
+
     suspend fun sendImage(imageUri: Uri, receiverId: Int) {
         val receiver = userDao.getUserById(receiverId).UUID
         try {
@@ -225,11 +226,20 @@ class ClientRepository @Inject constructor(
                 }
             )
 
-            response.body()
+            if(response.status == HttpStatusCode.OK) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Image sent", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Image failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+
         } catch (e: Exception) {
             // Log the error here
             withContext(Dispatchers.Main) {
-                Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(application, "Image failed", Toast.LENGTH_SHORT).show()
             }
             Log.d(TAG,"Client: Error sending message: ${e.message}")
         }
