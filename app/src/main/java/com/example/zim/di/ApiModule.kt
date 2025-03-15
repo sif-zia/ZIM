@@ -40,10 +40,4 @@ object ApiModule {
     fun provideActiveUserManager(): ActiveUserManager {
         return ActiveUserManager()
     }
-
-    @Provides
-    @Singleton
-    fun provideMessageChannel(): Channel<MessagePayload> {
-        return Channel(Channel.UNLIMITED)
-    }
 }

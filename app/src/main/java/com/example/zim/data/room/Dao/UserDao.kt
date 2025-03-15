@@ -56,7 +56,7 @@ interface UserDao {
         LIMIT 1
     """
     )
-    fun getCurrentUserFlow(): Flow<UserWithCurrentUser>
+    fun getCurrentUserFlow(): Flow<UserWithCurrentUser?>
 
     // Get Connected Users
     @Transaction

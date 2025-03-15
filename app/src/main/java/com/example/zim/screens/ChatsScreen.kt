@@ -94,7 +94,7 @@ fun ChatsScreen(
                     color = when (log.type) {
                         LogType.DEBUG -> Color.Gray
                         LogType.ERROR -> Color.Red
-                        LogType.INFO -> Color.Blue
+                        LogType.INFO -> Color.White
                         LogType.WARNING -> Color.Yellow
                     },
                     modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding)

@@ -14,12 +14,12 @@ import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
 import com.example.zim.wifiP2P.WifiDirectManager
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
-import io.ktor.client.utils.EmptyContent.contentType
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -28,9 +28,6 @@ import io.ktor.http.contentType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -264,16 +261,17 @@ class ClientRepository @Inject constructor(
 
     suspend fun sendOGM(ogm: OriginatorMessage, ip: String): Boolean {
         try {
+            if (ogm.payload != null) {
+                val userId = userDao.getIdByUUID(ogm.payload.destinationAddress)
+                if (userId != null)
+                    insertSentMessage(userId, ogm.payload.content)
+            }
             val response = client.post(getURL(ip, ApiRoute.OGM)) {
                 contentType(ContentType.Application.Json)
                 // Set the body
                 setBody(ogm)
             }
-
-            if(response.status == HttpStatusCode.OK) {
-                return true
-            }
-            return false
+            return response.status == HttpStatusCode.OK
         } catch (e: Exception) {
             // Log the error here
             Log.d(TAG,"Client: Error sending OGM: ${e.message}")

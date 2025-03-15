@@ -18,6 +18,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
 import com.example.zim.api.ServerRepository
+import com.example.zim.batman.BatmanProtocol
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.states.ProtocolState
@@ -42,6 +43,7 @@ class ProtocolViewModel @Inject constructor(
     private val clientRepository: ClientRepository,
     private val activeUserManager: ActiveUserManager,
     private val wifiDirectManager: WifiDirectManager,
+    private val batmanProtocol: BatmanProtocol,
     serverRepository: ServerRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ProtocolState())
@@ -146,7 +148,10 @@ class ProtocolViewModel @Inject constructor(
             is ProtocolEvent.SendMessage -> {
                 if (event.message.isNotEmpty())
                     viewModelScope.launch {
-                        clientRepository.sendMessage(event.message, event.id)
+//                        clientRepository.sendMessage(event.message, event.id)
+                        val uuid= userDao.getUserById(event.id).UUID
+                        batmanProtocol.sendMessage(uuid, event.message)
+
                     }
             }
 

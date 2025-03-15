@@ -14,15 +14,20 @@ import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import com.example.zim.api.UserData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +39,7 @@ class WifiDirectManager @Inject constructor(
 ) {
     private val _state = MutableStateFlow(WifiDirectState())
     val state: StateFlow<WifiDirectState> = _state.asStateFlow()
+    private var bridgeScope: CoroutineScope? = null
 
     // Individual callback functions
     private var onWifiStateChangedCallbacks = mutableListOf<(Boolean) -> Unit>()
@@ -124,11 +130,13 @@ class WifiDirectManager @Inject constructor(
             addAction(WIFI_AP_STATE_CHANGED)
         }
         context.registerReceiver(receiver, intentFilter)
+        startBridgeMode()
     }
 
     fun unregisterBroadcastReceiver() {
         try {
             context.unregisterReceiver(receiver)
+            stopBridgeMode()
         } catch (e: IllegalArgumentException) {
             // Receiver not registered
         }
@@ -409,7 +417,74 @@ class WifiDirectManager @Inject constructor(
         return _state.value.connectedDevices
     }
 
+    @SuppressLint("MissingPermission")
+    fun startBridgeMode() {
+        bridgeScope = CoroutineScope(Dispatchers.IO)
+
+        bridgeScope!!.launch {
+            while (true) {
+                // Only non-group owners should act as bridges
+                if (!_state.value.isGroupOwner && _state.value.isWifiEnabled) {
+                    val currentPeers = _state.value.peers
+                    val connectedDeviceNames = _state.value.connectedDevices.map { it.deviceName }
+
+                    // Filter out devices that are already connected
+                    val availableDevices = currentPeers.filter {
+                        !connectedDeviceNames.contains(it.deviceName) &&
+                                it.status != WifiP2pDevice.CONNECTED
+                    }
+                    Log.d("WifiDirectManager", "Available devices: ${availableDevices.size}")
+
+                    if (availableDevices.isNotEmpty()) {
+                        // Select a device to connect to (you can implement different selection strategies)
+                        val targetDevice = availableDevices.firstOrNull()
+
+                        targetDevice?.let {
+                            // Log the bridge connection attempt
+                            Log.d(
+                                "WifiDirectManager",
+                                "Bridge mode: Attempting to connect to ${it.deviceName}"
+                            )
+
+                            // Connect to the new device
+                            connect(
+                                device = it,
+                                onSuccess = {
+                                    Log.d(
+                                        "WifiDirectManager",
+                                        "Bridge mode: Successfully connected to ${it.deviceName}"
+                                    )
+                                },
+                                onFailure = { reason ->
+                                    Log.d(
+                                        "WifiDirectManager",
+                                        "Bridge mode: Failed to connect to ${it.deviceName}, reason: $reason"
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Wait for the specified interval before attempting to connect to another device
+                delay(BRIDGING_INTERVAL)
+            }
+        }
+    }
+
+    // Add a function to stop bridge mode
+    private fun stopBridgeMode() {
+        bridgeScope?.cancel()
+        bridgeScope = null
+    }
+
+    fun isBridgeActive(): Boolean {
+        return bridgeScope != null && bridgeScope?.isActive == true
+    }
+
     companion object {
         private const val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
+        private const val BRIDGING_INTERVAL = 5000L
     }
+
 }
