@@ -9,6 +9,5 @@ data class OriginatorMessage(
     val sequenceNumber: Int,            // Incremented for each new OGM
     val ttl: Int,                       // Time To Live
     val originalTtl: Int,               // Original TTL value for calculations
-    val timestamp: Long = System.currentTimeMillis(),
-    val payload: MessagePayload? = null // Optional: actual message being sent
+    val timestamp: Long = System.currentTimeMillis()
 )

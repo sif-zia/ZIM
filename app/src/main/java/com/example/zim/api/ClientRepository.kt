@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
@@ -35,6 +36,7 @@ import java.io.IOException
 import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.jvm.internal.impl.utils.DFS.Neighbors
 
 @Singleton
 class ClientRepository @Inject constructor(
@@ -46,9 +48,9 @@ class ClientRepository @Inject constructor(
     private val cryptoHelper: CryptoHelper,
     private val wifiDirectManager: WifiDirectManager
 ) {
-    init {
-        observeConnection()
-    }
+//    init {
+//        observeConnection()
+//    }
 
     val ips: MutableList<String> = mutableListOf()
 
@@ -139,48 +141,23 @@ class ClientRepository @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(message: String, userId: Int, toInsert: Boolean = true) {
+    suspend fun sendMessage(message: MessagePayload, neighborIp: String): Boolean {
         try {
-            val receiver = userDao.getUserById(userId).UUID
-
-            if(message.isEmpty() || receiver.isEmpty()) {
-                return
-            }
-
-            if(toInsert)
-                insertSentMessage(userId, message)
-
-            if(!activeUserManager.hasUser(receiver)) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(application, "User not connected", Toast.LENGTH_SHORT).show()
-                }
-                return
-            }
-
-            val ip = activeUserManager.getIpAddressForUser(receiver)
-            val encryptedMessage = cryptoHelper.encryptMessage(message, receiver)
-            val currentUser = userDao.getCurrentUser()
-
-            val messageData = MessageData(
-                sender = currentUser.users.UUID,
-                receiver = receiver,
-                carrier = currentUser.users.UUID,
-                msg = encryptedMessage
-            )
-
-            val response = client.post(getURL(ip!!, ApiRoute.MESSAGE)){
+            val response = client.post(getURL(neighborIp, ApiRoute.MESSAGE)){
                 contentType(ContentType.Application.Json)
-                // Set the body
-                setBody(messageData)
+                setBody(message)
             }
+
             if(response.status == HttpStatusCode.OK) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(application, "Message sent", Toast.LENGTH_SHORT).show()
                 }
+                return true
             } else {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
                 }
+                return false
             }
         } catch (e: Exception) {
             // Log the error here
@@ -188,7 +165,7 @@ class ClientRepository @Inject constructor(
                 Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
             }
             Log.d(TAG,"Client: Error sending message: ${e.message}")
-            throw e
+            return false
         }
     }
 
@@ -261,15 +238,8 @@ class ClientRepository @Inject constructor(
 
     suspend fun sendOGM(ogm: OriginatorMessage, ip: String): Boolean {
         try {
-            val myUuid = userDao.getCurrentUser().users.UUID
-            if (ogm.payload != null && ogm.payload.sourceAddress == myUuid) {
-                val userId = userDao.getIdByUUID(ogm.payload.destinationAddress)
-                if (userId != null)
-                    insertSentMessage(userId, ogm.payload.content)
-            }
             val response = client.post(getURL(ip, ApiRoute.OGM)) {
                 contentType(ContentType.Application.Json)
-                // Set the body
                 setBody(ogm)
             }
             return response.status == HttpStatusCode.OK
@@ -299,50 +269,50 @@ class ClientRepository @Inject constructor(
         }
     }
 
-    private suspend fun sendPendingMessages(uuid: String) {
-        // Use a mutex to ensure thread safety when accessing the pending messages
-        val mutex = kotlinx.coroutines.sync.Mutex()
-
-        mutex.withLock {
-            // Get pending messages within the lock to ensure consistency
-            val messages = messageDao.getPendingMessages(uuid)
-
-            try {
-                // Process each message within the lock
-
-                for (message in messages) {
-                    delay(50)
-//                    sendMessage(userDao.getIdByUUID(uuid), message)
-                    // Add a small delay to prevent overwhelming the socket
-
-                    sendMessage(message, userDao.getIdByUUID(uuid)!!, false)
-
-
-                    Log.d(TAG, "Sending message to ${uuid}")
-                }
-
-                // Mark messages as sent only if the loop completes successfully
-                messageDao.markPendingMessagesAsSent(uuid)
-            } catch (e: Exception) {
-                Log.e(TAG, "Client: Error sending pending messages: ${e.message}", e)
-                // If there's an error, we don't mark messages as sent
-            }
-        }
-    }
+//    private suspend fun sendPendingMessages(uuid: String) {
+//        // Use a mutex to ensure thread safety when accessing the pending messages
+//        val mutex = kotlinx.coroutines.sync.Mutex()
+//
+//        mutex.withLock {
+//            // Get pending messages within the lock to ensure consistency
+//            val messages = messageDao.getPendingMessages(uuid)
+//
+//            try {
+//                // Process each message within the lock
+//
+//                for (message in messages) {
+//                    delay(50)
+////                    sendMessage(userDao.getIdByUUID(uuid), message)
+//                    // Add a small delay to prevent overwhelming the socket
+//
+//                    sendMessage(message, userDao.getIdByUUID(uuid)!!, false)
+//
+//
+//                    Log.d(TAG, "Sending message to ${uuid}")
+//                }
+//
+//                // Mark messages as sent only if the loop completes successfully
+//                messageDao.markPendingMessagesAsSent(uuid)
+//            } catch (e: Exception) {
+//                Log.e(TAG, "Client: Error sending pending messages: ${e.message}", e)
+//                // If there's an error, we don't mark messages as sent
+//            }
+//        }
+//    }
 
     companion object {
         private const val TAG = "ApiRepository"
     }
 
-    private fun observeConnection() {
-        CoroutineScope(Dispatchers.IO).launch {
-            activeUserManager.activeUsers.collect { users ->
-                users.forEach { (publicKey, _) ->
-                    sendPendingMessages(publicKey)
-                }
-            }
-        }
-    }
+//    private fun observeConnection() {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            activeUserManager.activeUsers.collect { users ->
+//                users.forEach { (publicKey, _) ->
+//                    sendPendingMessages(publicKey)
+//                }
+//            }
+//        }
+//    }
 
     private fun getFileNameFromUri(uri: Uri): String? {
         var fileName: String? = null

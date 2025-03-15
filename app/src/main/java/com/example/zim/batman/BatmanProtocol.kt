@@ -7,6 +7,7 @@ import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.ReceivedMessages
+import com.example.zim.data.room.models.SentMessages
 import com.example.zim.utils.LogType
 import com.example.zim.utils.Logger
 import kotlinx.coroutines.*
@@ -38,6 +39,7 @@ class BatmanProtocol @Inject constructor(
 
     companion object {
         private const val DEFAULT_TTL = 50
+        private const val DEFAULT_MSG_TTL = 5
         private const val OGM_INTERVAL = 1000L // 1 second
         private const val SLIDING_WINDOW_SIZE = 128
         private const val MSG_EXPIRE_TIME = 60000L // 1 minute expiration
@@ -146,26 +148,18 @@ class BatmanProtocol @Inject constructor(
         processPendingMessages(ogm.originatorAddress)
 
         // Forward OGM if TTL allows if there is no payload
-        if (ogm.payload == null && ogm.ttl > 1) {
+        if (ogm.ttl > 1) {
             val forwardOgm = ogm.copy(ttl = ogm.ttl - 1, senderAddress = deviceId)
             forwardOGM(forwardOgm)
         }
+    }
 
-        // Process payload if present
-        ogm.payload?.let { payload ->
-            val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
-            if (processedMessages.containsKey(payloadKey)) {
-                return@let  // Skip if we've already processed this payload
-            }
-            processedMessages[payloadKey] = System.currentTimeMillis()
-
-            if (payload.destinationAddress == deviceId) {
-                // Message is for us
-                deliverMessage(payload)
-            } else {
-                // Forward message to next hop
-                forwardMessage(payload)
-            }
+    suspend fun processMessage(payload: MessagePayload) {
+        // Check if message is for this device
+        if (payload.destinationAddress == deviceId) {
+            deliverMessage(payload)
+        } else {
+            forwardMessage(payload)
         }
     }
 
@@ -229,17 +223,45 @@ class BatmanProtocol @Inject constructor(
 
     // Send a message to a specific destination
     suspend fun sendMessage(destination: String, content: String) {
+        val messageId = insertSentMessage(destination, content)
+
+        if(messageId < 0) {
+            logger.addLog(TAG, "Failed to insert message to database", LogType.ERROR)
+            return
+        }
+
         val payload = MessagePayload(
-            messageId = UUID.randomUUID().toString(),
+            messageId = messageId,
             sourceAddress = deviceId,
+            senderAddress = deviceId,
             destinationAddress = destination,
-            content = content
+            content = content,
+            ttl = DEFAULT_MSG_TTL
         )
 
-        logger.addLog(TAG, "Adding message with ID ${payload.messageId.substring(0, 5)} to queue", LogType.INFO)
+        logger.addLog(TAG, "Adding message with ID ${payload.messageId} to queue", LogType.INFO)
 
         // Add to message queue
         messageQueue.offer(payload)
+    }
+
+    private suspend fun insertSentMessage(uuid: String, message: String, msgType: String = "Text"): Int {
+        userDao.getIdByUUID(uuid)?.let { userId ->
+            val msgId =
+                messageDao.insertMessage(Messages(msg = message, isSent = true, type = msgType))
+
+            if (msgId > 0 && userId > 0) {
+                return messageDao.insertSentMessage(
+                    SentMessages(
+                        sentTime = LocalDateTime.now(),
+                        userIDFK = userId,
+                        status = "Sending",
+                        msgIDFK = msgId.toInt()
+                    )
+                ).toInt()
+            }
+        }
+        return -1
     }
 
     private suspend fun processOutgoingMessages() {
@@ -255,7 +277,7 @@ class BatmanProtocol @Inject constructor(
                 val destination = payload.destinationAddress
                 val nextHop = routingTable[destination]
 
-                logger.addLog(TAG, "Processing message with ID ${payload.messageId.substring(0, 5)} to ${destination.substring(0, 5)}", LogType.INFO)
+                logger.addLog(TAG, "Processing message with ID ${payload.messageId} to ${destination.substring(0, 5)}", LogType.INFO)
 
                 if (nextHop != null) {
                     // Route exists, send message
@@ -271,24 +293,12 @@ class BatmanProtocol @Inject constructor(
     }
 
     private suspend fun sendViaNextHop(payload: MessagePayload, nextHop: String) {
-        val peer = activeUserManager.getIpAddressForUser(nextHop)
-        if (peer != null) {
+        val peerIp = activeUserManager.getIpAddressForUser(nextHop)
+        if (peerIp != null) {
             // Create OGM with payload
-            val ogm = OriginatorMessage(
-                originatorAddress = deviceId,
-                senderAddress = deviceId,
-                sequenceNumber = sequenceNumber.incrementAndGet(),
-                ttl = DEFAULT_TTL,
-                originalTtl = DEFAULT_TTL,
-                payload = payload
-            )
+            val isSent = clientRepository.sendMessage(payload, peerIp)
 
-            val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
-            processedMessages[payloadKey] = System.currentTimeMillis()
-
-            val isSentOgm = clientRepository.sendOGM(ogm, peer)
-
-            if (!isSentOgm) {
+            if (!isSent) {
                 storePendingMessage(payload.destinationAddress, payload)
             }
         } else {
@@ -333,7 +343,7 @@ class BatmanProtocol @Inject constructor(
                     val payloadKey = "${message.messageId}:${message.sourceAddress}"
                     if (!processedMessages.containsKey(payloadKey)) {
                         sendViaNextHop(message, nextHop)
-                        logger.addLog(TAG, "Sending pending message with ID ${message.messageId.substring(0, 5)} through ${nextHop.substring(0, 5)}", LogType.INFO)
+                        logger.addLog(TAG, "Sending pending message with ID ${message.messageId} through ${nextHop.substring(0, 5)}", LogType.INFO)
                     }
                 }
             }
@@ -353,7 +363,8 @@ class BatmanProtocol @Inject constructor(
         val nextHop = routingTable[destination]
 
         if (nextHop != null) {
-            sendViaNextHop(payload, nextHop)
+            val updatedPayload = payload.copy(ttl = payload.ttl - 1, senderAddress = deviceId)
+            sendViaNextHop(updatedPayload, nextHop)
         } else {
             // No known route, store message
             storePendingMessage(destination, payload)

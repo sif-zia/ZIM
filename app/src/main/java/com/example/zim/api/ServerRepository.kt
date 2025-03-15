@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.zim.batman.BatmanProtocol
+import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
@@ -161,27 +162,14 @@ class ServerRepository @Inject constructor(
 
                         post(ApiRoute.MESSAGE) {
                             try {
-                                val messageData = call.receive<MessageData>()
-
-                                val senderUUID = messageData.sender
-                                val receiverUUID = messageData.receiver
-                                val encryptedMessage = messageData.msg
-                                val carrier = messageData.carrier
-
+                                val payload = call.receive<MessagePayload>()
                                 val carrierIp = call.request.origin.remoteHost
-                                val myUuid = userDao.getCurrentUser().users.UUID
 
-                                activeUserManager.addUser(carrier, carrierIp)
+                                activeUserManager.addUser(payload.sourceAddress, carrierIp)
 
-                                if (myUuid == receiverUUID) {
-                                    val decryptedMessage = cryptoHelper.decryptMessage(
-                                        encryptedMessage,
-                                        senderUUID
-                                    )
-                                    insertReceivedMessage(senderUUID, decryptedMessage)
-                                    call.respond(HttpStatusCode.OK, "Message received successfully")
-                                }
+                                batmanProtocol.processMessage(payload)
 
+                                call.respond(HttpStatusCode.OK, "Message received successfully")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Server: Error processing message data", e)
                                 call.respond(

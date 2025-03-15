@@ -22,7 +22,7 @@ interface MessageDao {
     suspend fun insertMessage(message: Messages): Long
 
     @Insert
-    suspend fun insertSentMessage(sentMessage: SentMessages)
+    suspend fun insertSentMessage(sentMessage: SentMessages): Long
 
     @Update
     suspend fun updateSentMessage(sentMessage: SentMessages)
