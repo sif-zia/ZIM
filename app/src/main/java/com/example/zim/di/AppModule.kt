@@ -6,6 +6,7 @@ import android.net.wifi.p2p.WifiP2pManager
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.ZIMDatabase
+import com.example.zim.utils.Logger
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,5 +43,11 @@ object AppModule {
     @Singleton
     fun provideLocationManager(@ApplicationContext context: Context): LocationManager {
         return context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    }
+
+    @Provides
+    @Singleton
+    fun provideLogger(@ApplicationContext context: Context): Logger {
+        return Logger(context)
     }
 }

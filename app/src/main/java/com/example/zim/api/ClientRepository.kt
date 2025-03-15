@@ -7,11 +7,13 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
+import com.example.zim.wifiP2P.WifiDirectManager
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -44,7 +46,8 @@ class ClientRepository @Inject constructor(
     private val messageDao: MessageDao,
     private val activeUserManager: ActiveUserManager,
     private val application: Application,
-    private val cryptoHelper: CryptoHelper
+    private val cryptoHelper: CryptoHelper,
+    private val wifiDirectManager: WifiDirectManager
 ) {
     init {
         observeConnection()
@@ -72,7 +75,8 @@ class ClientRepository @Inject constructor(
             val userData = UserData(
                 fName = currentUser.users.fName,
                 lName = currentUser.users.lName ?: "",
-                publicKey = currentUser.users.UUID
+                publicKey = currentUser.users.UUID,
+                deviceName = currentUser.users.deviceName ?: ""
             )
             val response: UserData = client.post(getURL(ip, ApiRoute.USER)) {
                 contentType(ContentType.Application.Json)
@@ -92,7 +96,8 @@ class ClientRepository @Inject constructor(
                 val user = Users(
                     UUID = response.publicKey,
                     fName = response.fName,
-                    lName = response.lName
+                    lName = response.lName,
+                    deviceName = response.deviceName
                 )
                 userDao.insertUser(user)
                 Log.d(TAG,
@@ -101,10 +106,11 @@ class ClientRepository @Inject constructor(
             } else {
                 // Update IP address if needed
                 val existingUser = userDao.getUserById(existingUserId)
-                if (existingUser.fName != response.fName || existingUser.lName != response.lName) {
+                if (existingUser.fName != response.fName || existingUser.lName != response.lName || existingUser.deviceName != response.deviceName) {
                     val updatedUser = existingUser.copy(
                         fName = response.fName,
-                        lName = response.lName
+                        lName = response.lName,
+                        deviceName = response.deviceName
                     )
                     userDao.updateUser(updatedUser) // Using REPLACE conflict strategy
                     Log.d(
@@ -123,6 +129,7 @@ class ClientRepository @Inject constructor(
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Hand shake successful", Toast.LENGTH_SHORT).show()
             }
+            wifiDirectManager.addConnectedDevice(response)
             return true
         } catch (e: Exception) {
             // Log the error here
@@ -255,6 +262,24 @@ class ClientRepository @Inject constructor(
         }
     }
 
+    suspend fun sendOGM(ogm: OriginatorMessage, ip: String): Boolean {
+        try {
+            val response = client.post(getURL(ip, ApiRoute.OGM)) {
+                contentType(ContentType.Application.Json)
+                // Set the body
+                setBody(ogm)
+            }
+
+            if(response.status == HttpStatusCode.OK) {
+                return true
+            }
+            return false
+        } catch (e: Exception) {
+            // Log the error here
+            Log.d(TAG,"Client: Error sending OGM: ${e.message}")
+            return false
+        }
+    }
 
 
     private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text") {
@@ -319,6 +344,7 @@ class ClientRepository @Inject constructor(
             }
         }
     }
+
     private fun getFileNameFromUri(uri: Uri): String? {
         var fileName: String? = null
 
@@ -339,6 +365,7 @@ class ClientRepository @Inject constructor(
 
         return fileName
     }
+
     private fun getFilePathFromUri(uri: Uri): String? {
         // Handle different URI schemes
         when {

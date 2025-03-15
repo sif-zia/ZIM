@@ -6,6 +6,7 @@ class ApiRoute {
         const val PORT = ":8080"
         const val USER = "/user"
         const val MESSAGE = "/message"
-        const val IMAGE= "/image"
+        const val IMAGE = "/image"
+        const val OGM = "/ogm"
     }
 }

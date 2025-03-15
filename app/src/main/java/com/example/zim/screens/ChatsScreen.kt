@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -24,6 +26,8 @@ import com.example.zim.components.ChatRow
 import com.example.zim.components.Search
 import com.example.zim.events.ChatsEvent
 import com.example.zim.states.ChatsState
+import com.example.zim.utils.LogType
+import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 
 
@@ -32,9 +36,10 @@ fun ChatsScreen(
     navController: NavController,
     state: ChatsState,
     onEvent: (ChatsEvent) -> Unit,
-    protocolViewModel: ProtocolViewModel = hiltViewModel()
+    protocolViewModel: ProtocolViewModel = hiltViewModel(),
+    chatsViewModel: ChatsViewModel = hiltViewModel()
 ) {
-
+    val logs by chatsViewModel.logs.collectAsState()
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
     val focusManager: FocusManager = LocalFocusManager.current
@@ -64,8 +69,8 @@ fun ChatsScreen(
 
         LazyColumn(
             modifier = Modifier
-                .padding(top = verticalPadding)
-                .fillMaxHeight(),
+                .padding(top = verticalPadding),
+//                .fillMaxHeight(),
             state = rememberLazyListState()
         ) {
             items(state.chats) { chat ->
@@ -78,6 +83,21 @@ fun ChatsScreen(
                     navController = navController,
                     isConnected = activeUsers[chat.UUID] != null,
                     lastMsgType = chat.lastMsgType
+                )
+            }
+        }
+
+        LazyColumn {
+            items(logs.subList(maxOf(logs.size - 10, 0), logs.size)) { log ->
+                Text(
+                    text = "${log.timestamp} [${log.tag}] ${log.message}",
+                    color = when (log.type) {
+                        LogType.DEBUG -> Color.Gray
+                        LogType.ERROR -> Color.Red
+                        LogType.INFO -> Color.Blue
+                        LogType.WARNING -> Color.Yellow
+                    },
+                    modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding)
                 )
             }
         }

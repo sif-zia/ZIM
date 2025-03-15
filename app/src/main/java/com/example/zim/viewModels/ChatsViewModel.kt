@@ -7,6 +7,7 @@ import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ChatsEvent
 import com.example.zim.states.ChatsState
+import com.example.zim.utils.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,10 +21,13 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatsViewModel @Inject constructor(
     private val userDao: UserDao,
-    private val messageDao: MessageDao
+    private val messageDao: MessageDao,
+    private val logger: Logger
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatsState())
+
+    val logs = logger.logs
 
     init {
         fetchUsers("")

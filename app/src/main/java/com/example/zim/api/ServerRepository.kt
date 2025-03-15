@@ -6,6 +6,8 @@ import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.example.zim.batman.BatmanProtocol
+import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
@@ -48,6 +50,7 @@ class ServerRepository @Inject constructor(
     private val messageDao: MessageDao,
     private val activeUserManager: ActiveUserManager,
     private val cryptoHelper: CryptoHelper,
+    private val batmanProtocol: BatmanProtocol,
     private val app: Application
 ) {
     private val TAG = "ApiRepository"
@@ -98,7 +101,8 @@ class ServerRepository @Inject constructor(
                                     val user = Users(
                                         UUID = userData.publicKey,
                                         fName = userData.fName,
-                                        lName = userData.lName
+                                        lName = userData.lName,
+                                        deviceName = userData.deviceName
                                     )
                                     userDao.insertUser(user)
                                     Log.d(
@@ -108,10 +112,11 @@ class ServerRepository @Inject constructor(
                                 } else {
                                     // Update IP address if needed
                                     val existingUser = userDao.getUserById(existingUserId)
-                                    if (existingUser.fName != userData.fName || existingUser.lName != userData.lName) {
+                                    if (existingUser.fName != userData.fName || existingUser.lName != userData.lName || existingUser.deviceName != userData.deviceName) {
                                         val updatedUser = existingUser.copy(
                                             fName = userData.fName,
-                                            lName = userData.lName
+                                            lName = userData.lName,
+                                            deviceName = userData.deviceName
                                         )
                                         userDao.updateUser(updatedUser) // Using REPLACE conflict strategy
                                         Log.d(
@@ -134,6 +139,7 @@ class ServerRepository @Inject constructor(
                                     publicKey = currentUser.users.UUID,
                                     fName = currentUser.users.fName,
                                     lName = currentUser.users.lName ?: "",
+                                    deviceName = currentUser.users.deviceName ?: ""
                                 )
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(app, "Hand shake Successful", Toast.LENGTH_SHORT)
@@ -245,6 +251,24 @@ class ServerRepository @Inject constructor(
                             } ?: call.respond(HttpStatusCode.BadRequest, "Image not received")
                         }
 
+                        post(ApiRoute.OGM) {
+                            try {
+                                val ogm = call.receive<OriginatorMessage>()
+
+                                val ip = call.request.origin.remoteHost
+                                val publicKey = ogm.senderAddress
+
+                                activeUserManager.addUser(publicKey, ip)
+
+                                batmanProtocol.processOGM(ogm)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing OGM data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid OGM data: ${e.message}"
+                                )
+                            }
+                        }
                     }
                 }
 

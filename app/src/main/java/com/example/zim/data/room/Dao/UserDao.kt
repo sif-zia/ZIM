@@ -46,6 +46,18 @@ interface UserDao {
     )
     suspend fun getCurrentUser(): UserWithCurrentUser // Return nullable UserWithCurrentUser to avoid issues if no result found
 
+
+    @Query(
+        """
+        SELECT *
+        FROM Users as U
+        INNER JOIN Curr_User as C
+        ON C.User_ID_FK = U.User_ID
+        LIMIT 1
+    """
+    )
+    fun getCurrentUserFlow(): Flow<UserWithCurrentUser>
+
     // Get Connected Users
     @Transaction
     @Query(

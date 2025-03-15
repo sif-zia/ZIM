@@ -15,7 +15,10 @@ import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import android.widget.Toast
+import com.example.zim.api.UserData
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -261,15 +264,6 @@ class WifiDirectManager @Inject constructor(
         })
     }
 
-    @SuppressLint("MissingPermission")
-    fun requestGroupInfo(onGroupInfoAvailable: (List<WifiP2pDevice>) -> Unit) {
-        wifiP2pManager.requestGroupInfo(channel) { group ->
-            val connectedDevices = group?.clientList ?: emptyList()
-            _state.update { it.copy(connectedDevices = connectedDevices.toList()) }
-            onGroupInfoAvailable(connectedDevices.toList())
-        }
-    }
-
     private fun notifyWifiStateChanged(enabled: Boolean) {
         onWifiStateChangedCallbacks.forEach { it(enabled) }
     }
@@ -397,6 +391,22 @@ class WifiDirectManager @Inject constructor(
                 }
             }
         }
+    }
+
+    fun addConnectedDevice(device: UserData) {
+        _state.update {
+            it.copy(connectedDevices = it.connectedDevices + device)
+        }
+    }
+
+    fun removeConnectedDevice(device: UserData) {
+        _state.update {
+            it.copy(connectedDevices = it.connectedDevices - device)
+        }
+    }
+
+    fun getConnectedDevices(): List<UserData> {
+        return _state.value.connectedDevices
     }
 
     companion object {
