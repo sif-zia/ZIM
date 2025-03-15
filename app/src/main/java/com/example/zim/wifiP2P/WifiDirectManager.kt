@@ -28,8 +28,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class WifiDirectManager @Inject constructor(
@@ -419,57 +421,97 @@ class WifiDirectManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun startBridgeMode() {
+        // Cancel existing scope if running
+        bridgeScope?.cancel()
         bridgeScope = CoroutineScope(Dispatchers.IO)
 
         bridgeScope!!.launch {
-            while (true) {
-                // Only non-group owners should act as bridges
-                if (!_state.value.isGroupOwner && _state.value.isWifiEnabled) {
-                    discoverPeers()
-                    delay(5000L)
+            while (isActive) {
+                try {
+                    // Only non-group owners should act as bridges
+                    if (!_state.value.isGroupOwner && _state.value.isWifiEnabled) {
+                        Log.d("WifiDirectManager", "Bridge mode: Scanning for new groups")
 
-                    val currentPeers = _state.value.peers
-                    val connectedDeviceNames = _state.value.connectedDevices.map { it.deviceName }
+                        // Discover available peers
+                        discoverPeers()
+                        // Give discovery time to find peers
+                        delay(5000L)
 
-                    // Filter out devices that are already connected
-                    val availableDevices = currentPeers.filter {
-                        !connectedDeviceNames.contains(it.deviceName) &&
-                                it.status != WifiP2pDevice.CONNECTED
-                    }
-                    Log.d("WifiDirectManager", "Available devices: ${availableDevices.size}")
+                        val currentPeers = _state.value.peers
+                        val connectedDeviceNames = _state.value.connectedDevices.map { it.deviceName }
 
-                    if (availableDevices.isNotEmpty()) {
-                        // Select a device to connect to (you can implement different selection strategies)
-                        val targetDevice = availableDevices.firstOrNull()
+                        // Filter out devices that are already connected
+                        val availableDevices = currentPeers.filter {
+                            !connectedDeviceNames.contains(it.deviceName) &&
+                                    it.status != WifiP2pDevice.CONNECTED
+                        }
+                        Log.d("WifiDirectManager", "Available devices: ${availableDevices.size}")
 
-                        targetDevice?.let {
-                            // Log the bridge connection attempt
-                            Log.d(
-                                "WifiDirectManager",
-                                "Bridge mode: Attempting to connect to ${it.deviceName}"
-                            )
+                        if (availableDevices.isNotEmpty() && _state.value.isConnected) {
+                            // Select a device to connect to
+                            val targetDevice = availableDevices.firstOrNull()
 
-                            // Connect to the new device
-                            connect(
-                                device = it,
-                                onSuccess = {
-                                    Log.d(
-                                        "WifiDirectManager",
-                                        "Bridge mode: Successfully connected to ${it.deviceName}"
-                                    )
-                                },
-                                onFailure = { reason ->
-                                    Log.d(
-                                        "WifiDirectManager",
-                                        "Bridge mode: Failed to connect to ${it.deviceName}, reason: $reason"
+                            targetDevice?.let {
+                                Log.d("WifiDirectManager", "Bridge mode: Planning to switch to ${it.deviceName}")
+
+                                // First disconnect fully, with a completion handler
+                                val disconnectSuccessful = suspendCancellableCoroutine<Boolean> { continuation ->
+                                    disconnect(
+                                        onSuccess = { continuation.resume(true) },
+                                        onFailure = { reason ->
+                                            Log.d("WifiDirectManager", "Bridge mode: Disconnect failed: $reason")
+                                            continuation.resume(false)
+                                        }
                                     )
                                 }
-                            )
+
+                                // Add delay to allow the system to stabilize after disconnect
+                                delay(2000L)
+
+                                // Only attempt to connect if disconnect was successful
+                                if (disconnectSuccessful) {
+                                    val connectSuccessful = suspendCancellableCoroutine<Boolean> { continuation ->
+                                        connect(
+                                            device = it,
+                                            onSuccess = {
+                                                Log.d("WifiDirectManager", "Bridge mode: Connected to ${it.deviceName}")
+                                                continuation.resume(true)
+                                            },
+                                            onFailure = { reason ->
+                                                Log.d("WifiDirectManager", "Bridge mode: Connection failed: $reason")
+                                                continuation.resume(false)
+                                            }
+                                        )
+                                    }
+
+                                    // If connection successful, wait longer before next attempt
+                                    if (connectSuccessful) {
+                                        delay(BRIDGING_INTERVAL * 2)
+                                    }
+                                }
+                            }
+                        } else if (!_state.value.isConnected && availableDevices.isNotEmpty()) {
+                            // We're not connected to anything, try to connect directly
+                            val targetDevice = availableDevices.firstOrNull()
+                            targetDevice?.let {
+                                Log.d("WifiDirectManager", "Bridge mode: Attempting first connection to ${it.deviceName}")
+                                connect(
+                                    device = it,
+                                    onSuccess = {
+                                        Log.d("WifiDirectManager", "Bridge mode: Connected to ${it.deviceName}")
+                                    },
+                                    onFailure = { reason ->
+                                        Log.d("WifiDirectManager", "Bridge mode: Connection failed: $reason")
+                                    }
+                                )
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.e("WifiDirectManager", "Bridge mode error: ${e.message}", e)
                 }
 
-                // Wait for the specified interval before attempting to connect to another device
+                // Wait before next cycle
                 delay(BRIDGING_INTERVAL)
             }
         }

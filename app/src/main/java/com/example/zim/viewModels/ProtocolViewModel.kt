@@ -121,6 +121,7 @@ class ProtocolViewModel @Inject constructor(
         viewModelScope.launch {
             activeUserManager.clearAllUsers()
             clientRepository.ips.clear()
+            batmanProtocol.resetRouting()
         }
     }
 

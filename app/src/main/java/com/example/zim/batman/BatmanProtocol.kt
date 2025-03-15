@@ -415,4 +415,10 @@ class BatmanProtocol @Inject constructor(
     private fun updateFlow() {
         _routedUsers.value = routingTable.toMap()
     }
+
+    fun resetRouting() {
+        routingTable.clear()
+        originatorTable.clear()
+        updateFlow()
+    }
 }
