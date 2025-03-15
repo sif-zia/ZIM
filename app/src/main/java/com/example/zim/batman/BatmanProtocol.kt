@@ -1,9 +1,8 @@
 package com.example.zim.batman
 
-import android.util.Log
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
-import com.example.zim.api.CryptoHelper
+import com.example.zim.utils.CryptoHelper
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages

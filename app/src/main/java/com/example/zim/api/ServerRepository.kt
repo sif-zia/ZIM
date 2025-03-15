@@ -14,6 +14,7 @@ import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.Users
+import com.example.zim.utils.CryptoHelper
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -41,7 +42,6 @@ import kotlinx.coroutines.yield
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDateTime
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 

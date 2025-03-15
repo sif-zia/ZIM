@@ -14,6 +14,7 @@ import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
+import com.example.zim.utils.CryptoHelper
 import com.example.zim.wifiP2P.WifiDirectManager
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -26,17 +27,12 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.reflect.jvm.internal.impl.utils.DFS.Neighbors
 
 @Singleton
 class ClientRepository @Inject constructor(

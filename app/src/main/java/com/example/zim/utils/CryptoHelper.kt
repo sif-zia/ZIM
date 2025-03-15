@@ -1,7 +1,6 @@
-package com.example.zim.api
+package com.example.zim.utils
 
 import com.example.zim.data.room.Dao.UserDao
-import com.example.zim.utils.Crypto
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 
