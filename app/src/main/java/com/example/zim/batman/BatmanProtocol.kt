@@ -3,6 +3,7 @@ package com.example.zim.batman
 import android.util.Log
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
+import com.example.zim.api.CryptoHelper
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
@@ -28,7 +29,8 @@ class BatmanProtocol @Inject constructor(
     private val activeUserManager: ActiveUserManager,
     private val userDao: UserDao,
     private val messageDao: MessageDao,
-    private val logger: Logger
+    private val logger: Logger,
+    private val cryptoHelper: CryptoHelper
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var deviceId = ""
@@ -235,7 +237,7 @@ class BatmanProtocol @Inject constructor(
             sourceAddress = deviceId,
             senderAddress = deviceId,
             destinationAddress = destination,
-            content = content,
+            content = cryptoHelper.encryptMessage(content, destination),
             ttl = DEFAULT_MSG_TTL
         )
 
@@ -353,7 +355,8 @@ class BatmanProtocol @Inject constructor(
     private fun deliverMessage(payload: MessagePayload) {
         // Message is for this device, deliver to application layer
         coroutineScope.launch {
-            insertReceivedMessage(payload.sourceAddress, payload.content)
+            val decryptedMessage = cryptoHelper.decryptMessage(payload.content, payload.sourceAddress)
+            insertReceivedMessage(payload.sourceAddress, decryptedMessage)
         }
         // Here you would integrate with your app's UI/notification system
     }

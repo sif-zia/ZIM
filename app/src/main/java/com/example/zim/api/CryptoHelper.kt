@@ -9,7 +9,7 @@ import javax.inject.Inject
 class CryptoHelper @Inject constructor(
     private val userDao: UserDao
 ) {
-
+    private val crypto = Crypto()
 
     suspend fun encryptMessage(message: String, publicKey: String): String {
         val secretKey = getSecretKey(publicKey)
@@ -22,8 +22,6 @@ class CryptoHelper @Inject constructor(
     }
 
     private suspend fun getSecretKey(publicKey: String): SecretKeySpec {
-
-        val crypto = Crypto()
         val privateKeyStr = userDao.getCurrentUser().currentUser.prKey ?: ""
         val privateKey = crypto.decodePrivateKey(privateKeyStr)
         val decodedPublicKey = crypto.decodePublicKey(publicKey)
@@ -34,8 +32,6 @@ class CryptoHelper @Inject constructor(
     }
 
     private fun encrypt(message: String, secretKey: SecretKeySpec): String {
-        val crypto = Crypto()
-
         val encryptedMessage = crypto.encryptText(message, secretKey)
         val encodedMessage = crypto.encodeEncryptedData(encryptedMessage)
 
@@ -43,8 +39,6 @@ class CryptoHelper @Inject constructor(
     }
 
     private fun decrypt(message: String, secretKey: SecretKeySpec): String {
-        val crypto = Crypto()
-
         val decodedMessage = crypto.decodeEncryptedData(message)
         val decryptedMessages = crypto.decryptText(decodedMessage, secretKey)
 
