@@ -123,4 +123,11 @@ interface MessageDao {
     WHERE User_ID_FK IN (SELECT User_ID FROM Users WHERE UUID = :receiverUuid)
 """)
     suspend fun markPendingMessagesAsSent(receiverUuid: String)
+
+    @Query("""
+        UPDATE Sent_Messages
+        SET status = "Sent"
+        WHERE Sent_Messages_ID = :sentMessageId
+    """)
+    suspend fun markMessageAsSent(sentMessageId: Int)
 }

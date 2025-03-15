@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import com.example.zim.batman.Acknowledgement
 import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.MessageDao
@@ -242,6 +243,20 @@ class ClientRepository @Inject constructor(
         } catch (e: Exception) {
             // Log the error here
             Log.d(TAG,"Client: Error sending OGM: ${e.message}")
+            return false
+        }
+    }
+
+    suspend fun sendAck(ack: Acknowledgement, ip: String): Boolean {
+        try {
+            val response = client.post(getURL(ip, ApiRoute.ACK)) {
+                contentType(ContentType.Application.Json)
+                setBody(ack)
+            }
+            return response.status == HttpStatusCode.OK
+        } catch (e: Exception) {
+            // Log the error here
+            Log.d(TAG,"Client: Error sending ACK: ${e.message}")
             return false
         }
     }

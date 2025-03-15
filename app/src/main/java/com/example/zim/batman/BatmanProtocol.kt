@@ -31,7 +31,6 @@ class BatmanProtocol @Inject constructor(
     private val logger: Logger,
     private val cryptoHelper: CryptoHelper
 ) {
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var deviceId = ""
     private val sequenceNumber = AtomicInteger(0)
 
@@ -351,12 +350,11 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    private fun deliverMessage(payload: MessagePayload) {
+    private suspend fun deliverMessage(payload: MessagePayload) {
         // Message is for this device, deliver to application layer
-        coroutineScope.launch {
-            val decryptedMessage = cryptoHelper.decryptMessage(payload.content, payload.sourceAddress)
-            insertReceivedMessage(payload.sourceAddress, decryptedMessage)
-        }
+        val decryptedMessage = cryptoHelper.decryptMessage(payload.content, payload.sourceAddress)
+        insertReceivedMessage(payload.sourceAddress, decryptedMessage)
+        sendAck(payload.messageId, payload.sourceAddress)
         // Here you would integrate with your app's UI/notification system
     }
 
@@ -372,6 +370,52 @@ class BatmanProtocol @Inject constructor(
             storePendingMessage(destination, payload)
             // Send discovery OGM
             sendDiscoveryOGM(destination)
+        }
+    }
+
+    private suspend fun sendAck(messageId: Int, source: String) {
+        val ack = Acknowledgement(
+            messageId = messageId,
+            sourceAddress = source,
+            senderAddress = deviceId,
+            ttl = DEFAULT_MSG_TTL
+        )
+
+        forwardAck(ack)
+    }
+
+    suspend fun processAck(ack: Acknowledgement) {
+        val messageId = ack.messageId
+        val source = ack.sourceAddress
+
+        if(source == deviceId) {
+            messageDao.markMessageAsSent(messageId)
+        } else {
+            val updatedAck = ack.copy(ttl = ack.ttl - 1, senderAddress = deviceId)
+            forwardAck(updatedAck)
+        }
+    }
+
+    private suspend fun forwardAck(ack: Acknowledgement) {
+        val nextHop = routingTable[ack.sourceAddress]
+        if (nextHop != null) {
+            val peerIp = activeUserManager.getIpAddressForUser(nextHop)
+            if (peerIp != null) {
+                var isSent = clientRepository.sendAck(ack, peerIp)
+
+                // Five Retries
+                var retryCount = 0
+                while (!isSent && retryCount < 5) {
+                    delay(1000)
+                    isSent = clientRepository.sendAck(ack, peerIp)
+                    retryCount++
+                }
+
+                if (!isSent) {
+                    // Remove route if sending fails
+                    removeRoute(ack.sourceAddress)
+                }
+            }
         }
     }
 

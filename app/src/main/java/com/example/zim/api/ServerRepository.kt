@@ -6,6 +6,7 @@ import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.example.zim.batman.Acknowledgement
 import com.example.zim.batman.BatmanProtocol
 import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
@@ -254,6 +255,25 @@ class ServerRepository @Inject constructor(
                                 call.respond(
                                     HttpStatusCode.BadRequest,
                                     "Invalid OGM data: ${e.message}"
+                                )
+                            }
+                        }
+
+                        post(ApiRoute.ACK) {
+                            try {
+                                val ack = call.receive<Acknowledgement>()
+
+                                val ip = call.request.origin.remoteHost
+                                val publicKey = ack.senderAddress
+
+                                activeUserManager.addUser(publicKey, ip)
+
+                                batmanProtocol.processAck(ack)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing ACK data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid ACK data: ${e.message}"
                                 )
                             }
                         }
