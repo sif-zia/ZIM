@@ -192,7 +192,7 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    private fun updateBestRoute(originatorAddress: String) {
+    private suspend fun updateBestRoute(originatorAddress: String) {
         val originatorMap = originatorTable[originatorAddress] ?: return
 
         // Find neighbor with highest reception rate
@@ -431,6 +431,27 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
+    private suspend fun addPendingMessagesOfAUserToQueue(uuid: String) {
+
+        val pendingMessages = messageDao.getPendingMessages(uuid)
+
+        pendingMessages.forEach { message ->
+            val payload = MessagePayload(
+                messageId = message.messageId,
+                sourceAddress = deviceId,
+                senderAddress = deviceId,
+                destinationAddress = uuid,
+                content = cryptoHelper.encryptMessage(message.content, uuid),
+                ttl = DEFAULT_MSG_TTL
+            )
+            val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
+            if (!processedMessages.containsKey(payloadKey)) {
+                logger.addLog(TAG, "Adding pending message with ID ${message.messageId} to queue", LogType.INFO)
+                messageQueue.offer(payload)
+            }
+        }
+    }
+
     private suspend fun insertReceivedMessage(
         uuid: String,
         message: String,
@@ -458,13 +479,18 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    fun addRoute(destination: String, nextHop: String) {
+    private suspend fun addRoute(destination: String, nextHop: String) {
+        if(routingTable.containsKey(destination) && routingTable[destination] == nextHop) {
+            return
+        }
+
         routingTable[destination] = nextHop
         updateFlow()
+        addPendingMessagesOfAUserToQueue(destination)
     }
 
     // Remove user from active map
-    fun removeRoute(destination: String) {
+    private fun removeRoute(destination: String) {
         routingTable.remove(destination)
         updateFlow()
     }

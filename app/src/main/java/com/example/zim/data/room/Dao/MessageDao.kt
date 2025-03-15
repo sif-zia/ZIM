@@ -3,16 +3,13 @@ package com.example.zim.data.room.Dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.example.zim.api.MessageData
 import com.example.zim.data.room.models.Messages
-import com.example.zim.data.room.models.MessagesWithReceivedMessages
-import com.example.zim.data.room.models.MessagesWithSentMessages
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.SentMessages
-import com.example.zim.data.room.models.Users
 import com.example.zim.helperclasses.ChatContent
 import kotlinx.coroutines.flow.Flow
 
@@ -108,14 +105,14 @@ interface MessageDao {
     suspend fun readAllMessages(userId: Int)
 
     @Query("""
-        SELECT M.msg
+        SELECT Sent_Messages_ID AS messageId, M.msg AS content
         FROM Messages M 
         JOIN Sent_Messages SM ON M.Message_ID = SM.Message_ID_FK
         JOIN Users U ON SM.User_ID_FK = U.User_ID
         WHERE U.UUID = :receiverUuid AND SM.status= "Sending" AND M.type= "Text"
-        ORDER BY SM.sentTime DESC 
+        ORDER BY SM.sentTime 
     """)
-    suspend fun getPendingMessages(receiverUuid: String): List<String>
+    suspend fun getPendingMessages(receiverUuid: String): List<MessageData>
 
     @Query("""
     UPDATE Sent_Messages
