@@ -425,6 +425,9 @@ class WifiDirectManager @Inject constructor(
             while (true) {
                 // Only non-group owners should act as bridges
                 if (!_state.value.isGroupOwner && _state.value.isWifiEnabled) {
+                    discoverPeers()
+                    delay(5000L)
+
                     val currentPeers = _state.value.peers
                     val connectedDeviceNames = _state.value.connectedDevices.map { it.deviceName }
 
@@ -484,7 +487,7 @@ class WifiDirectManager @Inject constructor(
 
     companion object {
         private const val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
-        private const val BRIDGING_INTERVAL = 5000L
+        private const val BRIDGING_INTERVAL = 30000L
     }
 
 }

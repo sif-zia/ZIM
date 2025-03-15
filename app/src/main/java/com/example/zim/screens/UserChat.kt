@@ -48,6 +48,7 @@ fun UserChat(
     navController: NavController,
     protocolViewModel: ProtocolViewModel = hiltViewModel()
 ) {
+    val routedUsers by protocolViewModel.routedUsers.collectAsState()
     var message by remember {
         mutableStateOf("")
     }
@@ -72,9 +73,10 @@ fun UserChat(
                 },
             verticalArrangement = Arrangement.SpaceBetween
         ) {
+            val status = if(activeUsers[state.uuid] != null) 1 else if (checkIsInNetwork(routedUsers, state.uuid)) 2 else 0
             UserInfoRow(
                 username = state.username,
-                status = activeUsers[state.uuid] != null,
+                status = status,
                 userDp = state.dpUri,
                 navController = navController
             )

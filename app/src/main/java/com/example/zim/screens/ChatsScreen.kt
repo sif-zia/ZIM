@@ -30,6 +30,9 @@ import com.example.zim.utils.LogType
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 
+fun checkIsInNetwork(routedUsers: Map<String, String>, uuid: String): Boolean {
+    return routedUsers.containsKey(uuid)
+}
 
 @Composable
 fun ChatsScreen(
@@ -40,6 +43,8 @@ fun ChatsScreen(
     chatsViewModel: ChatsViewModel = hiltViewModel()
 ) {
     val logs by chatsViewModel.logs.collectAsState()
+    val routedUsers by protocolViewModel.routedUsers.collectAsState()
+
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
     val focusManager: FocusManager = LocalFocusManager.current
@@ -73,7 +78,9 @@ fun ChatsScreen(
 //                .fillMaxHeight(),
             state = rememberLazyListState()
         ) {
+
             items(state.chats) { chat ->
+                val isConnected = if (activeUsers[chat.UUID] != null) 1 else if (checkIsInNetwork(routedUsers, chat.UUID)) 2 else 0
                 ChatRow(
                     name = "${chat.fName} ${chat.lName}",
                     lastMsg = chat.lastMsg,
@@ -81,25 +88,25 @@ fun ChatsScreen(
                     unReadMsgs = chat.unReadMsgs,
                     id = chat.id,
                     navController = navController,
-                    isConnected = activeUsers[chat.UUID] != null,
+                    isConnected = isConnected,
                     lastMsgType = chat.lastMsgType
                 )
             }
         }
 
-        LazyColumn {
-            items(logs.subList(maxOf(logs.size - 10, 0), logs.size)) { log ->
-                Text(
-                    text = "${log.timestamp} [${log.tag}] ${log.message}",
-                    color = when (log.type) {
-                        LogType.DEBUG -> Color.Gray
-                        LogType.ERROR -> Color.Red
-                        LogType.INFO -> Color.White
-                        LogType.WARNING -> Color.Yellow
-                    },
-                    modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding)
-                )
-            }
-        }
+//        LazyColumn {
+//            items(logs.subList(maxOf(logs.size - 10, 0), logs.size)) { log ->
+//                Text(
+//                    text = "${log.timestamp} [${log.tag}] ${log.message}",
+//                    color = when (log.type) {
+//                        LogType.DEBUG -> Color.Gray
+//                        LogType.ERROR -> Color.Red
+//                        LogType.INFO -> Color.White
+//                        LogType.WARNING -> Color.Yellow
+//                    },
+//                    modifier = Modifier.padding(horizontal = horizontalPadding, vertical = verticalPadding)
+//                )
+//            }
+//        }
     }
 }

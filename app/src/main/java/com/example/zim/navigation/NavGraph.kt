@@ -241,7 +241,6 @@ fun NavGraph(
                         val userId = backStackEntry.arguments?.getString("userId")?.toInt()
                         if (userId != null) {
                             userChatOnEvent(UserChatEvent.LoadData(userId))
-                            protocolViewModel.onEvent(ProtocolEvent.AutoConnect(userId))
                             UserChat(userId = userId, onEvent = userChatOnEvent, state = userChatState, navController = navController)
 
                         }

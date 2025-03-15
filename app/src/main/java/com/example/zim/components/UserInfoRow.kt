@@ -64,7 +64,7 @@ fun Color.add(offset: Float): Color {
 
 
 @Composable
-fun UserInfoRow(username: String, status: Boolean, userDp: Uri?, navController: NavController) {
+fun UserInfoRow(username: String, status: Int, userDp: Uri?, navController: NavController) {
 
 
     var isExpanded by remember {
@@ -122,7 +122,7 @@ fun UserInfoRow(username: String, status: Boolean, userDp: Uri?, navController: 
                 Text(text = username, fontWeight = FontWeight.Bold, fontSize = 20.sp)
 
                 // Status
-                if (status)
+                if (status == 1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -132,6 +132,17 @@ fun UserInfoRow(username: String, status: Boolean, userDp: Uri?, navController: 
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Connected", fontSize = 16.sp)
+                    }
+                else if (status == 2)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(100))
+                                .background(Color.Yellow)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "In Network", fontSize = 16.sp)
                     }
             }
 

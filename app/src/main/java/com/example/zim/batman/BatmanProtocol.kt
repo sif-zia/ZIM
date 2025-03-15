@@ -1,5 +1,6 @@
 package com.example.zim.batman
 
+import android.util.Log
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
 import com.example.zim.data.room.Dao.MessageDao
@@ -9,6 +10,9 @@ import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.utils.LogType
 import com.example.zim.utils.Logger
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -47,7 +51,10 @@ class BatmanProtocol @Inject constructor(
         ConcurrentHashMap<String, ConcurrentHashMap<String, OriginatorStats>>()
 
     // Maps destination to best next hop
-    private val routingTable = ConcurrentHashMap<String, String>()
+    val routingTable = ConcurrentHashMap<String, String>()
+
+    private val _routedUsers = MutableStateFlow<Map<String, String>>(emptyMap())
+    val routedUsers: StateFlow<Map<String, String>> = _routedUsers.asStateFlow()
 
     // Messages we've already seen to avoid reprocessing
     private val processedMessages = ConcurrentHashMap<String, Long>()
@@ -207,7 +214,7 @@ class BatmanProtocol @Inject constructor(
 
         // Update routing table with best next hop
         bestNeighbor?.let {
-            routingTable[originatorAddress] = it
+            addRoute(originatorAddress, it)
         }
     }
 
@@ -286,7 +293,7 @@ class BatmanProtocol @Inject constructor(
             }
         } else {
             // Peer not directly connected, need to find another route
-            routingTable.remove(payload.destinationAddress)
+            removeRoute(payload.destinationAddress)
             storePendingMessage(payload.destinationAddress, payload)
         }
     }
@@ -392,5 +399,20 @@ class BatmanProtocol @Inject constructor(
                 )
             }
         }
+    }
+
+    fun addRoute(destination: String, nextHop: String) {
+        routingTable[destination] = nextHop
+        updateFlow()
+    }
+
+    // Remove user from active map
+    fun removeRoute(destination: String) {
+        routingTable.remove(destination)
+        updateFlow()
+    }
+
+    private fun updateFlow() {
+        _routedUsers.value = routingTable.toMap()
     }
 }

@@ -90,7 +90,7 @@ fun ChatRow(
     modifier: Modifier = Modifier,
     name: String,
     lastMsg: String? = null,
-    isConnected: Boolean = false,
+    isConnected: Int = 0,
     unReadMsgs: Int = 0,
     time: LocalDateTime? = null,
     dpUri: Uri? = null,
@@ -233,8 +233,10 @@ fun ChatRow(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    val connectedColor = if (isConnected) {
+                    val connectedColor = if (isConnected == 1) {
                         Color.Green
+                    } else if (isConnected == 2) {
+                        Color.Yellow
                     } else {
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) // Faded primary color
                     }

@@ -261,7 +261,8 @@ class ClientRepository @Inject constructor(
 
     suspend fun sendOGM(ogm: OriginatorMessage, ip: String): Boolean {
         try {
-            if (ogm.payload != null) {
+            val myUuid = userDao.getCurrentUser().users.UUID
+            if (ogm.payload != null && ogm.payload.sourceAddress == myUuid) {
                 val userId = userDao.getIdByUUID(ogm.payload.destinationAddress)
                 if (userId != null)
                     insertSentMessage(userId, ogm.payload.content)

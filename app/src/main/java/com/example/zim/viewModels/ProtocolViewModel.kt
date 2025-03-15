@@ -49,6 +49,7 @@ class ProtocolViewModel @Inject constructor(
     private val _state = MutableStateFlow(ProtocolState())
 
     val activeUsers = activeUserManager.activeUsers
+    val routedUsers = batmanProtocol.routedUsers
 
     val state: StateFlow<ProtocolState> = _state.stateIn(
         viewModelScope,
@@ -165,13 +166,6 @@ class ProtocolViewModel @Inject constructor(
                     }
                 }
 
-            }
-
-            is ProtocolEvent.AutoConnect -> {
-                viewModelScope.launch {
-                    val deviceName = userDao.getUserById(event.userId).deviceName
-                    wifiDirectManager.connectByName(deviceName)
-                }
             }
         }
     }
