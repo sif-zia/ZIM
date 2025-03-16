@@ -312,6 +312,9 @@ class WifiDirectManager @Inject constructor(
 
                     _state.update { it.copy(isHotspotEnabled = isHotspotEnabled) }
                     notifyHotspotStateChanged(isHotspotEnabled)
+
+                    if(!isBridgeActive())
+                        startBridgeMode()
                 }
 
                 LocationManager.PROVIDERS_CHANGED_ACTION -> {
@@ -321,6 +324,9 @@ class WifiDirectManager @Inject constructor(
 
                     _state.update { it.copy(isLocationEnabled = isLocationEnabled) }
                     notifyLocationStateChanged(isLocationEnabled)
+
+                    if(!isBridgeActive())
+                        startBridgeMode()
                 }
 
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
@@ -329,6 +335,9 @@ class WifiDirectManager @Inject constructor(
 
                     _state.update { it.copy(isWifiEnabled = isWifiEnabled) }
                     notifyWifiStateChanged(isWifiEnabled)
+
+                    if(!isBridgeActive())
+                        startBridgeMode()
                 }
 
                 WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
@@ -486,7 +495,7 @@ class WifiDirectManager @Inject constructor(
 
                                     // If connection successful, wait longer before next attempt
                                     if (connectSuccessful) {
-                                        delay(BRIDGING_INTERVAL * 2)
+                                        delay(BRIDGING_INTERVAL)
                                     }
                                 }
                             }
@@ -504,15 +513,14 @@ class WifiDirectManager @Inject constructor(
                                         Log.d("WifiDirectManager", "Bridge mode: Connection failed: $reason")
                                     }
                                 )
+                                // Wait before next cycle
+                                delay(BRIDGING_INTERVAL)
                             }
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("WifiDirectManager", "Bridge mode error: ${e.message}", e)
                 }
-
-                // Wait before next cycle
-                delay(BRIDGING_INTERVAL)
             }
         }
     }

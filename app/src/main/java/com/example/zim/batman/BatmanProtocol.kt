@@ -14,6 +14,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -192,7 +194,7 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    private suspend fun updateBestRoute(originatorAddress: String) {
+    private fun updateBestRoute(originatorAddress: String) {
         val originatorMap = originatorTable[originatorAddress] ?: return
 
         // Find neighbor with highest reception rate
@@ -342,6 +344,7 @@ class BatmanProtocol @Inject constructor(
                     // Check if we've already processed this message
                     val payloadKey = "${message.messageId}:${message.sourceAddress}"
                     if (!processedMessages.containsKey(payloadKey)) {
+                        processedMessages[payloadKey] = System.currentTimeMillis()
                         sendViaNextHop(message, nextHop)
                         logger.addLog(TAG, "Sending pending message with ID ${message.messageId} through ${nextHop.substring(0, 5)}", LogType.INFO)
                     }
@@ -431,23 +434,36 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
+    private val addPendingMessageMutex = Mutex()
     private suspend fun addPendingMessagesOfAUserToQueue(uuid: String) {
+        addPendingMessageMutex.withLock {
+            // Get all pending messages in a single transaction
+            val pendingMessages = messageDao.getPendingMessages(uuid)
 
-        val pendingMessages = messageDao.getPendingMessages(uuid)
+            if (pendingMessages.isEmpty()) {
+                return
+            }
 
-        pendingMessages.forEach { message ->
-            val payload = MessagePayload(
-                messageId = message.messageId,
-                sourceAddress = deviceId,
-                senderAddress = deviceId,
-                destinationAddress = uuid,
-                content = cryptoHelper.encryptMessage(message.content, uuid),
-                ttl = DEFAULT_MSG_TTL
-            )
-            val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
-            if (!processedMessages.containsKey(payloadKey)) {
-                logger.addLog(TAG, "Adding pending message with ID ${message.messageId} to queue", LogType.INFO)
-                messageQueue.offer(payload)
+            logger.addLog(TAG, "Processing ${pendingMessages.size} pending messages for ${uuid.substring(0, 5)}", LogType.INFO)
+
+            pendingMessages.forEach { message ->
+                val payload = MessagePayload(
+                    messageId = message.messageId,
+                    sourceAddress = deviceId,
+                    senderAddress = deviceId,
+                    destinationAddress = uuid,
+                    content = cryptoHelper.encryptMessage(message.content, uuid),
+                    ttl = DEFAULT_MSG_TTL
+                )
+
+                // Check if we've already processed this message
+                val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
+                if (!processedMessages.containsKey(payloadKey)) {
+                    processedMessages[payloadKey] = System.currentTimeMillis()
+
+                    // Add to message queue
+                    messageQueue.offer(payload)
+                }
             }
         }
     }
@@ -479,14 +495,18 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    private suspend fun addRoute(destination: String, nextHop: String) {
+    private fun addRoute(destination: String, nextHop: String) {
         if(routingTable.containsKey(destination) && routingTable[destination] == nextHop) {
             return
         }
 
         routingTable[destination] = nextHop
         updateFlow()
-        addPendingMessagesOfAUserToQueue(destination)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            delay(1000) // Delay to allow route to stabilize
+            addPendingMessagesOfAUserToQueue(destination)
+        }
     }
 
     // Remove user from active map

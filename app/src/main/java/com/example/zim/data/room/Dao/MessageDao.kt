@@ -127,4 +127,7 @@ interface MessageDao {
         WHERE Sent_Messages_ID = :sentMessageId
     """)
     suspend fun markMessageAsSent(sentMessageId: Int)
+
+    @Query("UPDATE Sent_Messages SET status = :status WHERE Sent_Messages_ID IN (:messageIds)")
+    suspend fun updateSentMessagesStatus(messageIds: List<Int>, status: String)
 }
