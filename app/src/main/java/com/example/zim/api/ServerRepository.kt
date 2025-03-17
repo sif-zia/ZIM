@@ -166,7 +166,7 @@ class ServerRepository @Inject constructor(
                                 val payload = call.receive<MessagePayload>()
                                 val carrierIp = call.request.origin.remoteHost
 
-                                activeUserManager.addUser(payload.sourceAddress, carrierIp)
+                                activeUserManager.addUser(payload.senderAddress, carrierIp)
 
                                 batmanProtocol.processMessage(payload)
 

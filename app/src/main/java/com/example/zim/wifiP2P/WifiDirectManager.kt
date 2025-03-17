@@ -438,7 +438,7 @@ class WifiDirectManager @Inject constructor(
             while (isActive) {
                 try {
                     // Only non-group owners should act as bridges
-                    if (!_state.value.isGroupOwner && _state.value.isWifiEnabled) {
+                    if (_state.value.isWifiEnabled && _state.value.isConnected) {
                         Log.d("WifiDirectManager", "Bridge mode: Scanning for new groups")
 
                         // Discover available peers
@@ -463,19 +463,26 @@ class WifiDirectManager @Inject constructor(
                             targetDevice?.let {
                                 Log.d("WifiDirectManager", "Bridge mode: Planning to switch to ${it.deviceName}")
 
+                                var disconnectSuccessful = true
                                 // First disconnect fully, with a completion handler
-                                val disconnectSuccessful = suspendCancellableCoroutine<Boolean> { continuation ->
-                                    disconnect(
-                                        onSuccess = { continuation.resume(true) },
-                                        onFailure = { reason ->
-                                            Log.d("WifiDirectManager", "Bridge mode: Disconnect failed: $reason")
-                                            continuation.resume(false)
+                                if(!state.value.isGroupOwner) {
+                                    disconnectSuccessful =
+                                        suspendCancellableCoroutine<Boolean> { continuation ->
+                                            disconnect(
+                                                onSuccess = { continuation.resume(true) },
+                                                onFailure = { reason ->
+                                                    Log.d(
+                                                        "WifiDirectManager",
+                                                        "Bridge mode: Disconnect failed: $reason"
+                                                    )
+                                                    continuation.resume(false)
+                                                }
+                                            )
                                         }
-                                    )
                                 }
 
                                 // Add delay to allow the system to stabilize after disconnect
-                                delay(2000L)
+                                delay(100L)
 
                                 // Only attempt to connect if disconnect was successful
                                 if (disconnectSuccessful) {
