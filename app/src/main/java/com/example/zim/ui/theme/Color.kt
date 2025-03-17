@@ -12,7 +12,12 @@ import androidx.compose.ui.graphics.Color
 
 val DarkGreenishGray = Color(0xFF2E3938)
 val LightGray = Color(0xFFCCCECE)
-val Purple = Color(0xFF7154BD)
+//val Purple = Color(0xFF7154BD)
+
+val Blue = Color(0xFF6987C9)
+val White = Color(0xFFFFF9FB)
+val Gray = Color(0xFFC3C3C3)
+val Purple = Color(0xFF7B69C9)
 //val Green = Color(0xFF34DB25)
 //
 //val FadedDarkGreenishGray = Color(0xBF2E3938)

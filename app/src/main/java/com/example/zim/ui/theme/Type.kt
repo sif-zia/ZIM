@@ -63,6 +63,13 @@ val Typography = Typography(
         fontSize = 30.sp
     ),
 
+    // 3) Somewhat Large Font
+    headlineMedium = TextStyle(
+        fontFamily = RobotoCondensed,
+        fontWeight = FontWeight.Normal,
+        fontSize = 35.sp
+    ),
+
     // 3) NormalFont
     bodyLarge = TextStyle(
         fontFamily = RobotoCondensed,

@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -25,18 +26,18 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightGray,
-    secondary = DarkGreenishGray,
+    primary = Blue,
+    secondary = White,
     tertiary = Purple,
 
     /* Other default colors to override */
-    background = LightGray,
-    surface = DarkGreenishGray,
-    onPrimary = LightGray,
-    onSecondary = DarkGreenishGray,
-    onTertiary = LightGray,
-    onBackground = DarkGreenishGray,
-    onSurface = LightGray,
+    background = White,
+    surface = Gray,
+    onPrimary = White,
+    onSecondary = Color.Black,
+    onTertiary = Color.Black,
+    onBackground = Blue,
+    onSurface = Color.Black,
 )
 
 @Composable
@@ -45,7 +46,7 @@ fun ZIMTheme(
     content: @Composable () -> Unit
 ) {
 //    val colors = if(darkTheme) DarkColorScheme else LightColorScheme;
-    val colors = DarkColorScheme;
+    val colors = LightColorScheme;
 
     MaterialTheme(
         colorScheme = colors,
