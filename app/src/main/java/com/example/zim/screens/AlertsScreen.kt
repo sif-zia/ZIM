@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.zim.components.AddAlertDialog
 import com.example.zim.components.AlertRow
@@ -85,7 +86,7 @@ fun AlertsScreen(navController: NavController) {
             // My Alerts Header
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth(0.8f)
                     .padding(vertical = verticalPadding),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -97,7 +98,9 @@ fun AlertsScreen(navController: NavController) {
                 Text(
                     text = "My Alerts",
                     modifier = Modifier.weight(0.33f),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    fontSize = 20.sp
                 )
                 HorizontalDivider(
                     modifier = Modifier.weight(0.33f),
@@ -117,14 +120,15 @@ fun AlertsScreen(navController: NavController) {
                         .fillMaxWidth()
                         .padding(vertical = verticalPadding),
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.primary.copy(0.6f)
+                    color = MaterialTheme.colorScheme.primary.copy(0.6f),
+                    fontSize = 17.sp
                 )
             }
 
             // Alerts Header
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth(0.8f)
                     .padding(vertical = verticalPadding),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -136,7 +140,9 @@ fun AlertsScreen(navController: NavController) {
                 Text(
                     text = "Alerts",
                     modifier = Modifier.weight(0.33f),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                    fontSize = 20.sp
                 )
                 HorizontalDivider(
                     modifier = Modifier.weight(0.33f),
@@ -176,7 +182,7 @@ fun AlertsScreen(navController: NavController) {
                     imageVector = Icons.Outlined.NotificationAdd,
                     contentDescription = "Add Alert Button",
                     modifier = Modifier.size(25.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.surface,
                 )
             }
         }

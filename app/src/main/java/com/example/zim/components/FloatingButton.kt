@@ -33,8 +33,7 @@ fun FloatingButton(onClick: () -> Unit, content: @Composable () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .width(50.dp)
-                .height(50.dp)
+                .size(50.dp)
                 .clip(shape = RoundedCornerShape(100))
                 .border(
                     1.dp,

@@ -1,25 +1,14 @@
 package com.example.zim.components
 
-import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FireTruck
-import androidx.compose.material.icons.outlined.HealthAndSafety
-import androidx.compose.material.icons.outlined.PersonalInjury
-import androidx.compose.material.icons.outlined.SportsMartialArts
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,11 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zim.helperclasses.Alert
-import com.example.zim.helperclasses.AlertType
 import kotlinx.coroutines.delay
 
 @Composable
@@ -57,7 +44,7 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
     Row(
         modifier = modifier
             .padding(vertical = 8.dp)
-            .fillMaxWidth(0.8f)
+            .fillMaxWidth(0.9f)
             .clip(shape = RoundedCornerShape(33))
             .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(33))
     ) {
@@ -76,30 +63,45 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
             Icon(
                 imageVector = alert.type.toIcon(),
                 contentDescription = "Alert Icon",
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
-            Row (horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.padding(horizontal = 8.dp).weight(1f),) {
+            Row (horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .weight(1f),) {
                 Column(
-                    modifier = Modifier.height(64.dp),
+                    modifier = Modifier.height(45.dp),
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(text = alert.type.toName(), fontSize = 18.sp)
+                    //Alert Name
+                    Text(
+                        text = alert.type.toName(),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                    )
+                    // Alert Sender
                     Text(
                         text = alert.senderName,
-                        fontSize = 16.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )
 
                 }
                 Column(
-                    modifier = Modifier.height(64.dp),
+                    modifier = Modifier.height(45.dp),
                     verticalArrangement = Arrangement.SpaceEvenly,
                     horizontalAlignment = Alignment.End
                 ) {
-                    Text(text = "${minDistance}m - ${maxDistance}m", fontSize = 14.sp)
+                    //Distance
+                    Text(
+                        text = "${minDistance}m - ${maxDistance}m",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                    )
+                    //Time
                     Text(
                         text = timeString,
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )
 
