@@ -24,6 +24,7 @@ import androidx.navigation.NavController
 import com.example.zim.components.DateInput
 import com.example.zim.components.TextInput
 import com.example.zim.components.LogoRow
+import com.example.zim.components.SignUpLogoRow
 import com.example.zim.events.SignUpEvent
 import com.example.zim.navigation.Navigation
 import com.example.zim.states.SignUpState
@@ -64,16 +65,19 @@ fun SignUpScreen(
             .padding(32.dp)
             .padding(top = 32.dp)
     ) {
-        LogoRow();
+
+        SignUpLogoRow()
 
         Text(
             modifier = Modifier.padding(vertical = 32.dp),
             text = "Tell Us About Yourself!",
+            color= MaterialTheme.colorScheme.onBackground,
             fontSize = 28.sp,
         )
 
         TextInput(label = "First Name", text = state.firstName, onTextChange = { newText ->
             onEvent(SignUpEvent.SetFirstName( validateName(state.firstName, newText, context)))
+
         })
         //same as above state updater
         TextInput(label = "Last Name", text = state.lastName) { newText ->
@@ -89,8 +93,8 @@ fun SignUpScreen(
             modifier = Modifier.padding(top = 32.dp),
             onClick = { onEvent(SignUpEvent.SaveUser) },
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.tertiary,
-                contentColor = MaterialTheme.colorScheme.onTertiary
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
             Text(text = "Save")

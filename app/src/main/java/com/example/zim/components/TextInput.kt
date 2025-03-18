@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextInput(label: String, text: String, onTextChange: (String) -> Unit) {
     TextField(
@@ -22,15 +21,15 @@ fun TextInput(label: String, text: String, onTextChange: (String) -> Unit) {
         modifier = Modifier
             .padding(vertical = 16.dp)
             .fillMaxWidth(),
-        colors = TextFieldDefaults.textFieldColors(
-            focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-            unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
-            focusedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            containerColor = MaterialTheme.colorScheme.primary,
-            focusedIndicatorColor = MaterialTheme.colorScheme.tertiary,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = MaterialTheme.colorScheme.onPrimary
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            cursorColor = MaterialTheme.colorScheme.onSurface,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha=0.9f),
+            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha=0.9f),
+            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface,
+            focusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha=0.7f),
         ),
         singleLine = true
     )
