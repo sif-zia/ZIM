@@ -218,10 +218,9 @@ fun ChatRow(
                     else
                         Text(
                             modifier = Modifier,
-                            text = "(Start ZIMing with your new Connection)",
-                            style = Typography.bodyMedium.copy(
-                                fontStyle = FontStyle.Italic,
-                                fontSize = 14.sp
+                            text = "(Start ZIMing...)",
+                            style = Typography.labelSmall.copy(
+                                fontStyle = FontStyle.Italic
                             ),
                             color = msgColor,
                             maxLines = 1

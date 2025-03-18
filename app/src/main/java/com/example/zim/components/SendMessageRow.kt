@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
@@ -27,8 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -54,7 +49,7 @@ fun SendMessageRow(
     lazyListState: LazyListState,
     size: Int,
     onMessageSend: () -> Unit,
-    onImagePicked: (Uri) -> Unit // New parameter for handling picked images
+    onImagePicked: (Uri) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     var isFocused by remember { mutableStateOf(false) }
@@ -79,8 +74,8 @@ fun SendMessageRow(
         ) {
             Box {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextField(
-                        value = message,
+                    CustomTextField(
+                        text = message,
                         onValueChange = onMessageChange,
                         trailingIcon = {
                             IconButton(onClick = { showAttachMenu = !showAttachMenu }) {
@@ -91,40 +86,19 @@ fun SendMessageRow(
                                 )
                             }
                         },
-                        placeholder = {
-                            Row {
-                                Text(text = "Message", fontSize = 11.sp)
-                                Spacer(Modifier.height(12.dp))
-                            }
-                        },
+                        placeholderText = "Message",
+                        fontSize = 11.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .weight(1f)
-                            .height(48.dp)
+                            .height(40.dp)
                             .onFocusChanged {
-                                isFocused = true
+                                isFocused = it.isFocused
                             },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            cursorColor = MaterialTheme.colorScheme.onSurface,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.5f
-                            ),
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = MaterialTheme.colorScheme.surface
-                        ),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = {
-                            focusManager.clearFocus()
-                            onMessageSend()
-                        })
-
+                        focusManager = focusManager,
+                        onSend = onMessageSend
                     )
+
                     Spacer(modifier = Modifier.width(8.dp))
 
                     RoundButton(onClick = {
@@ -161,8 +135,6 @@ fun SendMessageRow(
                     // You can add more attachment options here if needed
                 }
             }
-
-
         }
     }
 
