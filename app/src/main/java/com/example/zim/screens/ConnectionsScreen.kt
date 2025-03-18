@@ -47,6 +47,18 @@ import com.example.zim.states.ProtocolState
 import com.example.zim.viewModels.ConnectionsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.UserChatViewModel
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
@@ -74,13 +86,17 @@ fun ConnectionsScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Connection icon with simplified design
             Icon(
                 imageVector = Icons.Outlined.Sensors,
                 contentDescription = "Connection Logo",
-                modifier = Modifier.size(128.dp),
+                modifier = Modifier
+                    .size(140.dp)
+                    .padding(top = 20.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
 
             everythingEnabled = hardwareServicesCheck(protocolState)
@@ -88,22 +104,25 @@ fun ConnectionsScreen(
                 onEvent(ConnectionsEvent.ScanForConnections)
                 Text(
                     text = "Searching For Nearby Devices...",
-                    fontSize = 22.sp,
-                    modifier = Modifier.padding(vertical = verticalPadding)
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+
                 )
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Open the app in the other device and make sure its Wifi is turned on!",
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5F),
+                    text = "Open the app in the other device and make sure its Wi-Fi is Turned on!",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
-                    fontSize = 18.sp,
+                    fontSize = 12.sp,
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = verticalPadding)
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 8.dp)
                 )
             }
             HorizontalDivider(
-                modifier = Modifier.fillMaxWidth(0.8f),
-                color = MaterialTheme.colorScheme.primary.copy(0.66f)
+                modifier = Modifier.fillMaxWidth(0.85f),
+                color = MaterialTheme.colorScheme.primary.copy(0.5f)
             )
 
             Box(
@@ -113,7 +132,6 @@ fun ConnectionsScreen(
                     .padding(top = 12.dp), contentAlignment = Alignment.Center
             ) {
                 if (!everythingEnabled) {
-
                     Text(
                         text = "Please Enable Location and Wifi\nAnd Disable Hotspot",
                         style = MaterialTheme.typography.bodyMedium,
@@ -121,7 +139,6 @@ fun ConnectionsScreen(
                         textAlign = TextAlign.Center
                     )
                 } else if (state.connections.isEmpty()) {
-
                     Text(
                         text = "No Device(s) Found",
                         style = MaterialTheme.typography.bodyMedium,
@@ -136,19 +153,17 @@ fun ConnectionsScreen(
                         state = rememberLazyListState()
                     ) {
                         state.connections.forEach { connection ->
-
                             item {
                                 ConnectionRow(
                                     phoneName = connection.deviceName,
-                                    description = connection.deviceAddress
-                                ) {
-
-//                            onEvent(ConnectionsEvent.ShowPrompt(connection))
-                                    onEvent(ConnectionsEvent.ConnectToDevice(connection))
-                                }
+                                    description = connection.deviceAddress,
+                                    onClick = {
+                                        onEvent(ConnectionsEvent.ConnectToDevice(connection))
+                                    }
+                                )
                                 HorizontalDivider(
-                                    modifier = Modifier.fillMaxWidth(0.5f),
-                                    color = MaterialTheme.colorScheme.primary.copy(0.5f)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.primary.copy(0.2f)
                                 )
                             }
                         }
@@ -156,7 +171,6 @@ fun ConnectionsScreen(
                 }
             }
         }
-
 
         AnimatedVisibility(
             visible = state.promptConnections.isNotEmpty(),
@@ -178,4 +192,77 @@ fun ConnectionsScreen(
             )
         }
     }
+}
+
+@Composable
+fun ImprovedConnectionRow(
+    deviceName: String,
+    deviceAddress: String,
+    onConnectClick: () -> Unit
+) {
+    // Assume the first part of device name is the person's name
+    // and the rest is the device model
+    val parts = deviceName.split(" ", limit = 2)
+    val personName = if (parts.size > 1) parts[0] + " " + parts[1] else deviceName
+    val deviceModel = deviceAddress  // Use address as device model for demonstration
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Phone icon
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(4.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Phone,
+                contentDescription = "Phone",
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Device info
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp)
+        ) {
+            Text(
+                text = personName,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = deviceModel,
+                color = Color.Black,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Normal
+            )
+        }
+
+        // Connect button
+        TextButton(
+            onClick = onConnectClick,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text(
+                text = "CONNECT",
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+
 }

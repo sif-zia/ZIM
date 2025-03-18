@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +42,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
@@ -85,25 +87,35 @@ fun SendMessageRow(
                                 Icon(
                                     imageVector = Icons.Outlined.AttachFile,
                                     contentDescription = "Attach File Button",
-                                    tint = MaterialTheme.colorScheme.secondary
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                             }
                         },
-                        placeholder = { Text(text = "Message") },
+                        placeholder = {
+                            Row {
+                                Text(text = "Message", fontSize = 11.sp)
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        },
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .weight(1f)
+                            .height(48.dp)
                             .onFocusChanged {
                                 isFocused = true
                             },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.primary.copy(0.9f),
-                            cursorColor = MaterialTheme.colorScheme.secondary,
-                            focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            cursorColor = MaterialTheme.colorScheme.onSurface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.5f
+                            ),
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.surface
                         ),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -118,12 +130,12 @@ fun SendMessageRow(
                     RoundButton(onClick = {
                         focusManager.clearFocus()
                         onMessageSend()
-                    }) {
+                    }, size = 40.dp ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Send,
                             contentDescription = "Send Message Button",
                             modifier = Modifier.size(25.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
                 }

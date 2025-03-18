@@ -55,14 +55,14 @@ fun ConnectionRow(
             modifier = Modifier
                 .height(64.dp)
                 .weight(3f),
-            verticalArrangement = Arrangement.SpaceEvenly,
+            verticalArrangement = Arrangement.Center,
         )
         {
-            Text(text = phoneName, fontSize = 18.sp)
+            Text(text = phoneName, fontSize = 17.sp, color = MaterialTheme.colorScheme.onBackground)
             Text(
                 text = description,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                fontSize = 16.sp
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                fontSize = 12.sp
             )
         }
         Column(
@@ -77,11 +77,12 @@ fun ConnectionRow(
                     .clickable { onClick() }
                     .border(
                         2.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(0.66f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(0.66f),
                         shape = RoundedCornerShape(25),
                     )
                     .padding(6.dp),
-                fontSize = 16.sp
+                fontSize = 12.sp,
+                color= MaterialTheme.colorScheme.onSurface.copy(alpha=0.66f)
             )
         }
     }

@@ -177,7 +177,7 @@ fun ChatRow(
                     ) {
                         Text(
                             text = name,
-                            style = Typography.bodyLarge
+                            style = Typography.bodyMedium
                         )
 
                         // Unread Messages Badge
@@ -210,7 +210,7 @@ fun ChatRow(
                         Text(
                             modifier = Modifier,
                             text = text,
-                            style = if(lastMsgType =="Text") Typography.bodyMedium else Typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            style = if(lastMsgType =="Text") Typography.labelSmall else Typography.labelSmall.copy(fontStyle = FontStyle.Italic),
                             color = msgColor,
                             maxLines = 1
                         )
@@ -256,7 +256,7 @@ fun ChatRow(
                         Text(
                             text = formattedTime,
                             modifier = Modifier.padding(top = 5.dp),
-                            style = Typography.bodyMedium.copy(fontSize = 12.sp)
+                            style = Typography.labelSmall.copy(fontSize = 10.sp)
                         )
                 }
             }

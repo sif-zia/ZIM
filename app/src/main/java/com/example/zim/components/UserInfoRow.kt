@@ -3,6 +3,7 @@ package com.example.zim.components
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +45,6 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.zim.R
 import com.example.zim.navigation.DropDownMenus
 import com.example.zim.navigation.Navigation
-import com.example.zim.viewModels.UserChatViewModel
 
 fun navigateTo(navController: NavController, navigation: Navigation) {
     navController.navigate(navigation.route) {
@@ -62,105 +63,112 @@ fun Color.add(offset: Float): Color {
     )
 }
 
-
 @Composable
 fun UserInfoRow(username: String, status: Int, userDp: Uri?, navController: NavController) {
-
-
     var isExpanded by remember {
         mutableStateOf(false)
     }
 
-
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.secondary.add(24f))
-            .padding(8.dp)
-            .height(50.dp)
-            .offset(),
-        verticalAlignment = Alignment.CenterVertically
+            .shadow(
+                elevation = 9.dp,
+                shape = RoundedCornerShape(0.dp),
+                clip = false
+            )
     ) {
-        // Back Icon
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-            contentDescription = "Back Button",
-            modifier = Modifier
-                .size(28.dp)
-                .clickable {
-                    navigateTo(navController, Navigation.Chats)
-                }
-        )
-
-        // Display Picture
-        Image(
-            painter = rememberAsyncImagePainter(
-                model = userDp,
-                placeholder = painterResource(R.drawable.dp_icon),
-                error = painterResource(id = R.drawable.dp_icon)
-            ),
-            contentDescription = "Display Picture",
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(100))
-                .size(42.dp)
-        )
-
-        Spacer(modifier = Modifier.width(10.dp))
-
         Row(
             modifier = Modifier
-                .fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.secondary.add(24f))
+                .padding(8.dp)
+                .height(50.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                // Username
-                Text(text = username, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-
-                // Status
-                if (status == 1)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(100))
-                                .background(Color.Green)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Connected", fontSize = 16.sp)
-                    }
-                else if (status == 2)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(100))
-                                .background(Color.Yellow)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "In Network", fontSize = 16.sp)
-                    }
-            }
-
-            Column {
+            // Back Icon
+            IconButton(onClick = { navigateTo(navController, Navigation.Chats) }) {
                 Icon(
-                    imageVector = Icons.Outlined.Menu,
-                    contentDescription = "User Chat Menu Button",
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    contentDescription = "Back Button",
                     modifier = Modifier
-                        .size(32.dp)
-                        .clickable { isExpanded = true }
+                        .size(28.dp)
                 )
+            }
+            // Display Picture
+            Image(
+                painter = rememberAsyncImagePainter(
+                    model = userDp,
+                    placeholder = painterResource(R.drawable.dp_icon),
+                    error = painterResource(id = R.drawable.dp_icon)
+                ),
+                contentDescription = "Display Picture",
+                modifier = Modifier
+                    .clip(shape = RoundedCornerShape(100))
+                    .size(42.dp)
+            )
 
-                DropDown(
-                    dropDownMenu = DropDownMenus.UserChatScreen(),
-                    navController = navController,
-                    expanded = isExpanded
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    isExpanded = false
+                    // Username
+                    Text(text = username, fontSize = 17.sp, color = MaterialTheme.colorScheme.onBackground)
+
+                    // Status
+                    if (status == 1)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(RoundedCornerShape(100))
+                                    .background(Color.Green)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Connected", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha=0.66f))
+                        }
+                    else if (status == 2)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(RoundedCornerShape(100))
+                                    .background(Color.Yellow)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "In Network", fontSize = 16.sp)
+                        }
+                }
+
+                Column {
+                    IconButton(onClick = {
+                        isExpanded = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Menu,
+                            contentDescription = "Menu Icon",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    DropDown(
+                        dropDownMenu = DropDownMenus.UserChatScreen(),
+                        navController = navController,
+                        expanded = isExpanded
+                    ) {
+                        isExpanded = false
+                    }
                 }
             }
         }

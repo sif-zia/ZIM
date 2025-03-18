@@ -2,7 +2,6 @@ package com.example.zim.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
@@ -50,16 +48,17 @@ fun SentChatBox(message: ChatContent, isFirst: Boolean = true) {
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(15.dp))
-                    .background(MaterialTheme.colorScheme.tertiary)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(8.dp)
                     .widthIn(max = screenWidth * 0.8f),
                 horizontalAlignment = Alignment.End
             ) {
-                Text(message.message, color = MaterialTheme.colorScheme.onTertiary,
+                Text(
+                    message.message, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.87f),
                     fontSize = 18.sp)
                 Text(
                     formatTime(message.time.toLocalTime()),
-                    color = MaterialTheme.colorScheme.onTertiary,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 13.sp,
                     textAlign = TextAlign.End
                 )
@@ -71,7 +70,7 @@ fun SentChatBox(message: ChatContent, isFirst: Boolean = true) {
                 .width(40.dp)
                 .offset(x = (15).dp, y = (-15).dp)
         ) {
-            val backgroundColor = MaterialTheme.colorScheme.tertiary
+            val backgroundColor = MaterialTheme.colorScheme.surface
             if(isFirst) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawArc(

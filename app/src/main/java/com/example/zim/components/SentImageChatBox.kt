@@ -1,12 +1,12 @@
 package com.example.zim.components
 
+import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -32,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.zim.helperclasses.ChatContent
-import android.net.Uri
 
 @Composable
 fun SentImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean = true) {
@@ -55,7 +53,7 @@ fun SentImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean = tru
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(15.dp))
-                    .background(MaterialTheme.colorScheme.tertiary)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(8.dp)
                     .widthIn(max = screenWidth * 0.8f),
                 horizontalAlignment = Alignment.End
@@ -76,7 +74,7 @@ fun SentImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean = tru
                 // Time display below the image
                 Text(
                     formatTime(message.time.toLocalTime()),
-                    color = MaterialTheme.colorScheme.onTertiary,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 4.dp),
                     textAlign = TextAlign.End
@@ -91,7 +89,7 @@ fun SentImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean = tru
                 .width(40.dp)
                 .offset(x = (15).dp, y = (-15).dp)
         ) {
-            val backgroundColor = MaterialTheme.colorScheme.tertiary
+            val backgroundColor = MaterialTheme.colorScheme.surface
             if (isFirst) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawArc(

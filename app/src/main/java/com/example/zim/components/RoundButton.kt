@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun RoundButton(modifier: Modifier=Modifier,size: Dp =50.dp, onClick:()->Unit, content:@Composable () ->Unit){
+fun RoundButton(modifier: Modifier=Modifier,size: Dp = 50.dp, onClick:()->Unit, content:@Composable () ->Unit){
     Box(
         modifier = Modifier
             .width(size)
@@ -26,8 +26,7 @@ fun RoundButton(modifier: Modifier=Modifier,size: Dp =50.dp, onClick:()->Unit, c
                 1.dp,
                 color = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(100)
-            )
-            .background(color = MaterialTheme.colorScheme.tertiary)
+            ).background(color = MaterialTheme.colorScheme.primary)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     )

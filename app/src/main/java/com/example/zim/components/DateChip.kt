@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,13 +53,13 @@ fun DateChip(date: LocalDate) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.primary)
+                .background(color = Color.Gray.copy(alpha=0.66f))
         ) {
             Text(
                 text = formatDateForChip(date),
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.padding(7.dp),
-                fontSize = 18.sp
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(6.dp),
+                fontSize = 12.sp
             )
         }
     }
