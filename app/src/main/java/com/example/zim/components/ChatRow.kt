@@ -177,9 +177,10 @@ fun ChatRow(
                     ) {
                         Text(
                             text = name,
-                            style = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                            style = Typography.bodyLarge
                         )
 
+                        // Unread Messages Badge
                         if (unReadMsgs > 0) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -189,16 +190,17 @@ fun ChatRow(
                                     .background(MaterialTheme.colorScheme.tertiary)
                                     .defaultMinSize(minWidth = 15.dp),
                                 textAlign = TextAlign.Center,
-                                fontSize = 15.sp
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onTertiary,
                             )
                         }
                     }
 
 
                     val msgColor = if (unReadMsgs == 0) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     } else {
-                        MaterialTheme.colorScheme.primary
+                        MaterialTheme.colorScheme.onSurface
                     }
 
                     // Last Message
@@ -238,7 +240,7 @@ fun ChatRow(
                     } else if (isConnected == 2) {
                         Color.Yellow
                     } else {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) // Faded primary color
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) // Faded primary color
                     }
                     // Connected Status
                     Box(

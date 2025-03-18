@@ -1,35 +1,24 @@
 package com.example.zim.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.zim.R
 
 @Composable
 fun Search(modifier: Modifier = Modifier, query: String, onQueryChange: (String) -> Unit) {
@@ -39,52 +28,38 @@ fun Search(modifier: Modifier = Modifier, query: String, onQueryChange: (String)
         modifier = modifier
             .fillMaxWidth()
     ) {
-        Row(
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            trailingIcon = {
+                IconButton(onClick = { focusManager.clearFocus() }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search Button",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            },
+            placeholder = { Text(text = "Search") },
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape = RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 24.dp)
-                .height(46.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BasicTextField(
-                value = query,
-                onValueChange = { onQueryChange(it) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(0.9F),
-                textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 16.sp
-                ),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        innerTextField()
-                        if (query.isEmpty()) {
-                            Text(
-                                text = "Search",
-                                style = TextStyle(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    fontSize = 16.sp
-                                )
-                            )
-                        }
-                    }
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                maxLines = 1
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.search_icon),
-                contentDescription = "Search Icon",
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .height(32.dp)
-                    .width(32.dp)
-            )
-        }
+                .clip(RoundedCornerShape(50))
+                .weight(1f)
+                .onFocusChanged {},
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.onSurface,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.surface
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
+
+        )
     }
 }

@@ -10,14 +10,23 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.example.zim.states.ChatsState
 
 @Composable
-fun BottomNavigationBar(navController: NavController, currentRoute: String?, chatsState: ChatsState) {
+fun BottomNavigationBar(
+    navController: NavController,
+    currentRoute: String?,
+    chatsState: ChatsState
+) {
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        tonalElevation = 16.dp
+    ) {
         BottomNavigationItems().getBottomNavigationItems(chatsState.unReadMsgs)
             .forEachIndexed { _, navigationItem ->
                 NavigationBarItem(
@@ -30,14 +39,18 @@ fun BottomNavigationBar(navController: NavController, currentRoute: String?, cha
                             badge = {
                                 if (navigationItem.notificationCount > 0) {
                                     Badge(containerColor = MaterialTheme.colorScheme.tertiary) {
-                                        Text(navigationItem.notificationCount.toString(), fontWeight = FontWeight.Bold)
+                                        Text(
+                                            navigationItem.notificationCount.toString(),
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }
                         ) {
                             Icon(
                                 navigationItem.icon,
-                                contentDescription = navigationItem.label
+                                contentDescription = navigationItem.label,
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     },
@@ -51,7 +64,9 @@ fun BottomNavigationBar(navController: NavController, currentRoute: String?, cha
                         }
                     },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedTextColor = MaterialTheme.colorScheme.primary
+                        selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        unselectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        indicatorColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
                     )
                 )
             }

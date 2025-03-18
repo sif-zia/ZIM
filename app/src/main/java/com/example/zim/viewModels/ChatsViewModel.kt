@@ -55,7 +55,7 @@ class ChatsViewModel @Inject constructor(
     private fun fetchUsers(query: String) {
         viewModelScope.launch {
             try {
-                userDao.getUsersWithLatestMessage(query).collectLatest { chats ->
+                userDao.getUsersWithLatestMessage(query).collect { chats ->
                     _state.update { it.copy(chats = chats) }
                 }
             } catch (e: Exception) {
@@ -70,8 +70,9 @@ class ChatsViewModel @Inject constructor(
     private fun fetchUnReadMsgs() {
         viewModelScope.launch {
             try {
-                val count = messageDao.getUnReadMsgsCount()
-                _state.update { it.copy(unReadMsgs = count) }
+                messageDao.getUnReadMsgsCount().collect { count ->
+                    _state.update { it.copy(unReadMsgs = count) }
+                }
             } catch (e: Exception) {
                 // Handle errors gracefully
                 Log.e("fetchUsers", "Error fetching users with latest messages: ${e.message}")

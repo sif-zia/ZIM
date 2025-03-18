@@ -1,29 +1,36 @@
 package com.example.zim.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.zim.R
 
 @Composable
 fun LogoRow(
     modifier: Modifier = Modifier,
     expandMenu: (() -> Unit)? = null,
-    dropDown: (@Composable () -> Unit )? = null
+    dropDown: (@Composable () -> Unit)? = null
 ) {
     return Row(
         modifier = modifier.fillMaxWidth(),
@@ -44,17 +51,32 @@ fun LogoRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.End
             ) {
-                Column {
-                    Image(
-                        modifier = Modifier.clickable {
-                            if (expandMenu != null)
-                                expandMenu()
-                        },
-                        painter = painterResource(id = R.drawable.menu_icon),
-                        contentDescription = "Menu Icon"
+                IconButton(onClick = {
+
+                }) {
+                    Icon(
+                        imageVector = Icons.Outlined.AccountCircle,
+                        contentDescription = "Profile Icon",
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(32.dp)
                     )
+
+                }
+                Column {
+                    IconButton(onClick = {
+                        if (expandMenu != null)
+                            expandMenu()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Menu,
+                            contentDescription = "Menu Icon",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                     dropDown()
                 }
+
             }
     }
 }

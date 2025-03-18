@@ -95,7 +95,7 @@ interface MessageDao {
         )
         WHERE isRead = 0
     """)
-    suspend fun getUnReadMsgsCount(): Int
+    fun getUnReadMsgsCount(): Flow<Int>
 
     @Query("""
         UPDATE Received_Messages
