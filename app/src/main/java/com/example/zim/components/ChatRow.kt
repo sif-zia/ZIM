@@ -127,21 +127,6 @@ fun ChatRow(
                 .fillMaxWidth()
                 .height(70.dp)
                 .background(MaterialTheme.colorScheme.background)
-                .drawBehind {
-                    drawLine(
-                        color = borderColor,
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width, 0f),
-                        strokeWidth = 1.dp.toPx()
-                    )
-
-                    drawLine(
-                        color = borderColor,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                }
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

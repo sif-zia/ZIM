@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -72,6 +74,7 @@ fun ChatsScreen(
             onQueryChange = { onEvent(ChatsEvent.ChangeQuery(newQuery = it)) }
         )
 
+        val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
 
         LazyColumn(
             modifier = Modifier
@@ -82,6 +85,8 @@ fun ChatsScreen(
 
             items(state.chats) { chat ->
                 val isConnected = if (activeUsers[chat.UUID] != null) 1 else if (checkIsInNetwork(routedUsers, chat.UUID)) 2 else 0
+
+                HorizontalDivider(color = borderColor)
                 ChatRow(
                     name = "${chat.fName} ${chat.lName}",
                     lastMsg = chat.lastMsg,
@@ -94,6 +99,7 @@ fun ChatsScreen(
                 )
             }
         }
+        HorizontalDivider(color = borderColor)
 
 //        LazyColumn {
 //            items(logs.subList(maxOf(logs.size - 10, 0), logs.size)) { log ->

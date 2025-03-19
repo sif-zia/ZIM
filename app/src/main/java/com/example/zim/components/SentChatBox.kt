@@ -35,7 +35,7 @@ fun SentChatBox(message: ChatContent, isFirst: Boolean = true) {
     Box(
         modifier = Modifier
             .padding(start = 5.dp)
-            .padding(vertical = if (isFirst) 6.dp else 1.dp),
+            .padding(top = if (isFirst) 12.dp else 2.dp),
         contentAlignment = Alignment.TopEnd
     )
      {

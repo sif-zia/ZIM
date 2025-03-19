@@ -144,6 +144,7 @@ fun ConnectionsScreen(
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )
                 } else {
+                    val lastConnection = state.connections.last()
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize(),
@@ -160,10 +161,12 @@ fun ConnectionsScreen(
                                         onEvent(ConnectionsEvent.ConnectToDevice(connection))
                                     }
                                 )
-                                HorizontalDivider(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.primary.copy(0.2f)
-                                )
+                                if(connection != lastConnection) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.fillMaxWidth(0.66f),
+                                        color = MaterialTheme.colorScheme.primary.copy(0.33f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -191,77 +194,4 @@ fun ConnectionsScreen(
             )
         }
     }
-}
-
-@Composable
-fun ImprovedConnectionRow(
-    deviceName: String,
-    deviceAddress: String,
-    onConnectClick: () -> Unit
-) {
-    // Assume the first part of device name is the person's name
-    // and the rest is the device model
-    val parts = deviceName.split(" ", limit = 2)
-    val personName = if (parts.size > 1) parts[0] + " " + parts[1] else deviceName
-    val deviceModel = deviceAddress  // Use address as device model for demonstration
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Phone icon
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(4.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Phone,
-                contentDescription = "Phone",
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        // Device info
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp)
-        ) {
-            Text(
-                text = personName,
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = deviceModel,
-                color = Color.Black,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Normal
-            )
-        }
-
-        // Connect button
-        TextButton(
-            onClick = onConnectClick,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(
-                text = "CONNECT",
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-
 }

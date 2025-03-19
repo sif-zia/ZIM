@@ -4,6 +4,6 @@
 
     <style name="Theme.ZIM" parent="android:Theme.Material.Light.NoActionBar" />
     <style name="Theme.SplashScreen" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowBackground">@drawable/zim_splash_screen</item>
     </style>
 </resources>

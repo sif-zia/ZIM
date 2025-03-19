@@ -129,7 +129,7 @@ fun NavGraph(
     if (signUpState.IsLoggedIn == null)
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
-                painter = painterResource(id = R.drawable.splash_screen),
+                painter = painterResource(id = R.drawable.zim_splash_screen),
                 contentDescription = "Splash Screen"
             )
         }
