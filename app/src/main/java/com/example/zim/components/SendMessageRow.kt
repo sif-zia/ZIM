@@ -87,11 +87,11 @@ fun SendMessageRow(
                             }
                         },
                         placeholderText = "Message",
-                        fontSize = 11.sp,
+                        fontSize = 18.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .weight(1f)
-                            .height(40.dp)
+                            .height(50.dp)
                             .onFocusChanged {
                                 isFocused = it.isFocused
                             },
@@ -104,7 +104,7 @@ fun SendMessageRow(
                     RoundButton(onClick = {
                         focusManager.clearFocus()
                         onMessageSend()
-                    }, size = 40.dp ) {
+                    }, size = 50.dp ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Send,
                             contentDescription = "Send Message Button",
