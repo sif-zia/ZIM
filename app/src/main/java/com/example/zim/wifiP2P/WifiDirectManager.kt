@@ -14,24 +14,20 @@ import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import com.example.zim.api.UserData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.resume
 
 @Singleton
 class WifiDirectManager @Inject constructor(
@@ -49,7 +45,7 @@ class WifiDirectManager @Inject constructor(
     private var onHotspotStateChangedCallbacks = mutableListOf<(Boolean) -> Unit>()
     private var onPeersDiscoveredCallbacks = mutableListOf<(List<WifiP2pDevice>) -> Unit>()
     private var onDeviceNameChangedCallbacks = mutableListOf<(String) -> Unit>()
-    private var onStartConnectionCallbacks = mutableListOf<(WifiP2pInfo, WifiP2pGroup) -> Unit>()
+    private var onStartConnectionCallbacks = mutableListOf<(WifiP2pInfo, WifiP2pGroup, Int) -> Unit>()
     private var onDisconnectCallbacks = mutableListOf<() -> Unit>()
 
     private lateinit var channel: WifiP2pManager.Channel
@@ -85,7 +81,7 @@ class WifiDirectManager @Inject constructor(
         onDeviceNameChangedCallbacks.add(callback)
     }
 
-    fun addOnConnectionCallback(callback: (WifiP2pInfo, WifiP2pGroup) -> Unit) {
+    fun addOnConnectionCallback(callback: (WifiP2pInfo, WifiP2pGroup, Int) -> Unit) {
         onStartConnectionCallbacks.add(callback)
     }
 
@@ -114,7 +110,7 @@ class WifiDirectManager @Inject constructor(
         onDeviceNameChangedCallbacks.remove(callback)
     }
 
-    fun removeOnConnectionCallback(callback: (WifiP2pInfo, WifiP2pGroup) -> Unit) {
+    fun removeOnConnectionCallback(callback: (WifiP2pInfo, WifiP2pGroup, Int) -> Unit) {
         onStartConnectionCallbacks.remove(callback)
     }
 
@@ -175,7 +171,7 @@ class WifiDirectManager @Inject constructor(
                             override fun onSuccess() {
                                 Toast.makeText(
                                     context,
-                                    "Connection Request Sent",
+                                    "Connecting to ${device.deviceName}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 onSuccess()
@@ -209,7 +205,7 @@ class WifiDirectManager @Inject constructor(
                     override fun onSuccess() {
                         Toast.makeText(
                             context,
-                            "Connection Request Sent",
+                            "Connecting to ${device.deviceName}",
                             Toast.LENGTH_SHORT
                         ).show()
                         onSuccess()
@@ -294,8 +290,8 @@ class WifiDirectManager @Inject constructor(
         onDeviceNameChangedCallbacks.forEach { it(deviceName) }
     }
 
-    private fun notifyConnected(info: WifiP2pInfo, group: WifiP2pGroup) {
-        onStartConnectionCallbacks.forEach { it(info, group) }
+    private fun notifyConnected(info: WifiP2pInfo, group: WifiP2pGroup, size: Int) {
+        onStartConnectionCallbacks.forEach { it(info, group, size) }
     }
 
     private fun notifyDisconnect() {
@@ -376,7 +372,8 @@ class WifiDirectManager @Inject constructor(
                             }
 
                             wifiP2pManager.requestGroupInfo(channel) { group ->
-                                notifyConnected(info, group)
+                                val clientList = group.clientList
+                                notifyConnected(info, group, clientList.size)
                             }
                         }
                     } else {
@@ -421,6 +418,12 @@ class WifiDirectManager @Inject constructor(
     fun removeConnectedDevice(device: UserData) {
         _state.update {
             it.copy(connectedDevices = it.connectedDevices - device)
+        }
+    }
+
+    fun removeConnectedDevice(publicKey: String) {
+        _state.update {
+            it.copy(connectedDevices = it.connectedDevices.filter { it.publicKey != publicKey })
         }
     }
 

@@ -50,6 +50,10 @@ class ActiveUserManager @Inject constructor() {
         return _activeUserMap.toMap()
     }
 
+    fun getUserByIp(ipAddress: String): String? {
+        return _activeUserMap.filterValues { it == ipAddress }.keys.firstOrNull()
+    }
+
     // Clear all users (useful when stopping server)
     fun clearAllUsers() {
         _activeUserMap.clear()

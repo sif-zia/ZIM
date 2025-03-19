@@ -103,7 +103,7 @@ class ProtocolViewModel @Inject constructor(
         }
     }
 
-    private fun onConnection(info: WifiP2pInfo, group: WifiP2pGroup) {
+    private fun onConnection(info: WifiP2pInfo, group: WifiP2pGroup, size: Int) {
         viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -111,8 +111,8 @@ class ProtocolViewModel @Inject constructor(
                     groupOwnerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
                 )
             }
-            if (info.groupFormed && !info.isGroupOwner) {
-                clientRepository.handshake(info.groupOwnerAddress?.hostAddress ?: "192.168.49.1")
+            if (info.groupFormed) {
+                clientRepository.handshake(info.isGroupOwner, size, info.groupOwnerAddress?.hostAddress ?: "192.168.49.1")
             }
         }
     }

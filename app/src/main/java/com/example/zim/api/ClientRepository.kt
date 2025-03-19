@@ -14,8 +14,8 @@ import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
+import com.example.zim.data.room.models.UserWithCurrentUser
 import com.example.zim.data.room.models.Users
-import com.example.zim.utils.CryptoHelper
 import com.example.zim.wifiP2P.WifiDirectManager
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -29,6 +29,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.LocalDateTime
@@ -37,12 +38,11 @@ import javax.inject.Singleton
 
 @Singleton
 class ClientRepository @Inject constructor(
+    private val application: Application,
     private val client: HttpClient,
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val activeUserManager: ActiveUserManager,
-    private val application: Application,
-    private val cryptoHelper: CryptoHelper,
     private val wifiDirectManager: WifiDirectManager
 ) {
 //    init {
@@ -50,91 +50,138 @@ class ClientRepository @Inject constructor(
 //    }
 
     val ips: MutableList<String> = mutableListOf()
+    val handshakeMutex = kotlinx.coroutines.sync.Mutex()
 
     private fun getURL(ip: String, route: String): String {
         return "${ApiRoute.BASE_URL}$ip${ApiRoute.PORT}$route"
     }
 
-    suspend fun handshake(ip: String): Boolean {
-        ips.forEach {
-            if(it == ip) {
-                return false
-            }
-        }
-        ips.add(ip)
+    suspend fun handshake(isGroupOwner: Boolean, connectedDevices: Int, groupOwnerIp: String) {
+        handshakeMutex.withLock {
+            try {
+                val subnet = groupOwnerIp.substringBeforeLast('.')
+                val toConnectIps = generatePotentialIpAddresses(subnet, isGroupOwner, connectedDevices)
 
-        withContext(Dispatchers.Main) {
-            Toast.makeText(application, "Hand shake initiated", Toast.LENGTH_SHORT).show()
-        }
-        try {
-            val currentUser = userDao.getCurrentUser()
-            val userData = UserData(
-                fName = currentUser.users.fName,
-                lName = currentUser.users.lName ?: "",
-                publicKey = currentUser.users.UUID,
-                deviceName = currentUser.users.deviceName ?: ""
-            )
-            val response: UserData = client.post(getURL(ip, ApiRoute.USER)) {
-                contentType(ContentType.Application.Json)
-                // Set the body
-                setBody(userData)
-            }.body()
+                val currentUser = userDao.getCurrentUser()
+                val userData = createUserData(currentUser)
 
-            if(response.publicKey == currentUser.users.UUID) {
-                return false
-            }
-
-            // Check if a user with this public key exists in the database
-            val existingUserId = userDao.getIdByUUID(response.publicKey)
-
-            if (existingUserId == null) {
-                // If user doesn't exist, insert the new user into the database
-                val user = Users(
-                    UUID = response.publicKey,
-                    fName = response.fName,
-                    lName = response.lName,
-                    deviceName = response.deviceName
-                )
-                userDao.insertUser(user)
-                Log.d(TAG,
-                    "Client: New user inserted: ${response.fName} ${response.lName}"
-                )
-            } else {
-                // Update IP address if needed
-                val existingUser = userDao.getUserById(existingUserId)
-                if (existingUser.fName != response.fName || existingUser.lName != response.lName || existingUser.deviceName != response.deviceName) {
-                    val updatedUser = existingUser.copy(
-                        fName = response.fName,
-                        lName = response.lName,
-                        deviceName = response.deviceName
-                    )
-                    userDao.updateUser(updatedUser) // Using REPLACE conflict strategy
-                    Log.d(
-                        TAG,
-                        "Client: Updated Name: ${existingUser.fName} ${existingUser.lName}"
-                    )
-
-                } else {
-                    Log.d(
-                        TAG,
-                        "Client: User exists: ${existingUser.fName} ${existingUser.lName}"
-                    )
+                for (ip in toConnectIps) {
+                    if (!ips.contains(ip)) {
+                        tryConnectToDevice(ip, userData)
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Client: Error in Handshake process: ${e.message}", e)
+                showToast("Handshake Failed")
             }
-            activeUserManager.addUser(response.publicKey, ip)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(application, "Hand shake successful", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun generatePotentialIpAddresses(subnet: String, isGroupOwner: Boolean, connectedDevices: Int): List<String> {
+        return if (isGroupOwner) {
+            // For group owner, client IPs typically start from .2
+            (2 until connectedDevices + 2).map { "$subnet.$it" }
+        } else {
+            // For clients, try both .1 (group owner) and other potential clients
+            (1 until connectedDevices + 2).map { "$subnet.$it" }
+        }
+    }
+
+    private fun createUserData(currentUser: UserWithCurrentUser): UserData {
+        return UserData(
+            fName = currentUser.users.fName,
+            lName = currentUser.users.lName ?: "",
+            publicKey = currentUser.users.UUID,
+            deviceName = currentUser.users.deviceName ?: ""
+        )
+    }
+
+    private suspend fun tryConnectToDevice(ip: String, userData: UserData) {
+        try {
+
+            Log.e(TAG, "Handshake initiated with ip: $ip")
+            val response = sendHandshakeRequest(ip, userData)
+
+            // Skip self-connections
+            if (response.publicKey == userData.publicKey) {
+                return
             }
-            wifiDirectManager.addConnectedDevice(response)
-            return true
+
+            processUserResponse(response, ip)
+
         } catch (e: Exception) {
-            // Log the error here
-            ips.remove(ip)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(application, "Hand shake Failed", Toast.LENGTH_SHORT).show()
-            }
-            Log.d(TAG,"Client: Error in Handshake: ${e.message}")
+            userDisconnected(ip)
+            Log.d(TAG, "Client: Failed to connect to $ip: ${e.message}")
+            // Don't show toast for individual connection failures to avoid spamming
+        }
+    }
+
+    private suspend fun sendHandshakeRequest(ip: String, userData: UserData): UserData {
+        return client.post(getURL(ip, ApiRoute.USER)) {
+            contentType(ContentType.Application.Json)
+            setBody(userData)
+        }.body()
+    }
+
+    private suspend fun processUserResponse(response: UserData, ip: String) {
+        try {
+            val userId = processUserData(response)
+            activeUserManager.addUser(response.publicKey, ip)
+            wifiDirectManager.addConnectedDevice(response)
+            ips.add(ip)
+            showToast("Connected to ${response.fName}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing user data: ${e.message}", e)
+        }
+    }
+
+    private suspend fun processUserData(userData: UserData): Int {
+        val existingUserId = userDao.getIdByUUID(userData.publicKey)
+
+        return if (existingUserId == null) {
+            insertNewUser(userData)
+        } else {
+            updateExistingUserIfNeeded(existingUserId, userData)
+            existingUserId
+        }
+    }
+
+    private suspend fun insertNewUser(userData: UserData): Int {
+        val user = Users(
+            UUID = userData.publicKey,
+            fName = userData.fName,
+            lName = userData.lName,
+            deviceName = userData.deviceName
+        )
+        val id = userDao.insertUser(user).toInt()
+        Log.d(TAG, "Client: New user inserted: ${userData.fName} ${userData.lName}")
+        return id
+    }
+
+    private suspend fun updateExistingUserIfNeeded(userId: Int, userData: UserData): Boolean {
+        val existingUser = userDao.getUserById(userId)
+
+        if (existingUser.fName != userData.fName ||
+            existingUser.lName != userData.lName ||
+            existingUser.deviceName != userData.deviceName) {
+
+            val updatedUser = existingUser.copy(
+                fName = userData.fName,
+                lName = userData.lName,
+                deviceName = userData.deviceName
+            )
+            userDao.updateUser(updatedUser)
+            Log.d(TAG, "Client: Updated user: ${userData.fName} ${userData.lName}")
+            return true
+        } else {
+            Log.d(TAG, "Client: User exists: ${existingUser.fName} ${existingUser.lName}")
             return false
+        }
+    }
+
+    private suspend fun showToast(message: String) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -154,10 +201,12 @@ class ClientRepository @Inject constructor(
                 withContext(Dispatchers.Main) {
                     Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
                 }
+                userDisconnected(neighborIp)
                 return false
             }
         } catch (e: Exception) {
             // Log the error here
+            userDisconnected(neighborIp)
             withContext(Dispatchers.Main) {
                 Toast.makeText(application, "Message failed", Toast.LENGTH_SHORT).show()
             }
@@ -256,6 +305,7 @@ class ClientRepository @Inject constructor(
             return response.status == HttpStatusCode.OK
         } catch (e: Exception) {
             // Log the error here
+            userDisconnected(ip)
             Log.d(TAG,"Client: Error sending ACK: ${e.message}")
             return false
         }
@@ -369,5 +419,13 @@ class ClientRepository @Inject constructor(
             }
         }
         return null
+    }
+
+    private fun userDisconnected(ip: String) {
+        activeUserManager.getUserByIp(ip)?.let { uuid ->
+            activeUserManager.removeUser(uuid)
+            wifiDirectManager.removeConnectedDevice(uuid)
+        }
+        ips.remove(ip)
     }
 }

@@ -144,7 +144,7 @@ class ServerRepository @Inject constructor(
                                     deviceName = currentUser.users.deviceName ?: ""
                                 )
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(app, "Hand shake Successful", Toast.LENGTH_SHORT)
+                                    Toast.makeText(app, "Connected to ${responseData.fName}", Toast.LENGTH_SHORT)
                                         .show()
                                 }
                                 call.respond(responseData)
