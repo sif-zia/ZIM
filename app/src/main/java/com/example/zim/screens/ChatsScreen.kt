@@ -95,7 +95,8 @@ fun ChatsScreen(
                     id = chat.id,
                     navController = navController,
                     isConnected = isConnected,
-                    lastMsgType = chat.lastMsgType
+                    lastMsgType = chat.lastMsgType,
+                    isSent = chat.isSent
                 )
             }
         }

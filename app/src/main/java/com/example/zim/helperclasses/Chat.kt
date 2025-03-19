@@ -13,4 +13,5 @@ data class Chat(
     val id: Int,
     val UUID: String,
     val lastMsgType: String? = null,
+    val isSent: Boolean? = false
 )

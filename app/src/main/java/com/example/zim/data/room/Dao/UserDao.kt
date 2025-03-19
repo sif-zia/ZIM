@@ -112,6 +112,7 @@ interface UserDao {
         MAX(user_info.latest_message_time) AS time,
         user_info.latest_message_content AS lastMsg,
         user_info.latest_message_type AS lastMsgType,
+        user_info.latest_message_isSent AS isSent,
         SUM(user_info.unread_msgs) AS unReadMsgs
     FROM (
             SELECT 
@@ -122,6 +123,7 @@ interface UserDao {
                 MAX(sm.sentTime) AS latest_message_time,
                 (SELECT msg FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_content,
                 (SELECT type FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_type,
+                (SELECT isSent FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_isSent,
                 0 AS unread_msgs
             FROM Users u
             LEFT JOIN Sent_Messages sm ON sm.User_ID_FK = u.User_ID
@@ -139,6 +141,7 @@ interface UserDao {
                 MAX(rm.receivedTime) AS latest_message_time,
                 (SELECT msg FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_content,
                 (SELECT type FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_type,
+                (SELECT isSent FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_isSent,
                 SUM(CASE WHEN rm.isRead = 0 THEN 1 ELSE 0 END) AS unread_msgs
             FROM Users u
             LEFT JOIN Received_Messages rm ON rm.User_ID_FK = u.User_ID

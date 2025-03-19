@@ -52,7 +52,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 fun formatDateTime(dateTime: LocalDateTime?): String {
-    if(dateTime == null) return ""
+    if (dateTime == null) return ""
 
     val now = LocalDate.now()
     val datePart = dateTime.toLocalDate()
@@ -85,6 +85,7 @@ fun formatDateTime(dateTime: LocalDateTime?): String {
     }
 
 }
+
 @Composable
 fun ChatRow(
     modifier: Modifier = Modifier,
@@ -98,13 +99,14 @@ fun ChatRow(
     id: Int,
     navController: NavController,
     lastMsgType: String? = null,
+    isSent: Boolean? = false
 ) {
     // This state will be used to trigger recomposition
     var refreshTrigger by remember { mutableIntStateOf(0) }
 
     // Launch a coroutine to update the refresh trigger every minute
     LaunchedEffect(Unit) {
-        while(true) {
+        while (true) {
             delay(60000) // 60000 milliseconds = 1 minute
             refreshTrigger += 1 // Increment to trigger recomposition
         }
@@ -191,16 +193,25 @@ fun ChatRow(
                     // Last Message
                     if (lastMsg != null && lastMsgType != null) {
                         val text: String =
-                            if (lastMsgType == "Text") lastMsg else if (lastMsgType == "Image") "Received an image." else "Unknown"
+                            if (lastMsgType == "Text") {
+                                lastMsg
+                            } else if (lastMsgType == "Image" && isSent == true) {
+                                "Sent an image."
+                            } else if (lastMsgType == "Image" && isSent == false) {
+                                "Received an image."
+                            } else {
+                                "Unknown"
+                            }
                         Text(
                             modifier = Modifier,
                             text = text,
-                            style = if(lastMsgType =="Text") Typography.labelSmall else Typography.labelSmall.copy(fontStyle = FontStyle.Italic),
+                            style = if (lastMsgType == "Text") Typography.labelSmall else Typography.labelSmall.copy(
+                                fontStyle = FontStyle.Italic
+                            ),
                             color = msgColor,
                             maxLines = 1
                         )
-                    }
-                    else
+                    } else
                         Text(
                             modifier = Modifier,
                             text = "(Start ZIMing...)",
