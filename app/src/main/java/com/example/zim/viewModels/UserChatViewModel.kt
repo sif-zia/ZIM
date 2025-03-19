@@ -34,25 +34,33 @@ class UserChatViewModel @Inject constructor(
         viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000), UserChatState()
     )
 
+    // Add this to track and cancel the previous chat loading job
+    private var currentLoadChatJob: kotlinx.coroutines.Job? = null
+
     @SuppressLint("MissingPermission")
     fun onEvent(event: UserChatEvent) {
         when (event) {
             is UserChatEvent.LoadData -> {
-                viewModelScope.launch {
-                    val user = userDao.getUserById(event.userId)
-                    _state.update {
-                        it.copy(
-                            username = "${user.fName} ${user.lName}",
-                            dpUri = user.cover,
-                            userId = user.id,
-                            uuid = user.UUID,
-                            connected = _state.value.connectionStatuses[user.UUID] ?: false
-                        )
+                if (event.userId != _state.value.userId) {
+                    viewModelScope.launch {
+                        val user = userDao.getUserById(event.userId)
+                        _state.update {
+                            it.copy(
+                                username = "${user.fName} ${user.lName}",
+                                dpUri = user.cover,
+                                userId = user.id,
+                                uuid = user.UUID,
+                                connected = _state.value.connectionStatuses[user.UUID] ?: false,
+                                // Clear previous messages while loading
+                                messages = emptyList()
+                            )
+                        }
+                        loadChats(event.userId)
                     }
-                    loadChats(event.userId)
                 }
             }
 
+            // Other events remain the same
             is UserChatEvent.ReadAllMessages -> {
                 viewModelScope.launch {
                     messageDao.readAllMessages(event.userId)
@@ -60,15 +68,21 @@ class UserChatViewModel @Inject constructor(
             }
 
             is UserChatEvent.ConnectToUser -> {
-
+                // Implementation for connecting to user
             }
         }
     }
 
     private suspend fun loadChats(userId: Int) {
+        // Cancel any existing chat loading job
+        currentLoadChatJob?.cancel()
+
         if (userId != -1) {
-            messageDao.getAllMessagesOfAUser(userId).collect { chatContentList ->
-                _state.update { it.copy(messages = chatContentList) }
+            // Start a new job and keep reference to cancel it later if needed
+            currentLoadChatJob = viewModelScope.launch {
+                messageDao.getAllMessagesOfAUser(userId).collectLatest { chatContentList ->
+                    _state.update { it.copy(messages = chatContentList) }
+                }
             }
         }
     }

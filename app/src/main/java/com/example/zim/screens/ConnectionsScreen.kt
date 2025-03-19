@@ -68,7 +68,6 @@ fun ConnectionsScreen(
     userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>(),
     protocolState: ProtocolState
 ) {
-    val userChatOnEvent = userChatViewModel::onEvent
 
     var lastPromptConnection by remember {
         mutableStateOf<WifiP2pDevice?>(null)
