@@ -16,6 +16,7 @@ data class ReceivedMessages(
     val receivedTime: LocalDateTime,
     @ColumnInfo(defaultValue = "0")
     val isRead: Boolean = false,
+    val receivedMessageId: Int,
 
     // Foreign Keys
     @ColumnInfo(name = Schema.USER_ID_FK)

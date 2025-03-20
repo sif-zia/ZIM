@@ -130,4 +130,12 @@ interface MessageDao {
 
     @Query("UPDATE Sent_Messages SET status = :status WHERE Sent_Messages_ID IN (:messageIds)")
     suspend fun updateSentMessagesStatus(messageIds: List<Int>, status: String)
+
+    @Query("""SELECT EXISTS(
+        SELECT *
+        FROM Received_Messages RM
+        JOIN Users U ON RM.User_ID_FK = U.User_ID
+        WHERE U.UUID = :senderUuid AND RM.receivedMessageId = :messageId
+    )""")
+    suspend fun checkMessageExist(senderUuid: String, messageId: Int): Boolean
 }

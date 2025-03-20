@@ -247,7 +247,14 @@ class ClientRepository @Inject constructor(
             val filename = getFileNameFromUri(imageUri) ?: "image.$fileExtension"
             val myUuid = userDao.getCurrentUser().users.UUID
 
-            insertSentMessage(receiverId, imageUri.toString(),"Image")
+            val id = insertSentMessage(receiverId, imageUri.toString(),"Image")
+
+            if(id == -1) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Image failed", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
 
             val response = client.submitFormWithBinaryData(
                 url = getURL(activeUserManager.getIpAddressForUser(receiver)!!, ApiRoute.IMAGE),
@@ -256,6 +263,7 @@ class ClientRepository @Inject constructor(
                     append("sender", myUuid)
                     append("fileExtension", fileExtension)
                     append("fileName", filename)
+                    append("messageId", id.toString())
                     append("image", byteArray, Headers.build {
                         append(HttpHeaders.ContentType, mimeType)
                         append(HttpHeaders.ContentDisposition, "filename=$filename")
@@ -312,22 +320,23 @@ class ClientRepository @Inject constructor(
     }
 
 
-    private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text") {
+    private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text"): Int {
         val uuid = userDao.getUserById(userId).UUID
         val status = if (activeUserManager.hasUser(uuid)) "Sent" else "Sending"
 
         val msgId = messageDao.insertMessage(Messages(msg = message, isSent = true, type = msgType))
 
         if (msgId > 0 && userId > 0) {
-            messageDao.insertSentMessage(
+            return messageDao.insertSentMessage(
                 SentMessages(
                     sentTime = LocalDateTime.now(),
                     userIDFK = userId,
                     status = status,
                     msgIDFK = msgId.toInt()
                 )
-            )
+            ).toInt()
         }
+        return -1
     }
 
 //    private suspend fun sendPendingMessages(uuid: String) {

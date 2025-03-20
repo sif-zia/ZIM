@@ -14,8 +14,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -147,6 +145,7 @@ class BatmanProtocol @Inject constructor(
         updateBestRoute(ogm.originatorAddress)
 
         // Process any pending messages for this originator
+        getPendingMessagesOfUser(ogm.originatorAddress)
         processPendingMessages(ogm.originatorAddress)
 
         // Forward OGM if TTL allows if there is no payload
@@ -356,7 +355,7 @@ class BatmanProtocol @Inject constructor(
     private suspend fun deliverMessage(payload: MessagePayload) {
         // Message is for this device, deliver to application layer
         val decryptedMessage = cryptoHelper.decryptMessage(payload.content, payload.sourceAddress)
-        insertReceivedMessage(payload.sourceAddress, decryptedMessage)
+        insertReceivedMessage(payload.sourceAddress, decryptedMessage, payload.messageId)
         sendAck(payload.messageId, payload.sourceAddress)
         // Here you would integrate with your app's UI/notification system
     }
@@ -434,19 +433,19 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    private val addPendingMessageMutex = Mutex()
-    private suspend fun addPendingMessagesOfAUserToQueue(uuid: String) {
-        addPendingMessageMutex.withLock {
-            // Get all pending messages in a single transaction
-            val pendingMessages = messageDao.getPendingMessages(uuid)
 
-            if (pendingMessages.isEmpty()) {
+    private suspend fun getPendingMessagesOfUser(uuid: String) {
+
+            // Get all pending messages in a single transaction
+            val pendingMessagesOfUser = messageDao.getPendingMessages(uuid)
+
+            if (pendingMessagesOfUser.isEmpty()) {
                 return
             }
 
-            logger.addLog(TAG, "Processing ${pendingMessages.size} pending messages for ${uuid.substring(0, 5)}", LogType.INFO)
+            logger.addLog(TAG, "Processing ${pendingMessagesOfUser.size} pending messages for ${uuid.substring(0, 5)}", LogType.INFO)
 
-            pendingMessages.forEach { message ->
+            pendingMessagesOfUser.forEach { message ->
                 val payload = MessagePayload(
                     messageId = message.messageId,
                     sourceAddress = deviceId,
@@ -457,22 +456,21 @@ class BatmanProtocol @Inject constructor(
                 )
 
                 // Check if we've already processed this message
-                val payloadKey = "${payload.messageId}:${payload.sourceAddress}"
-                if (!processedMessages.containsKey(payloadKey)) {
-                    processedMessages[payloadKey] = System.currentTimeMillis()
-
-                    // Add to message queue
-                    messageQueue.offer(payload)
-                }
+                storePendingMessage(uuid, payload)
             }
-        }
+
     }
 
     private suspend fun insertReceivedMessage(
         uuid: String,
         message: String,
+        messageId: Int,
         msgType: String = "Text"
     ) {
+        if(messageDao.checkMessageExist(uuid, messageId)) {
+            return
+        }
+
         val msgId = messageDao.insertMessage(
             Messages(
                 msg = message,
@@ -488,7 +486,8 @@ class BatmanProtocol @Inject constructor(
                     ReceivedMessages(
                         receivedTime = LocalDateTime.now(),
                         userIDFK = userId,
-                        msgIDFK = msgId.toInt()
+                        msgIDFK = msgId.toInt(),
+                        receivedMessageId = messageId
                     )
                 )
             }
@@ -502,11 +501,6 @@ class BatmanProtocol @Inject constructor(
 
         routingTable[destination] = nextHop
         updateFlow()
-
-        CoroutineScope(Dispatchers.IO).launch {
-            delay(1000) // Delay to allow route to stabilize
-            addPendingMessagesOfAUserToQueue(destination)
-        }
     }
 
     // Remove user from active map

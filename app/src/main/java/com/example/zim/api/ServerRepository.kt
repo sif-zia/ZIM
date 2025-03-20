@@ -51,7 +51,6 @@ class ServerRepository @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val activeUserManager: ActiveUserManager,
-    private val cryptoHelper: CryptoHelper,
     private val batmanProtocol: BatmanProtocol,
     private val app: Application
 ) {
@@ -185,6 +184,7 @@ class ServerRepository @Inject constructor(
                             var receiver = ""
                             var sender = ""
                             var fileName = ""
+                            var messageId = ""
                             var fileExtension = "jpg" // Default extension
                             var fileBytes: ByteArray? = null
 
@@ -196,6 +196,7 @@ class ServerRepository @Inject constructor(
                                             "sender" -> sender = part.value
                                             "fileExtension" -> fileExtension = part.value
                                             "fileName" -> fileName = part.value
+                                            "messageId" -> messageId = part.value
                                         }
                                     }
                                     is PartData.FileItem -> {
@@ -229,7 +230,7 @@ class ServerRepository @Inject constructor(
                                 // Save the image to disk with the proper extension
                                 val uri = saveImageOnDisk(fileBytes!!, fileName, fileExtension)
                                 if (uri != null) {
-                                    insertReceivedMessage(sender, uri.toString(), "Image")
+                                    insertReceivedMessage(sender, uri.toString(), messageId.toInt(), "Image")
                                     call.respond(HttpStatusCode.OK, "Image received successfully")
                                 } else {
                                     withContext(Dispatchers.Main) {
@@ -307,6 +308,7 @@ class ServerRepository @Inject constructor(
     private suspend fun insertReceivedMessage(
         uuid: String,
         message: String,
+        messageId: Int,
         msgType: String = "Text"
     ) {
         val msgId = messageDao.insertMessage(
@@ -324,7 +326,8 @@ class ServerRepository @Inject constructor(
                     ReceivedMessages(
                         receivedTime = LocalDateTime.now(),
                         userIDFK = userId,
-                        msgIDFK = msgId.toInt()
+                        msgIDFK = msgId.toInt(),
+                        receivedMessageId = messageId
                     )
                 )
             }
