@@ -10,5 +10,5 @@ sealed interface ConnectionsEvent {
     data object ScanForConnections : ConnectionsEvent
     data class ShowPrompt(val connection: WifiP2pDevice) : ConnectionsEvent
     data object HidePrompt : ConnectionsEvent
-    data class ConnectToDevice(val connection: WifiP2pDevice): ConnectionsEvent
+    data class ConnectToDevice(val ipAddress: String): ConnectionsEvent
 }

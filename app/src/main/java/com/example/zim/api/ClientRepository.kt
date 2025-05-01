@@ -23,11 +23,13 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -56,20 +58,57 @@ class ClientRepository @Inject constructor(
         return "${ApiRoute.BASE_URL}$ip${ApiRoute.PORT}$route"
     }
 
-    suspend fun handshake(isGroupOwner: Boolean, connectedDevices: Int, groupOwnerIp: String) {
+    suspend fun hello(ip: String): HelloData? {
+        val crrUser = userDao.getCurrentUser()?.users
+
+        if (crrUser == null) {
+            Log.d(TAG, "Client: Current user not found")
+            return null
+        }
+
+        val publicKey = crrUser.UUID
+        val name = crrUser.fName + " " + crrUser.lName
+
+        try {
+            val response = client.post(getURL(ip, ApiRoute.HELLO)) {
+                contentType(ContentType.Application.Json)
+                setBody(HelloData(name, publicKey))
+            }
+
+            if (response.status.isSuccess()) {
+                // Parse the response body to get the remote user's data
+                val remoteUserData = response.body<HelloData>()
+
+                // Check if the public keys match
+                if (remoteUserData.publicKey != publicKey) {
+                    Log.d(TAG, "Connected to user: ${remoteUserData.name}")
+                } else {
+                    Log.d(TAG, "Connected to self")
+                }
+
+                return remoteUserData
+            } else {
+                Log.d(TAG, "Client: Server responded with error: ${response.status}")
+                return null
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Client: Error sending hello: ${e.message}")
+            return null
+        }
+    }
+
+    suspend fun handshake(ipAddress: String) {
         handshakeMutex.withLock {
             try {
-                val subnet = groupOwnerIp.substringBeforeLast('.')
-                val toConnectIps = generatePotentialIpAddresses(subnet, isGroupOwner, connectedDevices)
 
                 val currentUser = userDao.getCurrentUser()
+                if (currentUser == null) {
+                    Log.d(TAG, "Client: Current user not found")
+                    return
+                }
                 val userData = createUserData(currentUser)
 
-                for (ip in toConnectIps) {
-                    if (!ips.contains(ip)) {
-                        tryConnectToDevice(ip, userData)
-                    }
-                }
+                tryConnectToDevice(ipAddress, userData)
             } catch (e: Exception) {
                 Log.e(TAG, "Client: Error in Handshake process: ${e.message}", e)
                 showToast("Handshake Failed")
@@ -245,7 +284,8 @@ class ClientRepository @Inject constructor(
 
             // Get original filename if possible
             val filename = getFileNameFromUri(imageUri) ?: "image.$fileExtension"
-            val myUuid = userDao.getCurrentUser().users.UUID
+            val myUuid = userDao.getCurrentUser()?.users?.UUID ?: throw IOException("Current user not found")
+
 
             val id = insertSentMessage(receiverId, imageUri.toString(),"Image")
 

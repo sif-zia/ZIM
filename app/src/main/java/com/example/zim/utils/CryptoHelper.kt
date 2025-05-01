@@ -21,7 +21,7 @@ class CryptoHelper @Inject constructor(
     }
 
     private suspend fun getSecretKey(publicKey: String): SecretKeySpec {
-        val privateKeyStr = userDao.getCurrentUser().currentUser.prKey ?: ""
+        val privateKeyStr = userDao.getCurrentUser()?.currentUser?.prKey ?: ""
         val privateKey = crypto.decodePrivateKey(privateKeyStr)
         val decodedPublicKey = crypto.decodePublicKey(publicKey)
         val sharedSecret = crypto.generateSharedSecret(privateKey, decodedPublicKey)

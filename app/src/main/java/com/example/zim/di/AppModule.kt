@@ -19,6 +19,12 @@ import javax.inject.Singleton
 object AppModule {
     @Provides
     @Singleton
+    fun provideContext(@ApplicationContext context: Context): Context {
+        return context
+    }
+
+    @Provides
+    @Singleton
     fun provideZIMDatabase(@ApplicationContext context: Context): ZIMDatabase {
         return ZIMDatabase.getInstance(context)
     }

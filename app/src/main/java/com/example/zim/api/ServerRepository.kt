@@ -135,6 +135,12 @@ class ServerRepository @Inject constructor(
                                 // Fetch the current user data to return as response
                                 val currentUser = userDao.getCurrentUser()
 
+                                if(currentUser == null) {
+                                    Log.e(TAG, "Server: Current user not found")
+                                    call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                    return@post
+                                }
+
                                 // Return user data as response
                                 val responseData = UserData(
                                     publicKey = currentUser.users.UUID,
@@ -217,7 +223,13 @@ class ServerRepository @Inject constructor(
                                 part.dispose()
                             }
 
-                            val myUuid = userDao.getCurrentUser().users.UUID
+                            val myUuid = userDao.getCurrentUser()?.users?.UUID
+                            if(myUuid == null) {
+                                Log.e(TAG, "Server: Current user not found")
+                                call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                return@post
+                            }
+
                             if (receiver != myUuid) {
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(app, "Invalid image receiver", Toast.LENGTH_SHORT).show()
@@ -275,6 +287,32 @@ class ServerRepository @Inject constructor(
                                 call.respond(
                                     HttpStatusCode.BadRequest,
                                     "Invalid ACK data: ${e.message}"
+                                )
+                            }
+                        }
+
+                        post(ApiRoute.HELLO) {
+                            try {
+                                val helloData = call.receive<HelloData>()
+
+                                val crrUser = userDao.getCurrentUser()?.users
+                                if (crrUser == null) {
+                                    Log.e(TAG, "Server: Current user not found")
+                                    call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                    return@post
+                                }
+                                val crrUserPublicKey = crrUser.UUID
+                                val crrUserName = crrUser.fName + " " + crrUser.lName
+
+                                if (helloData.publicKey != crrUserPublicKey) {
+                                    call.respond(HttpStatusCode.OK, HelloData(crrUserName, crrUserPublicKey))
+                                }
+                                call.respond(HttpStatusCode.BadRequest, "Self HELLO data")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing HELLO data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid HELLO data: ${e.message}"
                                 )
                             }
                         }
