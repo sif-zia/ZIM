@@ -102,7 +102,7 @@ fun SendMessageRow(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     RoundButton(onClick = {
-                        focusManager.clearFocus()
+//                        focusManager.clearFocus()
                         onMessageSend()
                     }, size = 50.dp ) {
                         Icon(
@@ -146,6 +146,6 @@ fun SendMessageRow(
     LaunchedEffect(isFocused) {
         delay(1000L)
         lazyListState.animateScrollToItem(size)
-        isFocused = false
+//        isFocused = false
     }
 }
