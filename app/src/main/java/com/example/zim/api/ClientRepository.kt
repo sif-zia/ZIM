@@ -223,6 +223,35 @@ class ClientRepository @Inject constructor(
             Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
         }
     }
+    suspend fun sendAlert(alert: AlertData, neighborIp: String): Boolean{
+        try {
+            val response = client.post(getURL(neighborIp, ApiRoute.ALERT)){
+                contentType(ContentType.Application.Json)
+                setBody(alert)
+            }
+
+            if(response.status == HttpStatusCode.OK) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Alert sent", Toast.LENGTH_SHORT).show()
+                }
+                return true
+            } else {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(application, "Alert failed", Toast.LENGTH_SHORT).show()
+                }
+                userDisconnected(neighborIp)
+                return false
+            }
+        } catch (e: Exception) {
+            // Log the error here
+            userDisconnected(neighborIp)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(application, "Alert failed", Toast.LENGTH_SHORT).show()
+            }
+            Log.d(TAG,"Client: Error sending alert: ${e.message}")
+            return false
+        }
+    }
 
     suspend fun sendMessage(message: MessagePayload, neighborIp: String): Boolean {
         try {

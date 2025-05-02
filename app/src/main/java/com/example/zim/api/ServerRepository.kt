@@ -10,12 +10,14 @@ import com.example.zim.batman.Acknowledgement
 import com.example.zim.batman.BatmanProtocol
 import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
+import com.example.zim.data.room.Dao.AlertDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
+import com.example.zim.data.room.models.Alerts
 import com.example.zim.data.room.models.Messages
+import com.example.zim.data.room.models.ReceivedAlerts
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.Users
-import com.example.zim.utils.CryptoHelper
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -50,6 +52,7 @@ import javax.inject.Singleton
 class ServerRepository @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
+    private val alertDao: AlertDao,
     private val activeUserManager: ActiveUserManager,
     private val batmanProtocol: BatmanProtocol,
     private val app: Application
@@ -290,6 +293,23 @@ class ServerRepository @Inject constructor(
                                 )
                             }
                         }
+                        post(ApiRoute.ALERT) {
+                            try {
+                                val alert = call.receive<AlertData>()
+                                val ip = call.request.origin.remoteHost
+                                val publicKey = alert.alertSenderPuKey
+
+                                activeUserManager.addUser(publicKey, ip)
+
+                                insertReceivedAlert(alert)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing ALERT data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid ALERT data: ${e.message}"
+                                )
+                            }
+                        }
 
                         post(ApiRoute.HELLO) {
                             try {
@@ -342,6 +362,48 @@ class ServerRepository @Inject constructor(
             }
         }
     }
+
+    private suspend fun insertReceivedAlert(
+        alert: AlertData
+    ) {
+        serverScope.launch {
+            var userId = userDao.getIdByUUID(alert.alertSenderPuKey)
+            if (userId != null) {
+
+                userId = userDao.insertUser(
+                    Users(
+                        UUID = alert.alertSenderPuKey,
+                        fName = alert.alertSenderFName,
+                        lName = alert.alertSenderLName
+                    )
+                ).toInt()
+            }
+            val alertID = alertDao.insertAlert(
+                Alerts(
+                    description = alert.alertDescription,
+                    type = alert.alertType,
+                    isSent = false,
+                    sentTime = alert.alertTime
+                )
+            )
+            if (userId != null) {
+                if (alertID > 0 && userId > 0) {
+                    alertDao.insertReceivedAlert(
+                        ReceivedAlerts(
+                            receivedTime = LocalDateTime.now(),
+                            hops = alert.alertHops,
+                            alertIdFk = alertID.toInt(),
+                            initiatorIdFk = userId.toInt(),
+                        )
+                    )
+                    Log.d(TAG, "Server: Alert inserted successfully")
+                } else {
+                    Log.e(TAG, "Server: Failed to insert alert")
+                }
+            }
+        }
+    }
+
 
     private suspend fun insertReceivedMessage(
         uuid: String,

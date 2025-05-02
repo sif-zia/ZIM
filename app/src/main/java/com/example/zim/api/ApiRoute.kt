@@ -10,5 +10,6 @@ class ApiRoute {
         const val OGM = "/ogm"
         const val ACK = "/ack"
         const val HELLO = "/hello"
+        const val ALERT="/alert"
     }
 }

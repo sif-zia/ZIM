@@ -12,12 +12,14 @@ import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
 import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
 import android.net.wifi.WifiNetworkSpecifier
 import android.os.Build
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.example.zim.api.ClientRepository
 import com.example.zim.data.room.Dao.UserDao
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
+import com.google.android.gms.nearby.connection.ConnectionsClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +40,7 @@ import java.util.ArrayList
 import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.Executor
+import java.util.logging.Handler
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -330,9 +333,13 @@ class NetworkScanner @Inject constructor(
     @SuppressLint("MissingPermission")
     private fun turnOnHotspot() {
         try {
+            // Replace context.mainExecutor with a compatible solution
+            val handler = android.os.Handler(Looper.getMainLooper())
+            val executor = Executor { command -> handler.post(command) }
+
             // Start the hotspot with a custom callback
             val hotspotCallback = ZimHotspotCallback()
-            startLocalOnlyHotspot(context, context.mainExecutor, hotspotCallback)
+            startLocalOnlyHotspot(context, executor, hotspotCallback)
 
             Log.d(TAG, "Requested to turn on hotspot")
         } catch (e: Exception) {

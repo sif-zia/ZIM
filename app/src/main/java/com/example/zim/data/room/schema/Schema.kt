@@ -15,6 +15,10 @@ class Schema {
         const val SENT_MESSAGE_ID: String = "Sent_Messages_ID"
         const val RECEIVED_MESSAGES: String = "Received_Messages"
         const val RECEIVED_MESSAGE_ID: String = "Received_Messages_ID"
-
+        const val ALERTS: String = "Alerts"
+        const val ALERTS_ID : String = "Alerts_ID"
+        const val ALERTS_ID_FK :String = "Alerts_ID_FK"
+        const val RECEIVED_ALERTS: String = "Received_Alerts"
+        const val RECEIVED_ALERTS_ID: String = "Received_Alerts_ID"
     }
 }

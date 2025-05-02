@@ -7,24 +7,28 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.zim.data.room.Dao.AlertDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.converters.Converters
+import com.example.zim.data.room.models.Alerts
 import com.example.zim.data.room.models.CurrentUser
 import com.example.zim.data.room.models.Messages
+import com.example.zim.data.room.models.ReceivedAlerts
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.Users
 import com.example.zim.data.room.schema.Schema
 
 @Database(
-    entities = [Users::class, CurrentUser::class, Messages::class, SentMessages::class, ReceivedMessages::class],
-    version = 2,
+    entities = [Users::class, CurrentUser::class, Messages::class, SentMessages::class, ReceivedMessages::class, Alerts::class,ReceivedAlerts::class],
+    version = 3,
 )
 @TypeConverters(Converters::class)
 abstract class ZIMDatabase : RoomDatabase() {
     abstract val userDao: UserDao
     abstract val messageDao: MessageDao
+    abstract val alertDao: AlertDao
 
     companion object {
         @Volatile

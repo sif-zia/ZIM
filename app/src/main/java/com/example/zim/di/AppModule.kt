@@ -3,6 +3,7 @@ package com.example.zim.di
 import android.content.Context
 import android.location.LocationManager
 import android.net.wifi.p2p.WifiP2pManager
+import com.example.zim.data.room.Dao.AlertDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.ZIMDatabase
@@ -37,6 +38,10 @@ object AppModule {
     @Provides
     fun provideMessageDao(database: ZIMDatabase): MessageDao {
         return database.messageDao
+    }
+    @Provides
+    fun provideAlertDao(database: ZIMDatabase): AlertDao {
+        return database.alertDao
     }
 
     @Provides

@@ -1,11 +1,13 @@
-//package com.example.zim.data.room.models
-//
-//import androidx.room.ColumnInfo
-//import androidx.room.Entity
-//import androidx.room.ForeignKey
-//import androidx.room.PrimaryKey
-//import java.time.LocalDate
-//import java.time.LocalDateTime
+package com.example.zim.data.room.models
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.PrimaryKey
+import com.example.zim.data.room.schema.Schema
+import com.typesafe.config.ConfigException.Null
+import java.time.LocalDate
+import java.time.LocalDateTime
 //
 //
 //
@@ -44,19 +46,19 @@
 //
 //
 //
-//
-//@Entity(tableName = "Alerts")
-//data class Alerts(
-//    @ColumnInfo(name = "Alert_ID")
-//    @PrimaryKey(autoGenerate = true)
-//    val id: Int = 1,
-//    val description: String, // Any
-//    val type: String, // Phone Drop, Health Emergency, Lost Alert, Safety Hazard, Others
-//    val isSent: Boolean,
-//    val sentTime: LocalDateTime,
-//)
-//
-//@Entity(tableName = "Received_Alerts",
+
+@Entity(tableName = Schema.ALERTS)
+data class Alerts(
+    @ColumnInfo(name = Schema.ALERTS_ID)
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 1,
+    val description: String? = null,
+    val type: String, // Phone Drop, Health Emergency, Lost Alert, Safety Hazard, Others
+    val isSent: Boolean,
+    val sentTime: LocalDateTime,
+)
+
+
 //    foreignKeys = [
 //        ForeignKey(
 //            entity = Alerts::class,
@@ -73,17 +75,17 @@
 //            onDelete = ForeignKey.CASCADE
 //        )
 //    ])
-//data class ReceivedAlerts(
-//    @ColumnInfo(name = "RAlert_ID")
-//    @PrimaryKey(autoGenerate = true)
-//    val id: Int = 1,
-//    val hops: Int,
-//    val receivedTime: LocalDateTime,
-//    @ColumnInfo(name = "Alert_ID")
-//    val alertIdFk: Int,
-//    @ColumnInfo(name = "User_ID")
-//    val initiatorIdFk: Int,
-//)
-//
-//
-//
+@Entity(tableName = Schema.RECEIVED_ALERTS)
+data class ReceivedAlerts(
+    @ColumnInfo(name = Schema.RECEIVED_ALERTS_ID)
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 1,
+    val hops: Int,
+    val receivedTime: LocalDateTime,
+    @ColumnInfo(name = Schema.ALERTS_ID_FK)
+    val alertIdFk: Int,
+    @ColumnInfo(name = Schema.USER_ID_FK)
+    val initiatorIdFk: Int,
+)
+
+
