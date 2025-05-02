@@ -9,5 +9,6 @@ class ApiRoute {
         const val IMAGE = "/image"
         const val OGM = "/ogm"
         const val ACK = "/ack"
+        const val HELLO = "/hello"
     }
 }

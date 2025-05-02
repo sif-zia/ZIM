@@ -6,11 +6,17 @@ import android.content.Context
 import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pDevice
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.zim.api.ActiveUserManager
+import com.example.zim.api.ClientRepository
+import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ConnectionsEvent
 import com.example.zim.states.ConnectionsState
+import com.example.zim.wifiP2P.NetworkScanner
 import com.example.zim.wifiP2P.WifiDirectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -25,10 +31,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @HiltViewModel
 class ConnectionsViewModel @Inject constructor(
     private val application: Application,
-    private val wifiDirectManager: WifiDirectManager
+    private val wifiDirectManager: WifiDirectManager,
+    private val networkScanner: NetworkScanner,
+    private val activeUserManager: ActiveUserManager,
+    private val userDao: UserDao,
+    private val clientRepository: ClientRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ConnectionsState())
 
@@ -38,8 +49,31 @@ class ConnectionsViewModel @Inject constructor(
         ConnectionsState()
     )
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    val networkPeers = networkScanner.discoveredDevices
+
+
     init {
         wifiDirectManager.addOnPeersDiscoveredCallback(::onPeersDiscovered)
+
+        viewModelScope.launch {
+            networkScanner.startHotspot()
+            updateActiveUser()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private suspend fun updateActiveUser() {
+        val publicKeys = userDao.getUUIDs()
+
+        networkPeers.collect { peers ->
+            activeUserManager.clearAllUsers()
+            peers.forEach { peer ->
+                if (peer.publicKey != null && peer.publicKey in publicKeys) {
+                    activeUserManager.addUser(peer.publicKey, peer.ipAddress)
+                }
+            }
+        }
     }
 
     private fun onPeersDiscovered(peers: List<WifiP2pDevice>) {
@@ -101,7 +135,13 @@ class ConnectionsViewModel @Inject constructor(
             }
 
             is ConnectionsEvent.ConnectToDevice -> {
-                wifiDirectManager.connect(event.connection)
+                viewModelScope.launch {
+                    clientRepository.handshake(event.ipAddress)
+                }
+            }
+
+            else -> {
+                Log.d("ConnectionsViewModel", "Unknown event: $event")
             }
         }
     }
@@ -134,5 +174,6 @@ class ConnectionsViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         wifiDirectManager.removeOnPeersDiscoveredCallback(::onPeersDiscovered)
+        networkScanner.onDestroy()
     }
 }

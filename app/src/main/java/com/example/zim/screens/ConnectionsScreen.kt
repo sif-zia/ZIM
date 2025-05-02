@@ -68,7 +68,7 @@ fun ConnectionsScreen(
     userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>(),
     protocolState: ProtocolState
 ) {
-
+    val networkPeers by viewModel.networkPeers.collectAsState()
     var lastPromptConnection by remember {
         mutableStateOf<WifiP2pDevice?>(null)
     }
@@ -152,21 +152,39 @@ fun ConnectionsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         state = rememberLazyListState()
                     ) {
-                        state.connections.forEach { connection ->
-                            item {
-                                ConnectionRow(
-                                    phoneName = connection.deviceName,
-                                    description = connection.deviceAddress,
-                                    onClick = {
-                                        onEvent(ConnectionsEvent.ConnectToDevice(connection))
-                                    }
-                                )
-                                if(connection != lastConnection) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.fillMaxWidth(0.66f),
-                                        color = MaterialTheme.colorScheme.primary.copy(0.33f)
-                                    )
+//                        state.connections.forEach { connection ->
+//                            item {
+//                                ConnectionRow(
+//                                    phoneName = connection.deviceName,
+//                                    description = connection.deviceAddress,
+//                                    onClick = {
+//                                        onEvent(ConnectionsEvent.ConnectToDevice(connection))
+//                                    }
+//                                )
+//                                if(connection != lastConnection) {
+//                                    HorizontalDivider(
+//                                        modifier = Modifier.fillMaxWidth(0.66f),
+//                                        color = MaterialTheme.colorScheme.primary.copy(0.33f)
+//                                    )
+//                                }
+//                            }
+//                        }
+
+                        items(networkPeers.size) { index ->
+                            val networkPeer = networkPeers[index]
+                            if(networkPeer.deviceName.isNullOrEmpty()) return@items
+                            ConnectionRow(
+                                phoneName = networkPeer.deviceName,
+                                description = networkPeer.ipAddress,
+                                onClick = {
+                                    onEvent(ConnectionsEvent.ConnectToDevice(networkPeer.ipAddress))
                                 }
+                            )
+                            if (index != state.connections.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.fillMaxWidth(0.66f),
+                                    color = MaterialTheme.colorScheme.primary.copy(0.33f)
+                                )
                             }
                         }
                     }

@@ -111,9 +111,9 @@ class ProtocolViewModel @Inject constructor(
                     groupOwnerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
                 )
             }
-            if (info.groupFormed) {
-                clientRepository.handshake(info.isGroupOwner, size, info.groupOwnerAddress?.hostAddress ?: "192.168.49.1")
-            }
+//            if (info.groupFormed) {
+//                clientRepository.handshake(info.isGroupOwner, size, info.groupOwnerAddress?.hostAddress ?: "192.168.49.1")
+//            }
         }
     }
 
