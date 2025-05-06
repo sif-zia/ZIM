@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,23 +30,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.AddAlertDialog
 import com.example.zim.components.AlertRow
 import com.example.zim.components.FloatingButton
 import com.example.zim.components.MyAlert
+import com.example.zim.events.AlertsEvent
 import com.example.zim.helperclasses.Alert
 import com.example.zim.helperclasses.AlertType
+import com.example.zim.viewModels.AlertsViewModel
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 
 @Composable
-fun AlertsScreen(navController: NavController) {
+fun AlertsScreen(navController: NavController, alertsViewModel: AlertsViewModel = hiltViewModel()) {
     val verticalPadding = 12.dp
+    val state by alertsViewModel.state.collectAsState()
     var showAddAlertBtn by remember { mutableStateOf(true) }
-    var currentAlert by remember {
-        mutableStateOf<Alert?>(null)
-    }
+//    var currentAlert by remember {
+//        mutableStateOf<Alert?>(null)
+//    }
     var showDialog by remember {
         mutableStateOf(false)
     }
@@ -69,14 +74,14 @@ fun AlertsScreen(navController: NavController) {
 
     val duration = 10 * 1000L
 
-    LaunchedEffect(currentAlert) {
-        if (currentAlert != null) {
-            showAddAlertBtn = false
-
-            delay(duration)
-            showAddAlertBtn = true
-        }
-    }
+//    LaunchedEffect(currentAlert) {
+//        if (currentAlert != null) {
+//            showAddAlertBtn = false
+//
+//            delay(duration)
+//            showAddAlertBtn = true
+//        }
+//    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -108,10 +113,17 @@ fun AlertsScreen(navController: NavController) {
                 )
             }
 
+            val type =  if(state.lastAlert === null) null
+                        else if(state.lastAlert?.type == "Fire Alert") AlertType.FIRE
+                        else if(state.lastAlert?.type == "Fall Alert") AlertType.FALL
+                        else if(state.lastAlert?.type == "Health Alert") AlertType.HEALTH
+                        else if(state.lastAlert?.type == "Safety Alert") AlertType.SAFETY
+                        else AlertType.CUSTOM
+
             // MyAlert Section
-            currentAlert?.let { alert ->
-                MyAlert(alert = alert, duration = duration){
-                    currentAlert= currentAlert?.copy(time= LocalDateTime.now())
+            state.lastAlert?.let { alert ->
+                MyAlert(alert = Alert(type = type ?: AlertType.CUSTOM, senderName = "Me", hops = 0, time = alert.sentTime), duration = duration){
+                    alertsViewModel.onEvent(AlertsEvent.ResendAlert(alert))
                 }
             } ?: run {
                 Text(
@@ -195,13 +207,14 @@ fun AlertsScreen(navController: NavController) {
                 onDismiss = { showDialog = false },
                 onConfirm =
                 {
-                    if (addAlertType != null) {
-                        currentAlert = if (addAlertType==AlertType.CUSTOM) {
-                            Alert(addAlertType!!, description, 0, LocalDateTime.now())
-                        } else {
-                            Alert(addAlertType!!, "Me", 0, LocalDateTime.now())
-                        }
-                    }
+//                    if (addAlertType != null) {
+//                        currentAlert = if (addAlertType==AlertType.CUSTOM) {
+//                            Alert(addAlertType!!, description, 0, LocalDateTime.now())
+//                        } else {
+//                            Alert(addAlertType!!, "Me", 0, LocalDateTime.now())
+//                        }
+//                    }
+                    alertsViewModel.onEvent(AlertsEvent.SendAlert(addAlertType?.toName()?: "Unknown Alert", description))
                     showDialog = false
                 }
             )

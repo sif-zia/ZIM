@@ -51,7 +51,7 @@ import java.time.LocalDateTime
 data class Alerts(
     @ColumnInfo(name = Schema.ALERTS_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val description: String? = null,
     val type: String, // Phone Drop, Health Emergency, Lost Alert, Safety Hazard, Others
     val isSent: Boolean,
@@ -79,7 +79,7 @@ data class Alerts(
 data class ReceivedAlerts(
     @ColumnInfo(name = Schema.RECEIVED_ALERTS_ID)
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 1,
+    val id: Int = 0,
     val hops: Int,
     val receivedTime: LocalDateTime,
     @ColumnInfo(name = Schema.ALERTS_ID_FK)

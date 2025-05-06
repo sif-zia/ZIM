@@ -237,7 +237,7 @@ class ClientRepository @Inject constructor(
                 return true
             } else {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(application, "Alert failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(application, "Alert failed Status Code: ${response.status}", Toast.LENGTH_SHORT).show()
                 }
                 userDisconnected(neighborIp)
                 return false

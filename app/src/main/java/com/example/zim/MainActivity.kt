@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.BLUETOOTH_ADVERTISE,
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.POST_NOTIFICATIONS,
+            Manifest.permission.BLUETOOTH_ADMIN,
         )
 
         private const val PERMISSION_REQUEST_CODE = 1001

@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.zim.data.room.models.Alerts
 import com.example.zim.helperclasses.Alert
 import com.example.zim.helperclasses.AlertType
 import kotlinx.coroutines.delay

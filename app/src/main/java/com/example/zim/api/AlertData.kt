@@ -25,7 +25,7 @@ object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
 @Serializable
 class AlertData {
     var alertType: String = ""
-    var alertDescription: String = ""
+    var alertDescription: String? = null
 
     @Serializable(with = LocalDateTimeSerializer::class)
     var alertTime: LocalDateTime = LocalDateTime.now()
@@ -37,7 +37,7 @@ class AlertData {
 
     constructor(
         alertType: String,
-        alertDescription: String,
+        alertDescription: String?,
         alertTime: LocalDateTime,
         alertSenderFName: String,
         alertSenderLName: String,

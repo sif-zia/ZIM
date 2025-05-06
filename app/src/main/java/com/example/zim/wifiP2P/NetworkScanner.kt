@@ -29,6 +29,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -267,7 +268,6 @@ class NetworkScanner @Inject constructor(
                                 Log.d(TAG, "Device found: $deviceInfo")
                                 synchronized(deviceList) {
                                     deviceList.add(deviceInfo)
-                                    _discoveredDevices.value = ArrayList(deviceList)
                                 }
                             }
                         } catch (e: IOException) {
@@ -279,6 +279,7 @@ class NetworkScanner @Inject constructor(
                 // Wait for all coroutines to complete
                 deferreds.awaitAll()
 
+                _discoveredDevices.update { ArrayList(deviceList) }
                 Log.d(TAG, "Network scan completed. Found ${deviceList.size} devices")
             }
         } finally {
@@ -333,13 +334,9 @@ class NetworkScanner @Inject constructor(
     @SuppressLint("MissingPermission")
     private fun turnOnHotspot() {
         try {
-            // Replace context.mainExecutor with a compatible solution
-            val handler = android.os.Handler(Looper.getMainLooper())
-            val executor = Executor { command -> handler.post(command) }
-
             // Start the hotspot with a custom callback
             val hotspotCallback = ZimHotspotCallback()
-            startLocalOnlyHotspot(context, executor, hotspotCallback)
+            startLocalOnlyHotspot(context, context.mainExecutor, hotspotCallback)
 
             Log.d(TAG, "Requested to turn on hotspot")
         } catch (e: Exception) {

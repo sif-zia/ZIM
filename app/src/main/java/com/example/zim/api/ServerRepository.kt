@@ -266,6 +266,8 @@ class ServerRepository @Inject constructor(
                                 activeUserManager.addUser(publicKey, ip)
 
                                 batmanProtocol.processOGM(ogm)
+
+                                call.respond(HttpStatusCode.OK, "OGM received successfully")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Server: Error processing OGM data", e)
                                 call.respond(
@@ -285,6 +287,8 @@ class ServerRepository @Inject constructor(
                                 activeUserManager.addUser(publicKey, ip)
 
                                 batmanProtocol.processAck(ack)
+
+                                call.respond(HttpStatusCode.OK, "ACK received successfully")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Server: Error processing ACK data", e)
                                 call.respond(
@@ -293,6 +297,7 @@ class ServerRepository @Inject constructor(
                                 )
                             }
                         }
+
                         post(ApiRoute.ALERT) {
                             try {
                                 val alert = call.receive<AlertData>()
@@ -301,7 +306,12 @@ class ServerRepository @Inject constructor(
 
                                 activeUserManager.addUser(publicKey, ip)
 
-                                insertReceivedAlert(alert)
+                                Log.d(TAG, "Server: Alert received from ${alert.alertSenderFName} about ${alert.alertType} with description ${alert.alertDescription} at ${alert.alertTime} and through public key ${alert.alertSenderPuKey}")
+
+                                // Process the alert data
+//                                insertReceivedAlert(alert)
+
+                                call.respond(HttpStatusCode.OK, "Alert received successfully")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Server: Error processing ALERT data", e)
                                 call.respond(
@@ -368,8 +378,7 @@ class ServerRepository @Inject constructor(
     ) {
         serverScope.launch {
             var userId = userDao.getIdByUUID(alert.alertSenderPuKey)
-            if (userId != null) {
-
+            if (userId == null) {
                 userId = userDao.insertUser(
                     Users(
                         UUID = alert.alertSenderPuKey,

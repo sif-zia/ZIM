@@ -15,6 +15,7 @@ import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.ClientRepository
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.helperclasses.Connection
 import com.example.zim.states.ConnectionsState
 import com.example.zim.wifiP2P.NetworkScanner
 import com.example.zim.wifiP2P.WifiDirectManager
@@ -68,10 +69,27 @@ class ConnectionsViewModel @Inject constructor(
 
         networkPeers.collect { peers ->
             activeUserManager.clearAllUsers()
+            val newConnections = mutableListOf<Connection>()
             peers.forEach { peer ->
                 if (peer.publicKey != null && peer.publicKey in publicKeys) {
                     activeUserManager.addUser(peer.publicKey, peer.ipAddress)
                 }
+                else if (peer.publicKey != null) {
+                    newConnections.add(
+                        Connection(
+                            fName = peer.deviceName?: "Unknown",
+                            lName = "",
+                            description = peer.ipAddress,
+                            deviceAddress = peer.publicKey
+                        )
+                    )
+                }
+            }
+            Log.d("NetworkScanner", "New connections: $newConnections")
+            _state.update { currentState ->
+                currentState.copy(
+                    devices = newConnections,
+                )
             }
         }
     }

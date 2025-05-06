@@ -60,7 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 
 
-@RequiresApi(Build.VERSION_CODES.Q)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun ConnectionsScreen(
     navController: NavController, state: ConnectionsState, onEvent: (ConnectionsEvent) -> Unit,
@@ -68,7 +68,6 @@ fun ConnectionsScreen(
     userChatViewModel: UserChatViewModel = hiltViewModel<UserChatViewModel>(),
     protocolState: ProtocolState
 ) {
-    val networkPeers by viewModel.networkPeers.collectAsState()
     var lastPromptConnection by remember {
         mutableStateOf<WifiP2pDevice?>(null)
     }
@@ -144,7 +143,7 @@ fun ConnectionsScreen(
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )
                 } else {
-                    val lastConnection = state.connections.last()
+                    val lastConnection = if (state.devices.isEmpty()) null else state.devices.last()
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize(),
@@ -152,41 +151,24 @@ fun ConnectionsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         state = rememberLazyListState()
                     ) {
-//                        state.connections.forEach { connection ->
-//                            item {
-//                                ConnectionRow(
-//                                    phoneName = connection.deviceName,
-//                                    description = connection.deviceAddress,
-//                                    onClick = {
-//                                        onEvent(ConnectionsEvent.ConnectToDevice(connection))
-//                                    }
-//                                )
-//                                if(connection != lastConnection) {
-//                                    HorizontalDivider(
-//                                        modifier = Modifier.fillMaxWidth(0.66f),
-//                                        color = MaterialTheme.colorScheme.primary.copy(0.33f)
-//                                    )
-//                                }
-//                            }
-//                        }
-
-                        items(networkPeers.size) { index ->
-                            val networkPeer = networkPeers[index]
-                            if(networkPeer.deviceName.isNullOrEmpty()) return@items
-                            ConnectionRow(
-                                phoneName = networkPeer.deviceName,
-                                description = networkPeer.ipAddress,
-                                onClick = {
-                                    onEvent(ConnectionsEvent.ConnectToDevice(networkPeer.ipAddress))
-                                }
-                            )
-                            if (index != state.connections.size - 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.fillMaxWidth(0.66f),
-                                    color = MaterialTheme.colorScheme.primary.copy(0.33f)
+                        state.devices.forEach { connection ->
+                            item {
+                                ConnectionRow(
+                                    phoneName = connection.fName,
+                                    description = connection.description,
+                                    onClick = {
+                                        onEvent(ConnectionsEvent.ConnectToDevice(connection.description))
+                                    }
                                 )
+                                if(connection != lastConnection) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.fillMaxWidth(0.66f),
+                                        color = MaterialTheme.colorScheme.primary.copy(0.33f)
+                                    )
+                                }
                             }
                         }
+
                     }
                 }
             }
