@@ -306,10 +306,10 @@ class ServerRepository @Inject constructor(
 
                                 activeUserManager.addUser(publicKey, ip)
 
-                                Log.d(TAG, "Server: Alert received from ${alert.alertSenderFName} about ${alert.alertType} with description ${alert.alertDescription} at ${alert.alertTime} and through public key ${alert.alertSenderPuKey}")
+                                Log.d(TAG, "Server: Alert received from ${alert.alertSenderFName} with ID : ${alert.alertId} about ${alert.alertType} with description ${alert.alertDescription} at ${alert.alertTime} and through public key ${alert.alertSenderPuKey}")
 
-                                // Process the alert data
-//                                insertReceivedAlert(alert)
+                                 //Process the alert data
+                                insertReceivedAlert(alert)
 
                                 call.respond(HttpStatusCode.OK, "Alert received successfully")
                             } catch (e: Exception) {
@@ -387,15 +387,16 @@ class ServerRepository @Inject constructor(
                     )
                 ).toInt()
             }
-            val alertID = alertDao.insertAlert(
-                Alerts(
-                    description = alert.alertDescription,
-                    type = alert.alertType,
-                    isSent = false,
-                    sentTime = alert.alertTime
+            val oldAlert=alertDao.getAlert(alert.alertSenderPuKey,alert.alertId)
+            if (oldAlert==null) {
+                val alertID = alertDao.insertAlert(
+                    Alerts(
+                        description = alert.alertDescription,
+                        type = alert.alertType,
+                        isSent = false,
+                        sentTime = alert.alertTime
+                    )
                 )
-            )
-            if (userId != null) {
                 if (alertID > 0 && userId > 0) {
                     alertDao.insertReceivedAlert(
                         ReceivedAlerts(
@@ -403,12 +404,19 @@ class ServerRepository @Inject constructor(
                             hops = alert.alertHops,
                             alertIdFk = alertID.toInt(),
                             initiatorIdFk = userId.toInt(),
+                            receivedAlertId = alertID.toInt()
                         )
                     )
                     Log.d(TAG, "Server: Alert inserted successfully")
                 } else {
                     Log.e(TAG, "Server: Failed to insert alert")
                 }
+            }
+            else
+            {
+                val hops = if (alert.alertHops< oldAlert.hops) alert.alertHops else oldAlert.hops
+                val receivedTime=LocalDateTime.now()
+                alertDao.updateReceivedAlert(oldAlert.id,hops,receivedTime)
             }
         }
     }

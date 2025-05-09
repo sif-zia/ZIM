@@ -1,5 +1,6 @@
 package com.example.zim.api
 
+import android.adservices.adid.AdId
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
@@ -26,7 +27,7 @@ object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
 class AlertData {
     var alertType: String = ""
     var alertDescription: String? = null
-
+    var alertId : Int
     @Serializable(with = LocalDateTimeSerializer::class)
     var alertTime: LocalDateTime = LocalDateTime.now()
 
@@ -42,7 +43,8 @@ class AlertData {
         alertSenderFName: String,
         alertSenderLName: String,
         alertSenderPuKey: String,
-        alertHops: Int
+        alertHops: Int,
+        alertId: Int
     ) {
         this.alertType = alertType
         this.alertDescription = alertDescription
@@ -51,5 +53,6 @@ class AlertData {
         this.alertSenderLName = alertSenderLName
         this.alertSenderPuKey = alertSenderPuKey
         this.alertHops = alertHops
+        this.alertId=alertId
     }
 }

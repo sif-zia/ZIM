@@ -10,8 +10,8 @@ import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Alerts
 import com.example.zim.events.AlertsEvent
 import com.example.zim.states.AlertsState
-import com.example.zim.states.ConnectionsState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +37,7 @@ class AlertsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            alertDao.getLastAlert().collect { alert ->
+            alertDao.getLastSentAlert().collect { alert ->
                 _state.update { it.copy(lastAlert = alert) }
             }
         }
@@ -46,10 +46,10 @@ class AlertsViewModel @Inject constructor(
     fun onEvent(event: AlertsEvent) {
         when (event) {
             is AlertsEvent.SendAlert -> {
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     val currentUser = userDao.getCurrentUser()?.users
 
-                    alertDao.insertAlert(Alerts(
+                    val alertId=alertDao.insertAlert(Alerts(
                         description = event.description,
                         type = event.type,
                         sentTime = event.time,
@@ -66,7 +66,8 @@ class AlertsViewModel @Inject constructor(
                                     alertSenderFName = currentUser.fName,
                                     alertSenderLName = currentUser.lName ?: "",
                                     alertSenderPuKey = currentUser.UUID,
-                                    alertHops = 0
+                                    alertHops = 0,
+                                    alertId=alertId.toInt()
                                 ),
                                 neighborIp = ip
                             )
@@ -75,9 +76,10 @@ class AlertsViewModel @Inject constructor(
                 }
             }
             is AlertsEvent.ResendAlert -> {
-                viewModelScope.launch {
-//                    alertDao.updateAlertTime(event.oldAlert.id)
+                viewModelScope.launch(Dispatchers.IO) {
+                    alertDao.updateAlertTime(event.oldAlert.id)
                     val currentUser = userDao.getCurrentUser()?.users
+
 
                     if (currentUser != null) {
                         activeUserManager.activeUsers.value.values.forEach { ip ->
@@ -89,7 +91,8 @@ class AlertsViewModel @Inject constructor(
                                     alertSenderFName = currentUser.fName,
                                     alertSenderLName = currentUser.lName ?: "",
                                     alertSenderPuKey = currentUser.UUID,
-                                    alertHops = 0
+                                    alertHops = 0,
+                                    alertId = event.oldAlert.id
                                 ),
                                 neighborIp = ip
                             )

@@ -1,13 +1,16 @@
 package com.example.zim.data.room.models
 
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 import com.example.zim.data.room.schema.Schema
 import com.typesafe.config.ConfigException.Null
 import java.time.LocalDate
 import java.time.LocalDateTime
+
 //
 //
 //
@@ -86,6 +89,27 @@ data class ReceivedAlerts(
     val alertIdFk: Int,
     @ColumnInfo(name = Schema.USER_ID_FK)
     val initiatorIdFk: Int,
+    val receivedAlertId: Int,
 )
 
+data class AlertsWithReceivedAlertsAndSender(
+    @Embedded
+    var alert: Alerts,
+
+    @Relation
+        (
+        parentColumn = Schema.ALERTS_ID,
+        entityColumn = Schema.ALERTS_ID_FK,
+    )
+
+    var receivedAlert: ReceivedAlerts,
+
+    @Relation
+        (
+        parentColumn = Schema.USER_ID_FK,
+        entityColumn = Schema.USER_ID,
+    )
+
+    var sender:Users
+)
 
