@@ -115,7 +115,9 @@ class NetworkScanner @Inject constructor(
         CoroutineScope(Dispatchers.IO).launch {
             userDao.getCurrentUserFlow().collect { currentUser ->
                 if(currentUser?.users != null) {
-                    nearbyApiNodeName = "ZIM_${currentUser.users.fName}_${currentUser.users.lName}_${currentUser.users.UUID.substring(0, 4)}"
+                    val androidVersion = android.os.Build.VERSION.SDK_INT
+                    val serviceNamePrefix = if (androidVersion <= android.os.Build.VERSION_CODES.R) "ZIM0" else "ZIM"
+                    nearbyApiNodeName = "${serviceNamePrefix}_${currentUser.users.fName}_${currentUser.users.lName}_${currentUser.users.UUID.substring(0, 4)}"
                 }
             }
         }
@@ -569,6 +571,11 @@ class NetworkScanner @Inject constructor(
 
                     if(!info.endpointName.startsWith("ZIM_")) {
                         Log.d(TAG, "Ignoring endpoint: $endpointId with name: ${info.endpointName} because does not belong to ZIM app")
+                        return
+                    }
+
+                    if(info.endpointName.startsWith("ZIM0_")) {
+                        Log.d(TAG, "Ignoring endpoint: $endpointId with name: ${info.endpointName} because does not have hotspot")
                         return
                     }
 

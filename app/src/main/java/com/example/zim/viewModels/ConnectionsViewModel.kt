@@ -58,26 +58,29 @@ class ConnectionsViewModel @Inject constructor(
         wifiDirectManager.addOnPeersDiscoveredCallback(::onPeersDiscovered)
 
         viewModelScope.launch {
-            networkScanner.startHotspot()
+            val androidVersion = android.os.Build.VERSION.SDK_INT
+            if (androidVersion > android.os.Build.VERSION_CODES.R) {
+                networkScanner.startHotspot()
+            }
+
             updateActiveUser()
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private suspend fun updateActiveUser() {
-        val publicKeys = userDao.getUUIDs()
 
         networkPeers.collect { peers ->
+            val publicKeys = userDao.getUUIDs()
             activeUserManager.clearAllUsers()
             val newConnections = mutableListOf<Connection>()
             peers.forEach { peer ->
                 if (peer.publicKey != null && peer.publicKey in publicKeys) {
                     activeUserManager.addUser(peer.publicKey, peer.ipAddress)
-                }
-                else if (peer.publicKey != null) {
+                } else if (peer.publicKey != null) {
                     newConnections.add(
                         Connection(
-                            fName = peer.deviceName?: "Unknown",
+                            fName = peer.deviceName ?: "Unknown",
                             lName = "",
                             description = peer.ipAddress,
                             deviceAddress = peer.publicKey
