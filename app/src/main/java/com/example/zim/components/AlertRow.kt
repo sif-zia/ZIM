@@ -23,21 +23,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.zim.data.room.models.AlertsWithReceivedAlertsAndSender
 import com.example.zim.helperclasses.Alert
+import com.example.zim.helperclasses.AlertType
+import com.example.zim.helperclasses.toAlertType
 import kotlinx.coroutines.delay
 
 @Composable
-fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
+fun AlertRow(modifier: Modifier = Modifier, alert: AlertsWithReceivedAlertsAndSender) {
 
     var timeString by remember {
-        mutableStateOf(formatDateTime(alert.time))
+        mutableStateOf(formatDateTime(alert.alert.sentTime))
     }
 
-    LaunchedEffect(alert.time) {
+    LaunchedEffect(alert.alert.sentTime) {
         while(true)
         {
             delay(60 * 1000L)
-            timeString = formatDateTime(alert.time)
+            timeString = formatDateTime(alert.alert.sentTime)
         }
     }
 
@@ -58,10 +61,10 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
         ) {
 
 
-            val minDistance = (alert.hops - 1) * 100
-            val maxDistance = (alert.hops) * 100
+            val minDistance = (alert.receivedAlert.hops - 1) * 100
+            val maxDistance = (alert.receivedAlert.hops) * 100
             Icon(
-                imageVector = alert.type.toIcon(),
+                imageVector = alert.alert.type.toAlertType().toIcon(),
                 contentDescription = "Alert Icon",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -75,13 +78,13 @@ fun AlertRow(modifier: Modifier = Modifier, alert: Alert) {
                 ) {
                     //Alert Name
                     Text(
-                        text = alert.type.toName(),
+                        text = alert.alert.type.toAlertType().toName(),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
                     )
                     // Alert Sender
                     Text(
-                        text = alert.senderName,
+                        text = alert.sender.fName,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.66f)
                     )

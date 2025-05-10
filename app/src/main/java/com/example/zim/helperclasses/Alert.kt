@@ -38,6 +38,7 @@ enum class AlertType {
             SAFETY -> "Safety Alert"
             FIRE -> "Fire Alert"
             CUSTOM -> "Custom Alert"
+            else -> "Custom Alert"
         }
     }
 }
@@ -52,6 +53,8 @@ fun String.toAlertType(): AlertType {
         else -> CUSTOM
     }
 }
+
+
 
 data class Alert(
     val type: AlertType,

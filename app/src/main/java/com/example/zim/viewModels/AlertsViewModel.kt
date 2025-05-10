@@ -1,7 +1,9 @@
 package com.example.zim.viewModels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.AlertData
 import com.example.zim.api.ClientRepository
@@ -37,9 +39,21 @@ class AlertsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            alertDao.getLastSentAlert().collect { alert ->
-                _state.update { it.copy(lastAlert = alert) }
-            }
+            observedLastSendAlert()
+        }
+        viewModelScope.launch {
+            observedReceivedAlerts()
+        }
+    }
+
+    suspend fun observedReceivedAlerts(){
+        alertDao.getAllReceivedAlerts().collect{alerts->
+            _state.update { it.copy(receivedAlerts = alerts) }
+        }
+    }
+    suspend fun observedLastSendAlert(){
+        alertDao.getLastSentAlert().collect { alert ->
+            _state.update { it.copy(lastAlert = alert) }
         }
     }
 

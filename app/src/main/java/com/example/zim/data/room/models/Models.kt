@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Junction
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.example.zim.data.room.schema.Schema
@@ -94,22 +95,24 @@ data class ReceivedAlerts(
 
 data class AlertsWithReceivedAlertsAndSender(
     @Embedded
-    var alert: Alerts,
+    val alert: Alerts,
 
-    @Relation
-        (
+    @Relation(
+        entity = ReceivedAlerts::class,
         parentColumn = Schema.ALERTS_ID,
-        entityColumn = Schema.ALERTS_ID_FK,
+        entityColumn = Schema.ALERTS_ID_FK
     )
+    val receivedAlert: ReceivedAlerts,
 
-    var receivedAlert: ReceivedAlerts,
-
-    @Relation
-        (
-        parentColumn = Schema.USER_ID_FK,
+    @Relation(
+        entity = Users::class,
+        parentColumn = Schema.ALERTS_ID,
         entityColumn = Schema.USER_ID,
+        associateBy = Junction(
+            value = ReceivedAlerts::class,
+            parentColumn = Schema.ALERTS_ID_FK,  // Changed from ALERTS_ID to ALERTS_ID_FK
+            entityColumn = Schema.USER_ID_FK     // This maps to the user field in ReceivedAlerts
+        )
     )
-
-    var sender:Users
+    val sender: Users
 )
-

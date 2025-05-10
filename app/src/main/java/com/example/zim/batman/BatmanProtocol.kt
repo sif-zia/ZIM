@@ -1,13 +1,19 @@
 package com.example.zim.batman
 
+import android.util.Log
 import com.example.zim.api.ActiveUserManager
+import com.example.zim.api.AlertData
 import com.example.zim.api.ClientRepository
+import com.example.zim.data.room.Dao.AlertDao
 import com.example.zim.utils.CryptoHelper
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
+import com.example.zim.data.room.models.Alerts
 import com.example.zim.data.room.models.Messages
+import com.example.zim.data.room.models.ReceivedAlerts
 import com.example.zim.data.room.models.ReceivedMessages
 import com.example.zim.data.room.models.SentMessages
+import com.example.zim.data.room.models.Users
 import com.example.zim.utils.LogType
 import com.example.zim.utils.Logger
 import kotlinx.coroutines.*
@@ -29,7 +35,8 @@ class BatmanProtocol @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val logger: Logger,
-    private val cryptoHelper: CryptoHelper
+    private val cryptoHelper: CryptoHelper,
+    private val alertDao: AlertDao
 ) {
     private var deviceId = ""
     private val sequenceNumber = AtomicInteger(0)
@@ -86,7 +93,7 @@ class BatmanProtocol @Inject constructor(
         // Initialize device ID
         CoroutineScope(Dispatchers.IO).launch {
             userDao.getCurrentUserFlow().collect { userWithCurrentUser ->
-                if(userWithCurrentUser != null)
+                if (userWithCurrentUser != null)
                     deviceId = userWithCurrentUser.users.UUID
             }
         }
@@ -103,7 +110,7 @@ class BatmanProtocol @Inject constructor(
         while (true) {
             val noOfConnectedDevices = activeUserManager.getAllActiveUsers().size
 
-            if(noOfConnectedDevices == 0) {
+            if (noOfConnectedDevices == 0) {
                 delay(OGM_INTERVAL)
                 continue
             }
@@ -118,7 +125,11 @@ class BatmanProtocol @Inject constructor(
 
             // Send OGM to all direct neighbors
             forwardOGM(ogm)
-            logger.addLog(TAG, "OGM with sequence number ${ogm.sequenceNumber} broadcast", LogType.INFO)
+            logger.addLog(
+                TAG,
+                "OGM with sequence number ${ogm.sequenceNumber} broadcast",
+                LogType.INFO
+            )
             delay(OGM_INTERVAL)
         }
     }
@@ -226,7 +237,7 @@ class BatmanProtocol @Inject constructor(
     suspend fun sendMessage(destination: String, content: String) {
         val messageId = insertSentMessage(destination, content)
 
-        if(messageId < 0) {
+        if (messageId < 0) {
             logger.addLog(TAG, "Failed to insert message to database", LogType.ERROR)
             return
         }
@@ -246,7 +257,11 @@ class BatmanProtocol @Inject constructor(
         messageQueue.offer(payload)
     }
 
-    private suspend fun insertSentMessage(uuid: String, message: String, msgType: String = "Text"): Int {
+    private suspend fun insertSentMessage(
+        uuid: String,
+        message: String,
+        msgType: String = "Text"
+    ): Int {
         userDao.getIdByUUID(uuid)?.let { userId ->
             val msgId =
                 messageDao.insertMessage(Messages(msg = message, isSent = true, type = msgType))
@@ -278,7 +293,16 @@ class BatmanProtocol @Inject constructor(
                 val destination = payload.destinationAddress
                 val nextHop = routingTable[destination]
 
-                logger.addLog(TAG, "Processing message with ID ${payload.messageId} to ${destination.substring(0, 5)}", LogType.INFO)
+                logger.addLog(
+                    TAG,
+                    "Processing message with ID ${payload.messageId} to ${
+                        destination.substring(
+                            0,
+                            5
+                        )
+                    }",
+                    LogType.INFO
+                )
 
                 if (nextHop != null) {
                     // Route exists, send message
@@ -327,7 +351,11 @@ class BatmanProtocol @Inject constructor(
             originalTtl = DEFAULT_TTL * 2
         )
 
-        logger.addLog(TAG, "Sending Discovery OGM with sequence number ${ogm.sequenceNumber}", LogType.INFO)
+        logger.addLog(
+            TAG,
+            "Sending Discovery OGM with sequence number ${ogm.sequenceNumber}",
+            LogType.INFO
+        )
 
         forwardOGM(ogm)
     }
@@ -336,7 +364,8 @@ class BatmanProtocol @Inject constructor(
         pendingMessages[originator]?.let { messages ->
             val nextHop = routingTable[originator]
             if (nextHop != null && messages.isNotEmpty()) {
-                val messagesList = messages.toList() // Create a copy to avoid concurrent modification
+                val messagesList =
+                    messages.toList() // Create a copy to avoid concurrent modification
                 pendingMessages.remove(originator)
 
                 messagesList.forEach { message ->
@@ -345,7 +374,16 @@ class BatmanProtocol @Inject constructor(
                     if (!processedMessages.containsKey(payloadKey)) {
                         processedMessages[payloadKey] = System.currentTimeMillis()
                         sendViaNextHop(message, nextHop)
-                        logger.addLog(TAG, "Sending pending message with ID ${message.messageId} through ${nextHop.substring(0, 5)}", LogType.INFO)
+                        logger.addLog(
+                            TAG,
+                            "Sending pending message with ID ${message.messageId} through ${
+                                nextHop.substring(
+                                    0,
+                                    5
+                                )
+                            }",
+                            LogType.INFO
+                        )
                     }
                 }
             }
@@ -390,7 +428,7 @@ class BatmanProtocol @Inject constructor(
         val messageId = ack.messageId
         val source = ack.sourceAddress
 
-        if(source == deviceId) {
+        if (source == deviceId) {
             messageDao.markMessageAsSent(messageId)
         } else {
             val updatedAck = ack.copy(ttl = ack.ttl - 1, senderAddress = deviceId)
@@ -436,28 +474,32 @@ class BatmanProtocol @Inject constructor(
 
     private suspend fun getPendingMessagesOfUser(uuid: String) {
 
-            // Get all pending messages in a single transaction
-            val pendingMessagesOfUser = messageDao.getPendingMessages(uuid)
+        // Get all pending messages in a single transaction
+        val pendingMessagesOfUser = messageDao.getPendingMessages(uuid)
 
-            if (pendingMessagesOfUser.isEmpty()) {
-                return
-            }
+        if (pendingMessagesOfUser.isEmpty()) {
+            return
+        }
 
-            logger.addLog(TAG, "Processing ${pendingMessagesOfUser.size} pending messages for ${uuid.substring(0, 5)}", LogType.INFO)
+        logger.addLog(
+            TAG,
+            "Processing ${pendingMessagesOfUser.size} pending messages for ${uuid.substring(0, 5)}",
+            LogType.INFO
+        )
 
-            pendingMessagesOfUser.forEach { message ->
-                val payload = MessagePayload(
-                    messageId = message.messageId,
-                    sourceAddress = deviceId,
-                    senderAddress = deviceId,
-                    destinationAddress = uuid,
-                    content = cryptoHelper.encryptMessage(message.content, uuid),
-                    ttl = DEFAULT_MSG_TTL
-                )
+        pendingMessagesOfUser.forEach { message ->
+            val payload = MessagePayload(
+                messageId = message.messageId,
+                sourceAddress = deviceId,
+                senderAddress = deviceId,
+                destinationAddress = uuid,
+                content = cryptoHelper.encryptMessage(message.content, uuid),
+                ttl = DEFAULT_MSG_TTL
+            )
 
-                // Check if we've already processed this message
-                storePendingMessage(uuid, payload)
-            }
+            // Check if we've already processed this message
+            storePendingMessage(uuid, payload)
+        }
 
     }
 
@@ -467,7 +509,7 @@ class BatmanProtocol @Inject constructor(
         messageId: Int,
         msgType: String = "Text"
     ) {
-        if(messageDao.checkMessageExist(uuid, messageId)) {
+        if (messageDao.checkMessageExist(uuid, messageId)) {
             return
         }
 
@@ -494,8 +536,35 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
+    fun forwardAlerts(alertId: Int, receivedAlertId: Int, userId: Int) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val alert = alertDao.getAlertById(alertId)
+            val receivedAlert = alertDao.getReceivedAlertById(receivedAlertId)
+            val user = userDao.getUserById(userId)
+            if (alert == null || receivedAlert == null) {
+                Log.d(TAG, "Alert Forwarding failed ,alert does not exist")
+                return@launch
+            }
+            activeUserManager.activeUsers.value.values.forEach { ip ->
+                clientRepository.sendAlert(
+                    AlertData(
+                        alertType = alert.type,
+                        alertDescription = alert.description,
+                        alertTime = alert.sentTime,
+                        alertSenderFName = user.fName,
+                        alertSenderLName = user.lName ?: "",
+                        alertSenderPuKey = user.UUID,
+                        alertHops = receivedAlert.hops + 1,
+                        alertId = receivedAlert.receivedAlertId
+                    ),
+                    neighborIp = ip
+                )
+            }
+        }
+    }
+
     private fun addRoute(destination: String, nextHop: String) {
-        if(routingTable.containsKey(destination) && routingTable[destination] == nextHop) {
+        if (routingTable.containsKey(destination) && routingTable[destination] == nextHop) {
             return
         }
 
@@ -518,4 +587,6 @@ class BatmanProtocol @Inject constructor(
         originatorTable.clear()
         updateFlow()
     }
+
+
 }

@@ -2,9 +2,11 @@ package com.example.zim.data.room.Dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.zim.data.room.models.Alerts
 import com.example.zim.data.room.models.AlertsWithReceivedAlertsAndSender
 import com.example.zim.data.room.models.ReceivedAlerts
+import com.example.zim.data.room.schema.Schema
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 
@@ -33,9 +35,17 @@ interface AlertDao{
     @Query("UPDATE Received_Alerts SET hops = :hops,receivedTime = :time WHERE Received_Alerts_ID= :receivedAlertId ")
     suspend fun updateReceivedAlert(receivedAlertId:Int,hops:Int,time: LocalDateTime)
 
-//    @Query("""
-//        SELECT *
-//        FROM ALERTS AS A
-//        JOIN Received_Alerts AS RA ON A.Alerts_ID = RA.Received_Alerts_ID""")
-//    suspend fun getAllReceivedAlerts() : Flow<List<AlertsWithReceivedAlertsAndSender>>
+    @Query("SELECT * FROM Alerts WHERE Alerts_ID = :alertId")
+    suspend fun getAlertById(alertId:Int) : Alerts?
+
+    @Query("SELECT * FROM Received_Alerts WHERE Received_Alerts_ID = :alertId")
+    suspend fun getReceivedAlertById(alertId:Int) : ReceivedAlerts?
+
+    @Transaction
+    @Query("""
+    SELECT A.*
+    FROM ${Schema.ALERTS} AS A
+    JOIN ${Schema.RECEIVED_ALERTS} AS RA ON A.${Schema.ALERTS_ID} = RA.${Schema.ALERTS_ID_FK}
+    ORDER BY RA.receivedTime DESC""")
+    fun getAllReceivedAlerts(): Flow<List<AlertsWithReceivedAlertsAndSender>>
 }

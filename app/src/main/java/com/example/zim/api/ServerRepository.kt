@@ -138,9 +138,12 @@ class ServerRepository @Inject constructor(
                                 // Fetch the current user data to return as response
                                 val currentUser = userDao.getCurrentUser()
 
-                                if(currentUser == null) {
+                                if (currentUser == null) {
                                     Log.e(TAG, "Server: Current user not found")
-                                    call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                    call.respond(
+                                        HttpStatusCode.InternalServerError,
+                                        "Current user not found"
+                                    )
                                     return@post
                                 }
 
@@ -152,7 +155,11 @@ class ServerRepository @Inject constructor(
                                     deviceName = currentUser.users.deviceName ?: ""
                                 )
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(app, "Connected to ${userData.fName}", Toast.LENGTH_SHORT)
+                                    Toast.makeText(
+                                        app,
+                                        "Connected to ${userData.fName}",
+                                        Toast.LENGTH_SHORT
+                                    )
                                         .show()
                                 }
                                 call.respond(responseData)
@@ -208,10 +215,12 @@ class ServerRepository @Inject constructor(
                                             "messageId" -> messageId = part.value
                                         }
                                     }
+
                                     is PartData.FileItem -> {
                                         // If fileName already set from FormItem, use that, otherwise use the original
                                         if (fileName.isEmpty()) {
-                                            fileName = part.originalFileName ?: "image.$fileExtension"
+                                            fileName =
+                                                part.originalFileName ?: "image.$fileExtension"
                                         }
 
                                         // If we don't have the extension yet, try to extract it from the filename
@@ -221,21 +230,29 @@ class ServerRepository @Inject constructor(
 
                                         fileBytes = part.streamProvider().readBytes()
                                     }
+
                                     else -> {}
                                 }
                                 part.dispose()
                             }
 
                             val myUuid = userDao.getCurrentUser()?.users?.UUID
-                            if(myUuid == null) {
+                            if (myUuid == null) {
                                 Log.e(TAG, "Server: Current user not found")
-                                call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                call.respond(
+                                    HttpStatusCode.InternalServerError,
+                                    "Current user not found"
+                                )
                                 return@post
                             }
 
                             if (receiver != myUuid) {
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(app, "Invalid image receiver", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        app,
+                                        "Invalid image receiver",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 call.respond(HttpStatusCode.BadRequest, "Invalid image receiver")
                                 return@post
@@ -245,13 +262,25 @@ class ServerRepository @Inject constructor(
                                 // Save the image to disk with the proper extension
                                 val uri = saveImageOnDisk(fileBytes!!, fileName, fileExtension)
                                 if (uri != null) {
-                                    insertReceivedMessage(sender, uri.toString(), messageId.toInt(), "Image")
+                                    insertReceivedMessage(
+                                        sender,
+                                        uri.toString(),
+                                        messageId.toInt(),
+                                        "Image"
+                                    )
                                     call.respond(HttpStatusCode.OK, "Image received successfully")
                                 } else {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(app, "Unable to save image", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            app,
+                                            "Unable to save image",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
-                                    call.respond(HttpStatusCode.InternalServerError, "Unable to save image")
+                                    call.respond(
+                                        HttpStatusCode.InternalServerError,
+                                        "Unable to save image"
+                                    )
                                 }
                             } ?: call.respond(HttpStatusCode.BadRequest, "Image not received")
                         }
@@ -306,12 +335,21 @@ class ServerRepository @Inject constructor(
 
                                 activeUserManager.addUser(publicKey, ip)
 
-                                Log.d(TAG, "Server: Alert received from ${alert.alertSenderFName} with ID : ${alert.alertId} about ${alert.alertType} with description ${alert.alertDescription} at ${alert.alertTime} and through public key ${alert.alertSenderPuKey}")
-
-                                 //Process the alert data
-                                insertReceivedAlert(alert)
-
-                                call.respond(HttpStatusCode.OK, "Alert received successfully")
+                                Log.d(
+                                    TAG,
+                                    "Server: Alert received from ${alert.alertSenderFName} with ID : ${alert.alertId} about ${alert.alertType} with description ${alert.alertDescription} at ${alert.alertTime} and through public key ${alert.alertSenderPuKey}"
+                                )
+                                val user = userDao.getCurrentUser()
+                                val myPuKey = user?.users?.UUID
+                                if (myPuKey != alert.alertSenderPuKey) {
+                                    //Process the alert data
+                                    insertReceivedAlert(alert)
+                                    call.respond(HttpStatusCode.OK, "Alert received successfully")
+                                }
+                                else{
+                                    Log.e(TAG, "Server:Alert Ignored due to self alert")
+                                    call.respond(HttpStatusCode.OK, "Self Alert received ")
+                                }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Server: Error processing ALERT data", e)
                                 call.respond(
@@ -328,14 +366,20 @@ class ServerRepository @Inject constructor(
                                 val crrUser = userDao.getCurrentUser()?.users
                                 if (crrUser == null) {
                                     Log.e(TAG, "Server: Current user not found")
-                                    call.respond(HttpStatusCode.InternalServerError, "Current user not found")
+                                    call.respond(
+                                        HttpStatusCode.InternalServerError,
+                                        "Current user not found"
+                                    )
                                     return@post
                                 }
                                 val crrUserPublicKey = crrUser.UUID
                                 val crrUserName = crrUser.fName + " " + crrUser.lName
 
                                 if (helloData.publicKey != crrUserPublicKey) {
-                                    call.respond(HttpStatusCode.OK, HelloData(crrUserName, crrUserPublicKey))
+                                    call.respond(
+                                        HttpStatusCode.OK,
+                                        HelloData(crrUserName, crrUserPublicKey)
+                                    )
                                 }
                                 call.respond(HttpStatusCode.BadRequest, "Self HELLO data")
                             } catch (e: Exception) {
@@ -376,8 +420,12 @@ class ServerRepository @Inject constructor(
     private suspend fun insertReceivedAlert(
         alert: AlertData
     ) {
+        var userForwardId:Int?=null
+        var alertForwardId:Int?=null
+        var receivedAlertsForwardId:Int?=null
         serverScope.launch {
             var userId = userDao.getIdByUUID(alert.alertSenderPuKey)
+
             if (userId == null) {
                 userId = userDao.insertUser(
                     Users(
@@ -386,9 +434,11 @@ class ServerRepository @Inject constructor(
                         lName = alert.alertSenderLName
                     )
                 ).toInt()
+
             }
-            val oldAlert=alertDao.getAlert(alert.alertSenderPuKey,alert.alertId)
-            if (oldAlert==null) {
+            userForwardId=userId
+            val oldAlert = alertDao.getAlert(alert.alertSenderPuKey, alert.alertId)
+            if (oldAlert == null) {
                 val alertID = alertDao.insertAlert(
                     Alerts(
                         description = alert.alertDescription,
@@ -398,7 +448,7 @@ class ServerRepository @Inject constructor(
                     )
                 )
                 if (alertID > 0 && userId > 0) {
-                    alertDao.insertReceivedAlert(
+                    receivedAlertsForwardId=alertDao.insertReceivedAlert(
                         ReceivedAlerts(
                             receivedTime = LocalDateTime.now(),
                             hops = alert.alertHops,
@@ -406,17 +456,29 @@ class ServerRepository @Inject constructor(
                             initiatorIdFk = userId.toInt(),
                             receivedAlertId = alertID.toInt()
                         )
-                    )
+                    ).toInt()
                     Log.d(TAG, "Server: Alert inserted successfully")
+                    alertForwardId=alertID.toInt()
                 } else {
                     Log.e(TAG, "Server: Failed to insert alert")
                 }
+            } else {
+                val hops = if (alert.alertHops < oldAlert.hops) alert.alertHops else oldAlert.hops
+                val currentTime=LocalDateTime.now()
+                val receivedTime = if(currentTime<oldAlert.receivedTime) currentTime else oldAlert.receivedTime
+                alertDao.updateReceivedAlert(oldAlert.id, hops, receivedTime)
+
+                receivedAlertsForwardId=oldAlert.id
+                alertForwardId=oldAlert.alertIdFk
             }
-            else
+            if(userForwardId!=null && alertForwardId!=null && receivedAlertsForwardId!=null)
             {
-                val hops = if (alert.alertHops< oldAlert.hops) alert.alertHops else oldAlert.hops
-                val receivedTime=LocalDateTime.now()
-                alertDao.updateReceivedAlert(oldAlert.id,hops,receivedTime)
+                batmanProtocol.forwardAlerts(alertForwardId!!,
+                    receivedAlertsForwardId!!, userForwardId!!
+                )
+            }
+            else{
+                Log.d(TAG, "Server:Alert Forwarding failed")
             }
         }
     }
@@ -451,7 +513,11 @@ class ServerRepository @Inject constructor(
         }
     }
 
-    private suspend fun saveImageOnDisk(imageData: ByteArray, fileName: String, fileExtension: String = "jpg"): Uri? {
+    private suspend fun saveImageOnDisk(
+        imageData: ByteArray,
+        fileName: String,
+        fileExtension: String = "jpg"
+    ): Uri? {
         return try {
             // Create a safe file extension (remove any dots and ensure lowercase)
             val safeExtension = fileExtension.replace(".", "").lowercase()

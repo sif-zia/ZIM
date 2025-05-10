@@ -39,6 +39,7 @@ import com.example.zim.components.MyAlert
 import com.example.zim.events.AlertsEvent
 import com.example.zim.helperclasses.Alert
 import com.example.zim.helperclasses.AlertType
+import com.example.zim.helperclasses.toAlertType
 import com.example.zim.viewModels.AlertsViewModel
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
@@ -61,16 +62,16 @@ fun AlertsScreen(navController: NavController, alertsViewModel: AlertsViewModel 
     var description by remember {
         mutableStateOf("")
     }
-    var alerts by remember {
-        mutableStateOf(
-            listOf(
-                Alert(AlertType.HEALTH, "Itisam", 5, LocalDateTime.now()),
-                Alert(AlertType.FALL, "Muaaz", 2, LocalDateTime.now()),
-                Alert(AlertType.FIRE, "Afroze", 3, LocalDateTime.now()),
-                Alert(AlertType.SAFETY, "Saim", 1, LocalDateTime.now())
-            )
-        )
-    }
+//    var alerts by remember {
+//        mutableStateOf(
+//            listOf(
+//                Alert(AlertType.HEALTH, "Itisam", 5, LocalDateTime.now()),
+//                Alert(AlertType.FALL, "Muaaz", 2, LocalDateTime.now()),
+//                Alert(AlertType.FIRE, "Afroze", 3, LocalDateTime.now()),
+//                Alert(AlertType.SAFETY, "Saim", 1, LocalDateTime.now())
+//            )
+//        )
+//    }
 
     val duration = 10 * 1000L
 
@@ -113,16 +114,9 @@ fun AlertsScreen(navController: NavController, alertsViewModel: AlertsViewModel 
                 )
             }
 
-            val type =  if(state.lastAlert === null) null
-                        else if(state.lastAlert?.type == "Fire Alert") AlertType.FIRE
-                        else if(state.lastAlert?.type == "Fall Alert") AlertType.FALL
-                        else if(state.lastAlert?.type == "Health Alert") AlertType.HEALTH
-                        else if(state.lastAlert?.type == "Safety Alert") AlertType.SAFETY
-                        else AlertType.CUSTOM
-
             // MyAlert Section
             state.lastAlert?.let { alert ->
-                MyAlert(alert = Alert(type = type ?: AlertType.CUSTOM, senderName = "Me", hops = 0, time = alert.sentTime), duration = duration){
+                MyAlert(alert = Alert(type = alert.type.toAlertType(), senderName = "Me", hops = 0, time = alert.sentTime), duration = duration){
                     alertsViewModel.onEvent(AlertsEvent.ResendAlert(alert))
                 }
             } ?: run {
@@ -167,7 +161,7 @@ fun AlertsScreen(navController: NavController, alertsViewModel: AlertsViewModel 
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                alerts.forEach { alert ->
+                state.receivedAlerts.forEach{ alert ->
                     item {
                         AlertRow(
                             alert = alert
@@ -214,7 +208,7 @@ fun AlertsScreen(navController: NavController, alertsViewModel: AlertsViewModel 
 //                            Alert(addAlertType!!, "Me", 0, LocalDateTime.now())
 //                        }
 //                    }
-                    alertsViewModel.onEvent(AlertsEvent.SendAlert(addAlertType?.toName()?: "Unknown Alert", description))
+                    alertsViewModel.onEvent(AlertsEvent.SendAlert(addAlertType?.toName()?: "Custom Alert", description))
                     showDialog = false
                 }
             )
