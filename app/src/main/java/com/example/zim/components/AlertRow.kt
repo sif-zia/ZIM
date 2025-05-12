@@ -61,8 +61,8 @@ fun AlertRow(modifier: Modifier = Modifier, alert: AlertsWithReceivedAlertsAndSe
         ) {
 
 
-            val minDistance = (alert.receivedAlert.hops - 1) * 100
-            val maxDistance = (alert.receivedAlert.hops) * 100
+            val minDistance = (alert.receivedAlert.hops) * 100
+            val maxDistance = (alert.receivedAlert.hops+1) * 100
             Icon(
                 imageVector = alert.alert.type.toAlertType().toIcon(),
                 contentDescription = "Alert Icon",
