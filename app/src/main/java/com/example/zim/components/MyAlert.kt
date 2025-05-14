@@ -51,7 +51,7 @@ fun getNewAngle(alertTime: LocalDateTime, durationInMillis: Long): Float {
 }
 
 @Composable
-fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend:()->Unit) {
+fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long, onResend: () -> Unit) {
     var timeAngle by remember {
         mutableStateOf(0f)
     }
@@ -66,7 +66,6 @@ fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend
 
     Row(
         modifier = modifier
-
             .fillMaxWidth(0.8f)
             .clip(shape = RoundedCornerShape(33))
             .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(33))
@@ -83,7 +82,8 @@ fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend
             Icon(
                 imageVector = alert.type.toIcon(),
                 contentDescription = "Alert Icon",
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,12 +132,17 @@ fun MyAlert(modifier: Modifier = Modifier, alert: Alert, duration: Long,onResend
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(50)
+                                )
                         ) {
                             Text(
                                 text = "Resend",
                                 fontSize = 16.sp,
-                                modifier = Modifier.padding(8.dp)
+                                modifier = Modifier
+                                    .padding(8.dp)
                                     .clickable { onResend() }
                             )
                         }
