@@ -39,6 +39,7 @@ import com.example.zim.components.LogoRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
 import com.example.zim.events.ProtocolEvent
+import com.example.zim.events.UpdateUserEvent
 import com.example.zim.events.UserChatEvent
 import com.example.zim.screens.AlertsScreen
 import com.example.zim.screens.ChatsScreen
@@ -118,6 +119,8 @@ fun NavGraph(
     val signUpState by signUpViewModel.state.collectAsState()
     val onSignUpEvent = signUpViewModel::onEvent
 
+    val onUpdateUserEvent = signUpViewModel::onUpdateEvent
+
     val connectionsState by connectionsViewModel.state.collectAsState()
     val connectionOnEvent = connectionsViewModel::onEvent
 
@@ -147,7 +150,8 @@ fun NavGraph(
                             .padding(
                                 horizontal = horizontalPadding,
                             ),
-                        expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) }
+                        expandMenu = { onChatsEvent(ChatsEvent.ExpandMenu) },
+                        navController = navController,  // Make sure to pass the navController here
                     ) {
                         DropDown(
                             dropDownMenu = DropDownMenus.ChatsScreen(),
@@ -257,7 +261,11 @@ fun NavGraph(
                         SettingsScreen()
                     }
                     composable(Navigation.Profile.route) {
-                        ProfileScreen()
+                        ProfileScreen(
+                            navController= navController,
+                            state = signUpState,
+                            onEvent = onUpdateUserEvent ,
+                        )
                     }
                     composable(Navigation.FallDetectionModel.route){
                         FallDetectionScreen(navController)

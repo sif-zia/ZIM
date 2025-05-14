@@ -8,11 +8,11 @@ import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.ChatsEvent
 import com.example.zim.states.ChatsState
 import com.example.zim.utils.Logger
+import com.example.zim.utils.LogType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,8 +48,50 @@ class ChatsViewModel @Inject constructor(
                 _state.update { it.copy(query = event.newQuery) }
                 fetchUsers(event.newQuery)
             }
+            is ChatsEvent.EnterSelectionMode -> {
+                _state.update {
+                    it.copy(
+                        isSelectionModeActive = true,
+                        selectedChatIds = if (event.chatId != null)
+                            it.selectedChatIds + event.chatId
+                        else
+                            it.selectedChatIds
+                    )
+                }
+            }
+            is ChatsEvent.ToggleChatSelection -> {
+                _state.update {
+                    val updatedIds = if (it.selectedChatIds.contains(event.chatId)) {
+                        it.selectedChatIds - event.chatId
+                    } else {
+                        it.selectedChatIds + event.chatId
+                    }
+                    // If no chats are selected, exit selection mode
+                    val shouldRemainInSelectionMode = updatedIds.isNotEmpty()
+                    it.copy(
+                        selectedChatIds = updatedIds,
+                        isSelectionModeActive = shouldRemainInSelectionMode
+                    )
+                }
+            }
+            is ChatsEvent.ExitSelectionMode -> {
+                _state.update {
+                    it.copy(
+                        isSelectionModeActive = false,
+                        selectedChatIds = emptySet()
+                    )
+                }
+            }
+            is ChatsEvent.DeleteSelectedChats -> {
+                markChatsAsInactive(_state.value.selectedChatIds.toList())
+                _state.update {
+                    it.copy(
+                        isSelectionModeActive = false,
+                        selectedChatIds = emptySet()
+                    )
+                }
+            }
         }
-
     }
 
     private fun fetchUsers(query: String) {
@@ -81,4 +123,30 @@ class ChatsViewModel @Inject constructor(
             }
         }
     }
+
+    // Function to mark users as inactive
+    private fun markChatsAsInactive(chatIds: List<Int>) {
+        viewModelScope.launch {
+            try {
+                chatIds.forEach { chatId ->
+                    try {
+                        userDao.updateUserActiveStatus(chatId, false)
+
+                        // Get and delete all messages related to this user
+                        val messages = messageDao.getAllMessagesOfUser(chatId)
+                        messageDao.deleteMessages(messages)
+
+                    } catch (e: Exception) {
+//                        logger.log("Failed to delete messages for chat $chatId: ${e.message}", "ChatsViewModel", LogType.ERROR)
+                    }
+                }
+
+                fetchUsers(_state.value.query)
+
+            } catch (e: Exception) {
+//                logger.log("Error in markChatsAsInactive: ${e.message}", "ChatsViewModel", LogType.ERROR)
+            }
+        }
+    }
+
 }

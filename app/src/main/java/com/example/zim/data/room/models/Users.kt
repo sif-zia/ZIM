@@ -23,6 +23,7 @@ data class Users(
     val DOB: LocalDate?=null,
     val cover: Uri? = null, // URI
     val puKey: String?=null,
+    var isActive: Boolean = true,
     @ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
     val connectionTime: LocalDateTime = LocalDateTime.now(),
 )

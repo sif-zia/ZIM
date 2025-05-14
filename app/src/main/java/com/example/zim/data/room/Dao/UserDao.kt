@@ -128,7 +128,7 @@ interface UserDao {
             FROM Users u
             LEFT JOIN Sent_Messages sm ON sm.User_ID_FK = u.User_ID
             JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
-            WHERE u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%"
+            WHERE (u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%") AND u.isActive = 1
             GROUP BY u.User_ID, u.fName, u.lName
 
             UNION ALL
@@ -146,7 +146,7 @@ interface UserDao {
             FROM Users u
             LEFT JOIN Received_Messages rm ON rm.User_ID_FK = u.User_ID
             JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
-            WHERE u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%"
+            WHERE (u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%") AND u.isActive = 1
             GROUP BY u.User_ID, u.fName, u.lName
         ) AS user_info
     GROUP BY user_info.User_ID, user_info.fName, user_info.lName
@@ -183,4 +183,11 @@ interface UserDao {
 
     @Query("UPDATE Users SET deviceName = :deviceName WHERE User_ID = (SELECT User_ID_FK FROM Curr_User LIMIT 1)")
     suspend fun setCurrUserDeviceName(deviceName: String)
+
+    // New method to update user active status
+    @Query("UPDATE Users SET isActive = :isActive WHERE User_ID = :userId")
+    suspend fun updateUserActiveStatus(userId: Int, isActive: Boolean)
+
+    @Query("UPDATE Users SET isActive = 1 WHERE User_ID = :userId")
+    suspend fun activateUserById(userId:Int)
 }

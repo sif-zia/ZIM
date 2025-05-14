@@ -4,9 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,18 +18,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.ChatRow
+import com.example.zim.components.DeleteTopBar
 import com.example.zim.components.Search
 import com.example.zim.events.ChatsEvent
 import com.example.zim.states.ChatsState
-import com.example.zim.utils.LogType
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 
@@ -52,10 +48,9 @@ fun ChatsScreen(
 
     val horizontalPadding: Dp = 16.dp
     val verticalPadding: Dp = 12.dp
-    val focusManager: FocusManager = LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
     val activeUsers by protocolViewModel.activeUsers.collectAsState()
-
 
     return Column(
         modifier = Modifier
@@ -63,28 +58,37 @@ fun ChatsScreen(
             .clickable(
                 indication = null, // Removes the click animation
                 interactionSource = interactionSource, // Required for clickable without animation
-                onClick = { focusManager.clearFocus() }
+                onClick = {
+                    focusManager.clearFocus()
+                    if (state.isSelectionModeActive) {
+                        onEvent(ChatsEvent.ExitSelectionMode)
+                    }
+                }
             )
     ) {
-
-        Search(
-            modifier = Modifier.padding(
-                horizontal = horizontalPadding,
-                vertical = verticalPadding
-            ),
-            query = state.query,
-            onQueryChange = { onEvent(ChatsEvent.ChangeQuery(newQuery = it)) }
-        )
+        if (state.isSelectionModeActive) {
+            DeleteTopBar(
+                selectedCount = state.selectedChatIds.size,
+                onBackPressed = { onEvent(ChatsEvent.ExitSelectionMode) },
+                onDeletePressed = { onEvent(ChatsEvent.DeleteSelectedChats) }
+            )
+        } else {
+            Search(
+                modifier = Modifier.padding(
+                    horizontal = horizontalPadding,
+                    vertical = verticalPadding
+                ),
+                query = state.query,
+                onQueryChange = { onEvent(ChatsEvent.ChangeQuery(newQuery = it)) }
+            )
+        }
 
         val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
 
         LazyColumn(
-            modifier = Modifier
-                .padding(top = verticalPadding),
-//                .fillMaxHeight(),
+            modifier = Modifier.padding(top = verticalPadding),
             state = rememberLazyListState()
         ) {
-
             items(state.chats) { chat ->
                 val isConnected = if (activeUsers[chat.UUID] != null) 1 else if (checkIsInNetwork(routedUsers, chat.UUID)) 2 else 0
 
@@ -98,18 +102,21 @@ fun ChatsScreen(
                     navController = navController,
                     isConnected = isConnected,
                     lastMsgType = chat.lastMsgType,
-                    isSent = chat.isSent
+                    isSent = chat.isSent,
+                    isSelectionModeActive = state.isSelectionModeActive,
+                    isSelected = state.selectedChatIds.contains(chat.id),
+                    onLongClick = { onEvent(ChatsEvent.EnterSelectionMode(chat.id)) },
+                    onSelectToggle = { onEvent(ChatsEvent.ToggleChatSelection(chat.id)) }
                 )
             }
         }
-        if(state.chats.isNotEmpty()) {
-            HorizontalDivider(color = borderColor)
-        }
-        else{
-            Box(
-                modifier = Modifier.fillMaxSize()
-                .padding(top = 12.dp), contentAlignment = Alignment.Center
 
+        if(state.chats.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "No Chat(s)",
@@ -117,7 +124,10 @@ fun ChatsScreen(
                     color = MaterialTheme.colorScheme.primary.copy(0.66f)
                 )
             }
+        } else {
+            HorizontalDivider(color = borderColor)
         }
+
 
 //        LazyColumn {
 //            items(logs.subList(maxOf(logs.size - 10, 0), logs.size)) { log ->

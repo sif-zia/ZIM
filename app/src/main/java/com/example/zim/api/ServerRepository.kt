@@ -120,8 +120,9 @@ class ServerRepository @Inject constructor(
                                         val updatedUser = existingUser.copy(
                                             fName = userData.fName,
                                             lName = userData.lName,
-                                            deviceName = userData.deviceName
+                                            deviceName = userData.deviceName,
                                         )
+                                        userDao.activateUserById(existingUser.id) // Activate the user
                                         userDao.updateUser(updatedUser) // Using REPLACE conflict strategy
                                         Log.d(
                                             TAG,
@@ -431,7 +432,8 @@ class ServerRepository @Inject constructor(
                     Users(
                         UUID = alert.alertSenderPuKey,
                         fName = alert.alertSenderFName,
-                        lName = alert.alertSenderLName
+                        lName = alert.alertSenderLName,
+                        isActive = false
                     )
                 ).toInt()
 

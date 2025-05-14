@@ -30,11 +30,27 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.zim.helperclasses.ChatContent
 import android.net.Uri
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
+import androidx.compose.ui.input.pointer.pointerInput
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun ReceivedImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean = true) {
+fun ReceivedImageChatBox(
+    message: ChatContent,
+    imageUri: Uri,
+    isFirst: Boolean = true,
+    isSelectionModeActive: Boolean = false,
+    isSelected: Boolean = false,
+    onLongClick: () -> Unit = {},
+    onSelectToggle: () -> Unit = {}
+) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val context = LocalContext.current
@@ -43,6 +59,16 @@ fun ReceivedImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean =
         modifier = Modifier
             .padding(start = 5.dp)
             .padding(top = if (isFirst) 12.dp else 2.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { onLongClick() },
+                    onTap = {
+                        if (isSelectionModeActive) {
+                            onSelectToggle()
+                        }
+                    }
+                )
+            }
     ) {
         Row(
             modifier = Modifier
@@ -53,7 +79,12 @@ fun ReceivedImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean =
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(15.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(
+                        if (isSelected && isSelectionModeActive)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
                     .padding(8.dp)
                     .widthIn(max = screenWidth * 0.8f),
                 horizontalAlignment = Alignment.Start
@@ -78,6 +109,36 @@ fun ReceivedImageChatBox(message: ChatContent, imageUri: Uri, isFirst: Boolean =
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+        }
+
+        // Show selection indicator when in selection mode
+        if (isSelectionModeActive) {
+            Box(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.TopEnd)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surface
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 

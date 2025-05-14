@@ -71,13 +71,14 @@ class ConnectionsViewModel @Inject constructor(
     private suspend fun updateActiveUser() {
 
         networkPeers.collect { peers ->
-            val publicKeys = userDao.getUUIDs()
             activeUserManager.clearAllUsers()
             val newConnections = mutableListOf<Connection>()
             peers.forEach { peer ->
-                if (peer.publicKey != null && peer.publicKey in publicKeys) {
-                    activeUserManager.addUser(peer.publicKey, peer.ipAddress)
-                } else if (peer.publicKey != null) {
+                if(peer.publicKey == null) {
+                    return@forEach
+                }
+                val peerId = userDao.getIdByUUID(peer.publicKey)
+                if( peerId == null){
                     newConnections.add(
                         Connection(
                             fName = peer.deviceName ?: "Unknown",
@@ -86,6 +87,19 @@ class ConnectionsViewModel @Inject constructor(
                             deviceAddress = peer.publicKey
                         )
                     )
+                } else {
+                    val peerData= userDao.getUserById(peerId)
+                    if(!peerData.isActive){
+                        newConnections.add(
+                            Connection(
+                                fName = peer.deviceName ?: "Unknown",
+                                lName = "",
+                                description = peer.ipAddress,
+                                deviceAddress = peer.publicKey
+                            )
+                        )
+                    }
+                    activeUserManager.addUser(peer.publicKey, peer.ipAddress)
                 }
             }
             Log.d("NetworkScanner", "New connections: $newConnections")

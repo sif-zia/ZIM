@@ -25,12 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.zim.navigation.Navigation
 
 @Composable
 fun LogoRow(
     modifier: Modifier = Modifier,
     expandMenu: (() -> Unit)? = null,
-    dropDown: (@Composable () -> Unit)? = null
+    navController: NavController? = null,
+    dropDown: (@Composable () -> Unit)? = null,
 ) {
     return Row(
         modifier = modifier.fillMaxWidth(),
@@ -52,7 +55,7 @@ fun LogoRow(
                 horizontalArrangement = Arrangement.End
             ) {
                 IconButton(onClick = {
-
+                    navController?.navigate(Navigation.Profile.route)
                 }) {
                     Icon(
                         imageVector = Icons.Outlined.AccountCircle,

@@ -19,4 +19,6 @@ data class UserChatState (
     val uuid: String = "0",
     val connectionStatuses: Map<String, Boolean> = emptyMap(),
     val isNewConnection: Boolean = true,
+    val isSelectionModeActive: Boolean = false,
+    val selectedMessageIds: Set<Int> = emptySet()
 )

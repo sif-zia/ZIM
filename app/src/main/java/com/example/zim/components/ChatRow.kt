@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -85,7 +87,6 @@ fun formatDateTime(dateTime: LocalDateTime?): String {
     }
 
 }
-
 @Composable
 fun ChatRow(
     modifier: Modifier = Modifier,
@@ -99,7 +100,11 @@ fun ChatRow(
     id: Int,
     navController: NavController,
     lastMsgType: String? = null,
-    isSent: Boolean? = false
+    isSent: Boolean? = false,
+    isSelectionModeActive: Boolean,
+    isSelected: Boolean,
+    onLongClick: () -> Unit,
+    onSelectToggle: () -> Unit
 ) {
     // This state will be used to trigger recomposition
     var refreshTrigger by remember { mutableIntStateOf(0) }
@@ -117,18 +122,34 @@ fun ChatRow(
         formatDateTime(time)
     }
 
-    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3F)
-    Box(modifier = modifier.clickable {
-        if (isDM)
-            navController.navigate(Navigation.UserChat.route + "/${id}")
-        else
-            navController.navigate(Navigation.GroupChat.route + "/${id}")
-    }) {
+    // Set background color based on selection state
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
+    Box(modifier = modifier
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onLongPress = { onLongClick() },
+                onTap = {
+                    if (isSelectionModeActive) {
+                        onSelectToggle()
+                    } else {
+                        if (isDM)
+                            navController.navigate(Navigation.UserChat.route + "/${id}")
+                        else
+                            navController.navigate(Navigation.GroupChat.route + "/${id}")
+                    }
+                }
+            )
+        }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(70.dp)
-                .background(MaterialTheme.colorScheme.background)
+                .background(backgroundColor) // Apply the background color here
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

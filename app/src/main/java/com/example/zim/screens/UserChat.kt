@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.DateChip
+import com.example.zim.components.DeleteMessagesTopBar
 import com.example.zim.components.ReceivedChatBox
 import com.example.zim.components.ReceivedImageChatBox
 import com.example.zim.components.SendMessageRow
@@ -46,6 +47,7 @@ import com.example.zim.viewModels.ProtocolViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
 @Composable
 fun UserChat(
     userId: Int,
@@ -86,13 +88,24 @@ fun UserChat(
                 },
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            val status = if (activeUsers[state.uuid] != null) 1 else if (checkIsInNetwork(routedUsers, state.uuid)) 2 else 0
-            UserInfoRow(
-                username = state.username,
-                status = status,
-                userDp = state.dpUri,
-                navController = navController
-            )
+            // Show different top bars based on selection mode
+            if (state.isSelectionModeActive) {
+                DeleteMessagesTopBar(
+                    selectedCount = state.selectedMessageIds.size,
+                    onBackPressed = { onEvent(UserChatEvent.ExitSelectionMode) },
+                    onDeletePressed = { onEvent(UserChatEvent.DeleteSelectedMessages) },
+                    onSelectAll = { onEvent(UserChatEvent.SelectAllMessages) },
+                    onDeselectAll = { onEvent(UserChatEvent.DeselectAllMessages) }
+                )
+            } else {
+                val status = if (activeUsers[state.uuid] != null) 1 else if (checkIsInNetwork(routedUsers, state.uuid)) 2 else 0
+                UserInfoRow(
+                    username = state.username,
+                    status = status,
+                    userDp = state.dpUri,
+                    navController = navController
+                )
+            }
 
             if (messages.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -115,18 +128,72 @@ fun UserChat(
 
                         items(messagesForDate.size) { index ->
                             val msg = messagesForDate[index]
+                            val isNextSameSender = index < messagesForDate.size - 1 &&
+                                    messagesForDate[index + 1].isReceived == msg.isReceived
+                            val isFirst = index == 0 || messagesForDate[index - 1].isReceived != msg.isReceived
+
                             when {
                                 msg.isReceived && msg.type == "Text" -> {
-                                    ReceivedChatBox(msg, true)
+                                    ReceivedChatBox(
+                                        message = msg,
+                                        isFirst = isFirst,
+                                        isSelectionModeActive = state.isSelectionModeActive,
+                                        isSelected = state.selectedMessageIds.contains(msg.id),
+                                        onLongClick = {
+                                            if (!state.isSelectionModeActive) {
+                                                onEvent(UserChatEvent.EnterSelectionMode)
+                                                onEvent(UserChatEvent.ToggleMessageSelection(msg.id))
+                                            }
+                                        },
+                                        onSelectToggle = { onEvent(UserChatEvent.ToggleMessageSelection(msg.id)) }
+                                    )
                                 }
                                 !msg.isReceived && msg.type == "Text" -> {
-                                    SentChatBox(msg, true)
+                                    SentChatBox(
+                                        message = msg,
+                                        isFirst = isFirst,
+                                        isSelectionModeActive = state.isSelectionModeActive,
+                                        isSelected = state.selectedMessageIds.contains(msg.id),
+                                        onLongClick = {
+                                            if (!state.isSelectionModeActive) {
+                                                onEvent(UserChatEvent.EnterSelectionMode)
+                                                onEvent(UserChatEvent.ToggleMessageSelection(msg.id))
+                                            }
+                                        },
+                                        onSelectToggle = { onEvent(UserChatEvent.ToggleMessageSelection(msg.id)) }
+                                    )
                                 }
                                 msg.isReceived && msg.type == "Image" -> {
-                                    ReceivedImageChatBox(msg, Uri.parse(msg.message), true)
+                                    ReceivedImageChatBox(
+                                        message = msg,
+                                        imageUri = Uri.parse(msg.message),
+                                        isFirst = isFirst,
+                                        isSelectionModeActive = state.isSelectionModeActive,
+                                        isSelected = state.selectedMessageIds.contains(msg.id),
+                                        onLongClick = {
+                                            if (!state.isSelectionModeActive) {
+                                                onEvent(UserChatEvent.EnterSelectionMode)
+                                                onEvent(UserChatEvent.ToggleMessageSelection(msg.id))
+                                            }
+                                        },
+                                        onSelectToggle = { onEvent(UserChatEvent.ToggleMessageSelection(msg.id)) }
+                                    )
                                 }
                                 !msg.isReceived && msg.type == "Image" -> {
-                                    SentImageChatBox(msg, Uri.parse(msg.message), true)
+                                    SentImageChatBox(
+                                        message = msg,
+                                        imageUri = Uri.parse(msg.message),
+                                        isFirst = isFirst,
+                                        isSelectionModeActive = state.isSelectionModeActive,
+                                        isSelected = state.selectedMessageIds.contains(msg.id),
+                                        onLongClick = {
+                                            if (!state.isSelectionModeActive) {
+                                                onEvent(UserChatEvent.EnterSelectionMode)
+                                                onEvent(UserChatEvent.ToggleMessageSelection(msg.id))
+                                            }
+                                        },
+                                        onSelectToggle = { onEvent(UserChatEvent.ToggleMessageSelection(msg.id)) }
+                                    )
                                 }
                             }
                         }
@@ -229,4 +296,9 @@ fun forceScrollToBottom(lazyListState: LazyListState, coroutineScope: CoroutineS
             Log.e("UserChat", "Error scrolling to bottom: ${e.message}")
         }
     }
+}
+
+// Helper function to check if a user's UUID is in the routed users
+fun checkIsInNetwork(routedUsers: Map<String, Any>, uuid: String): Boolean {
+    return routedUsers.containsKey(uuid)
 }

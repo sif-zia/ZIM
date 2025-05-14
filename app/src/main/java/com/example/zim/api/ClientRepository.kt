@@ -207,8 +207,9 @@ class ClientRepository @Inject constructor(
             val updatedUser = existingUser.copy(
                 fName = userData.fName,
                 lName = userData.lName,
-                deviceName = userData.deviceName
+                deviceName = userData.deviceName,
             )
+            userDao.activateUserById(existingUser.id)
             userDao.updateUser(updatedUser)
             Log.d(TAG, "Client: Updated user: ${userData.fName} ${userData.lName}")
             return true

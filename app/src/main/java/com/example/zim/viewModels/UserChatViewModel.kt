@@ -1,19 +1,16 @@
 package com.example.zim.viewModels
 
 import android.annotation.SuppressLint
-import android.net.wifi.p2p.WifiP2pManager
-import android.net.wifi.p2p.WifiP2pManager.Channel
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.events.UserChatEvent
 import com.example.zim.states.UserChatState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,8 +31,8 @@ class UserChatViewModel @Inject constructor(
         viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000), UserChatState()
     )
 
-    // Add this to track and cancel the previous chat loading job
-    private var currentLoadChatJob: kotlinx.coroutines.Job? = null
+    // Track and cancel the previous chat loading job
+    private var currentLoadChatJob: Job? = null
 
     @SuppressLint("MissingPermission")
     fun onEvent(event: UserChatEvent) {
@@ -52,7 +49,10 @@ class UserChatViewModel @Inject constructor(
                                 uuid = user.UUID,
                                 connected = _state.value.connectionStatuses[user.UUID] ?: false,
                                 // Clear previous messages while loading
-                                messages = emptyList()
+                                messages = emptyList(),
+                                // Reset selection state when changing users
+                                isSelectionModeActive = false,
+                                selectedMessageIds = emptySet()
                             )
                         }
                         loadChats(event.userId)
@@ -60,7 +60,6 @@ class UserChatViewModel @Inject constructor(
                 }
             }
 
-            // Other events remain the same
             is UserChatEvent.ReadAllMessages -> {
                 viewModelScope.launch {
                     messageDao.readAllMessages(event.userId)
@@ -69,6 +68,83 @@ class UserChatViewModel @Inject constructor(
 
             is UserChatEvent.ConnectToUser -> {
                 // Implementation for connecting to user
+            }
+
+            is UserChatEvent.EnterSelectionMode -> {
+                _state.update { it.copy(isSelectionModeActive = true) }
+            }
+
+            is UserChatEvent.ExitSelectionMode -> {
+                _state.update { it.copy(isSelectionModeActive = false, selectedMessageIds = emptySet()) }
+            }
+
+            is UserChatEvent.ToggleMessageSelection -> {
+                _state.update { currentState ->
+                    val updatedSelection = currentState.selectedMessageIds.toMutableSet()
+
+                    // Toggle selection state
+                    if (updatedSelection.contains(event.messageId)) {
+                        updatedSelection.remove(event.messageId)
+                    } else {
+                        updatedSelection.add(event.messageId)
+                    }
+
+                    // If no messages are selected after toggling, exit selection mode
+                    if (updatedSelection.isEmpty() && currentState.isSelectionModeActive) {
+                        currentState.copy(
+                            selectedMessageIds = updatedSelection,
+                            isSelectionModeActive = false
+                        )
+                    } else {
+                        currentState.copy(selectedMessageIds = updatedSelection)
+                    }
+                }
+            }
+
+            is UserChatEvent.DeleteSelectedMessages -> {
+                val selectedIds = _state.value.selectedMessageIds
+                if (selectedIds.isNotEmpty()) {
+                    viewModelScope.launch {
+                        try {
+                            // Delete messages from all relevant tables
+                            // This will delete the messages from the messages table,
+                            // received_messages table, and sent_messages table
+                            messageDao.deleteMessagesCompletely(selectedIds.toList())
+
+                            // Exit selection mode after deletion
+                            _state.update {
+                                it.copy(
+                                    isSelectionModeActive = false,
+                                    selectedMessageIds = emptySet()
+                                )
+                            }
+                        } catch (e: Exception) {
+                            // Handle error (log or show a message)
+                            // For now, we'll still exit selection mode
+                            _state.update {
+                                it.copy(
+                                    isSelectionModeActive = false,
+                                    selectedMessageIds = emptySet()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            is UserChatEvent.SelectAllMessages -> {
+                viewModelScope.launch {
+                    val allMessageIds = _state.value.messages.map { it.id }.toSet()
+                    _state.update {
+                        it.copy(selectedMessageIds = allMessageIds)
+                    }
+                }
+            }
+
+            is UserChatEvent.DeselectAllMessages -> {
+                _state.update {
+                    it.copy(selectedMessageIds = emptySet())
+                }
             }
         }
     }

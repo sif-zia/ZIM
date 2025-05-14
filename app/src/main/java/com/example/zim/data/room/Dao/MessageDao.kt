@@ -36,6 +36,46 @@ interface MessageDao {
     @Delete
     suspend fun deleteReceivedMessage(receivedMessages: ReceivedMessages)
 
+    @Delete
+    suspend fun deleteMessages(messages: List<Messages>)
+
+    @Transaction
+    suspend fun deleteMessagesAndReceivedMessages(messageIds: List<Int>) {
+        // First delete all associated received messages
+        deleteReceivedMessagesForMessageIds(messageIds)
+        // Then delete the messages themselves
+        deleteMessagesByIds(messageIds)
+    }
+
+    /**
+     * Complete deletion of messages from all relevant tables:
+     * 1. messages table
+     * 2. received_messages table
+     * 3. sent_messages table
+     */
+    @Transaction
+    suspend fun deleteMessagesCompletely(messageIds: List<Int>) {
+        // Delete from received_messages table
+        deleteReceivedMessagesForMessageIds(messageIds)
+
+        // Delete from sent_messages table
+        deleteSentMessagesForMessageIds(messageIds)
+
+        // Finally delete from messages table
+        deleteMessagesByIds(messageIds)
+    }
+
+    @Query("DELETE FROM messages WHERE messages.Message_ID" +
+            " IN (:messageIds)")
+    suspend fun deleteMessagesByIds(messageIds: List<Int>)
+
+    @Query("DELETE FROM RECEIVED_MESSAGES WHERE MESSAGE_ID_FK IN (:messageIds)")
+    suspend fun deleteReceivedMessagesForMessageIds(messageIds: List<Int>)
+
+    @Query("DELETE FROM SENT_MESSAGES WHERE MESSAGE_ID_FK IN (:messageIds)")
+    suspend fun deleteSentMessagesForMessageIds(messageIds: List<Int>)
+
+
     @Transaction
     @Query(
         """
@@ -60,7 +100,7 @@ interface MessageDao {
     @Query("""
         SELECT *
         FROM (
-            SELECT M.msg AS message, M.type AS type, R.receivedTime AS time, 1 AS isReceived
+            SELECT M.Message_ID AS id, M.msg AS message, M.type AS type, R.receivedTime AS time, 1 AS isReceived
             FROM messages AS M
             INNER JOIN Received_Messages AS R
             ON M.Message_ID = R.Message_ID_FK
@@ -68,7 +108,7 @@ interface MessageDao {
     
             UNION
     
-            SELECT M.msg AS message, M.type AS type, S.sentTime AS time, 0 AS isReceived
+            SELECT M.Message_ID AS id,  M.msg AS message, M.type AS type, S.sentTime AS time, 0 AS isReceived
             FROM messages AS M
             INNER JOIN Sent_Messages AS S
             ON M.Message_ID = S.Message_ID_FK
@@ -77,6 +117,21 @@ interface MessageDao {
         ORDER BY time
     """)
     fun getAllMessagesOfAUser(userID: Int): Flow<List<ChatContent>>
+
+    @Transaction
+    @Query("""
+    SELECT M.*
+    FROM Messages M
+    JOIN Sent_Messages SM ON M.Message_ID = SM.Message_ID_FK
+    WHERE SM.User_ID_FK = :userId
+    UNION
+    SELECT M.*
+    FROM Messages M
+    JOIN Received_Messages RM ON M.Message_ID = RM.Message_ID_FK
+    WHERE RM.User_ID_FK = :userId
+""")
+    suspend fun getAllMessagesOfUser(userId: Int): List<Messages>
+
 
     @Query("""
         SELECT *
