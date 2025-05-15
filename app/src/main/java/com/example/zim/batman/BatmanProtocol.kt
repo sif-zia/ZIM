@@ -536,29 +536,47 @@ class BatmanProtocol @Inject constructor(
         }
     }
 
-    fun forwardAlerts(alertId: Int, receivedAlertId: Int, userId: Int) {
+    fun forwardAlerts(alertId: Int, receivedAlertId: Int, userId: Int, toSkipIp: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            val alert = alertDao.getAlertById(alertId)
-            val receivedAlert = alertDao.getReceivedAlertById(receivedAlertId)
-            val user = userDao.getUserById(userId)
-            if (alert == null || receivedAlert == null) {
-                Log.d(TAG, "Alert Forwarding failed ,alert does not exist")
-                return@launch
-            }
-            activeUserManager.activeUsers.value.values.forEach { ip ->
-                clientRepository.sendAlert(
-                    AlertData(
-                        alertType = alert.type,
-                        alertDescription = alert.description,
-                        alertTime = alert.sentTime,
-                        alertSenderFName = user.fName,
-                        alertSenderLName = user.lName ?: "",
-                        alertSenderPuKey = user.UUID,
-                        alertHops = receivedAlert.hops + 1,
-                        alertId = receivedAlert.receivedAlertId
-                    ),
-                    neighborIp = ip
-                )
+            try {
+                val alert = alertDao.getAlertById(alertId)
+                val receivedAlert = alertDao.getReceivedAlertById(receivedAlertId)
+                val user = userDao.getUserById(userId)
+
+                if (alert == null || receivedAlert == null) {
+                    Log.d(TAG, "Alert Forwarding failed, alert, received alert, or user does not exist")
+                    return@launch
+                }
+
+                val activeUsers = activeUserManager.activeUsers.value
+                if (activeUsers.isEmpty()) {
+                    Log.d(TAG, "No active users to forward alert to")
+                    return@launch
+                }
+
+                activeUsers.values.forEach { ip ->
+                    if(ip != toSkipIp) {
+                        try {
+                            clientRepository.sendAlert(
+                                AlertData(
+                                    alertType = alert.type,
+                                    alertDescription = alert.description,
+                                    alertTime = alert.sentTime,
+                                    alertSenderFName = user.fName,
+                                    alertSenderLName = user.lName ?: "",
+                                    alertSenderPuKey = user.UUID,
+                                    alertHops = receivedAlert.hops + 1,
+                                    alertId = receivedAlert.receivedAlertId  // This should be the original alert ID
+                                ),
+                                neighborIp = ip
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to send alert to $ip: ${e.message}", e)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in forwardAlerts: ${e.message}", e)
             }
         }
     }

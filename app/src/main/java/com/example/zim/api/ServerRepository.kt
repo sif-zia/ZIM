@@ -344,7 +344,7 @@ class ServerRepository @Inject constructor(
                                 val myPuKey = user?.users?.UUID
                                 if (myPuKey != alert.alertSenderPuKey) {
                                     //Process the alert data
-                                    insertReceivedAlert(alert)
+                                    insertReceivedAlert(alert, ip)
                                     call.respond(HttpStatusCode.OK, "Alert received successfully")
                                 }
                                 else{
@@ -419,68 +419,85 @@ class ServerRepository @Inject constructor(
     }
 
     private suspend fun insertReceivedAlert(
-        alert: AlertData
+        alert: AlertData,
+        toSkipIp: String
     ) {
-        var userForwardId:Int?=null
-        var alertForwardId:Int?=null
-        var receivedAlertsForwardId:Int?=null
-        serverScope.launch {
-            var userId = userDao.getIdByUUID(alert.alertSenderPuKey)
-
-            if (userId == null) {
-                userId = userDao.insertUser(
-                    Users(
-                        UUID = alert.alertSenderPuKey,
-                        fName = alert.alertSenderFName,
-                        lName = alert.alertSenderLName,
-                        isActive = false
-                    )
-                ).toInt()
-
-            }
-            userForwardId=userId
-            val oldAlert = alertDao.getAlert(alert.alertSenderPuKey, alert.alertId)
-            if (oldAlert == null) {
-                val alertID = alertDao.insertAlert(
-                    Alerts(
-                        description = alert.alertDescription,
-                        type = alert.alertType,
-                        isSent = false,
-                        sentTime = alert.alertTime
-                    )
-                )
-                if (alertID > 0 && userId > 0) {
-                    receivedAlertsForwardId=alertDao.insertReceivedAlert(
-                        ReceivedAlerts(
-                            receivedTime = LocalDateTime.now(),
-                            hops = alert.alertHops,
-                            alertIdFk = alertID.toInt(),
-                            initiatorIdFk = userId.toInt(),
-                            receivedAlertId = alertID.toInt()
+        // Use withContext instead of launch to ensure the function completes before returning
+        withContext(serverScope.coroutineContext) {
+            try {
+                // Find or create user
+                var userId = userDao.getIdByUUID(alert.alertSenderPuKey)
+                if (userId == null) {
+                    userId = userDao.insertUser(
+                        Users(
+                            UUID = alert.alertSenderPuKey,
+                            fName = alert.alertSenderFName,
+                            lName = alert.alertSenderLName,
+                            isActive = false
                         )
                     ).toInt()
-                    Log.d(TAG, "Server: Alert inserted successfully")
-                    alertForwardId=alertID.toInt()
-                } else {
-                    Log.e(TAG, "Server: Failed to insert alert")
                 }
-            } else {
-                val hops = if (alert.alertHops < oldAlert.hops) alert.alertHops else oldAlert.hops
-                val currentTime=LocalDateTime.now()
-                val receivedTime = if(currentTime<oldAlert.receivedTime) currentTime else oldAlert.receivedTime
-                alertDao.updateReceivedAlert(oldAlert.id, hops, receivedTime)
 
-                receivedAlertsForwardId=oldAlert.id
-                alertForwardId=oldAlert.alertIdFk
-            }
-            if(userForwardId!=null && alertForwardId!=null && receivedAlertsForwardId!=null)
-            {
-                batmanProtocol.forwardAlerts(alertForwardId!!,
-                    receivedAlertsForwardId!!, userForwardId!!
-                )
-            }
-            else{
-                Log.d(TAG, "Server:Alert Forwarding failed")
+                // Check if we already have this alert
+                val oldAlert = alertDao.getAlert(alert.alertSenderPuKey, alert.alertId)
+
+                if (oldAlert == null) {
+                    // Insert new alert
+                    val alertID = alertDao.insertAlert(
+                        Alerts(
+                            description = alert.alertDescription,
+                            type = alert.alertType,
+                            isSent = false,
+                            sentTime = alert.alertTime
+                        )
+                    )
+
+                    if (alertID > 0 && userId > 0) {
+                        // Insert received alert with the ORIGINAL alert ID from sender
+                        val receivedAlertId = alertDao.insertReceivedAlert(
+                            ReceivedAlerts(
+                                receivedTime = LocalDateTime.now(),
+                                hops = alert.alertHops,
+                                alertIdFk = alertID.toInt(),
+                                initiatorIdFk = userId,
+                                receivedAlertId = alert.alertId  // Use the original alert ID
+                            )
+                        ).toInt()
+
+                        Log.d(TAG, "Server: Alert inserted successfully")
+
+                        // Forward the alert immediately
+                        batmanProtocol.forwardAlerts(
+                            alertID.toInt(),
+                            receivedAlertId,
+                            userId,
+                            toSkipIp
+                        )
+                    } else {
+                        Log.e(TAG, "Server: Failed to insert alert")
+                    }
+                } else {
+                    // Update existing alert only if the new hop count is lower
+                    if (alert.alertHops < oldAlert.hops) {
+                        alertDao.updateReceivedAlert(
+                            oldAlert.id,
+                            alert.alertHops,
+                            LocalDateTime.now()  // Update received time to current time
+                        )
+
+                        // Forward the updated alert
+                        batmanProtocol.forwardAlerts(
+                            oldAlert.alertIdFk,
+                            oldAlert.id,
+                            userId,
+                            toSkipIp
+                        )
+                    } else {
+                        Log.d(TAG, "Server: Received alert with higher or equal hop count, not updating")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing received alert: ${e.message}", e)
             }
         }
     }

@@ -4,18 +4,14 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.app.Application
-import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity.SENSOR_SERVICE
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zim.api.ActiveUserManager
 import com.example.zim.api.AlertData
 import com.example.zim.api.ClientRepository
@@ -23,7 +19,6 @@ import com.example.zim.data.room.Dao.AlertDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Alerts
 import com.example.zim.helperclasses.AlertType
-import com.example.zim.states.ConnectionsState
 import com.example.zim.states.FallDetectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -35,9 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.apache.commons.math3.transform.DftNormalization
-import org.apache.commons.math3.transform.FastFourierTransformer
-import org.apache.commons.math3.transform.TransformType
 import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.math.abs
@@ -63,7 +55,7 @@ class FallDetectionViewModel @Inject constructor(
         FallDetectionState()
     )
 
-    val TAG = "FallDetectionViewModel"
+    private val TAG = "FallDetectionViewModel"
 
     private val meanArray = floatArrayOf(
         1.6418100929257502f, 2.3303889437215637f, 1.7351686581527097f, 13.772294131027596f,
@@ -107,11 +99,19 @@ class FallDetectionViewModel @Inject constructor(
     private var threshold: Int = 4
     val duration = 60
 
-    private lateinit var sensorManager: SensorManager
+    // Initialize sensorManager but don't register listeners yet
+    private var sensorManager: SensorManager = application.getSystemService(SENSOR_SERVICE) as SensorManager
+    private var accelerometer: Sensor? = null
+    private var gyroscope: Sensor? = null
+    private var sensorsRegistered = false
 
     init {
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+
         viewModelScope.launch {
             _state.collect { fallState ->
+                // Handle fall detection state changes
                 if (fallState.fallAlertStatus == "detected") {
                     _state.update { it.copy(fallAlertStatus = "countDown", countDown = duration) }
 
@@ -127,37 +127,76 @@ class FallDetectionViewModel @Inject constructor(
                     }
                 }
                 Log.d("FallPrediction", predictionQue.toString())
+
+                // Handle sensor registration/unregistration based on fall detection being enabled
+                if (fallState.isFallDetectionEnabled && !sensorsRegistered) {
+                    registerSensorListeners()
+                } else if (!fallState.isFallDetectionEnabled && sensorsRegistered) {
+                    unregisterSensorListeners()
+                }
             }
         }
+    }
+
+    // Register sensor listeners
+    private fun registerSensorListeners() {
+        if (sensorsRegistered) return
+
+        accelerometer?.also { sensor ->
+            sensorManager.registerListener(
+                this,
+                sensor,
+                SensorManager.SENSOR_DELAY_FASTEST,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
+
+        gyroscope?.also { sensor ->
+            sensorManager.registerListener(
+                this,
+                sensor,
+                SensorManager.SENSOR_DELAY_FASTEST,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
+
+        sensorsRegistered = true
+        Log.d(TAG, "Sensor listeners registered")
+    }
+
+    // Unregister sensor listeners
+    private fun unregisterSensorListeners() {
+        if (!sensorsRegistered) return
+
+        sensorManager.unregisterListener(this)
+        sensorsRegistered = false
+
+        // Clear data buffers when sensors are disabled
+        clearSensorBuffers()
+
+        Log.d(TAG, "Sensor listeners unregistered")
+    }
+
+    // Clear all sensor data buffers
+    private fun clearSensorBuffers() {
+        acc_window_x = emptyList()
+        acc_window_y = emptyList()
+        acc_window_z = emptyList()
+        acc_timestamps = emptyList()
+
+        gyro_window_x = emptyList()
+        gyro_window_y = emptyList()
+        gyro_window_z = emptyList()
+        gyro_timestamps = emptyList()
+
+        isAccWindowFull = false
+        isGyroWindowFull = false
     }
 
     fun onToggleFallDetection() {
         viewModelScope.launch {
             _state.update { it.copy(isFallDetectionEnabled = !it.isFallDetectionEnabled) }
         }
-    }
-
-    private fun setUpSensorStuff() {
-        sensorManager = application.getSystemService(SENSOR_SERVICE) as SensorManager
-
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also { accelerometer ->
-            sensorManager.registerListener(
-                this,
-                accelerometer,
-                SensorManager.SENSOR_DELAY_FASTEST,
-                SensorManager.SENSOR_DELAY_UI
-            )
-        }
-
-        sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.also { gyroscope ->
-            sensorManager.registerListener(
-                this,
-                gyroscope,
-                SensorManager.SENSOR_DELAY_FASTEST,
-                SensorManager.SENSOR_DELAY_UI
-            )
-        }
-
     }
 
     private fun getPrediction(
@@ -280,6 +319,9 @@ class FallDetectionViewModel @Inject constructor(
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
+        // Only process sensor data if fall detection is enabled
+        if (!_state.value.isFallDetectionEnabled) return
+
         when (event?.sensor?.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 _state.update { it.copy(accReadings = event.values.clone()) }
@@ -310,7 +352,7 @@ class FallDetectionViewModel @Inject constructor(
         }
 
         if (isAccWindowFull && isGyroWindowFull) {
-            if (!predictionCooldown && _state.value.isFallDetectionEnabled) {
+            if (!predictionCooldown) {
                 getPrediction(
                     acc_window_x.toList(), acc_window_y.toList(), acc_window_z.toList(),
                     gyro_window_x.toList(), gyro_window_y.toList(), gyro_window_z.toList()
@@ -357,7 +399,6 @@ class FallDetectionViewModel @Inject constructor(
                     )
                 }) / windowX.size
 
-            val samplingRate = windowX.size / 4.0f
 
             features.add(stdX)
             features.add(stdY)
@@ -375,7 +416,7 @@ class FallDetectionViewModel @Inject constructor(
 
         }
         if (print < 2) {
-            Log.d("features", "features" + features.toString())
+            Log.d("features", "features$features")
             print += 1
         }
         return features
@@ -472,10 +513,13 @@ class FallDetectionViewModel @Inject constructor(
 
 
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-
+        // No implementation needed
     }
 
-    init {
-        setUpSensorStuff()
+    // Clean up when viewModel is destroyed
+    override fun onCleared() {
+        super.onCleared()
+        // Make sure to unregister listeners to prevent memory leaks
+        unregisterSensorListeners()
     }
 }
