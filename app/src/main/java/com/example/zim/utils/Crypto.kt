@@ -28,6 +28,16 @@ class Crypto {
     }
 
     /**
+     * Generates a random AES key for direct use (without ECDH key exchange)
+     * @return SecretKeySpec for AES encryption
+     */
+    fun generateRandomAESKey(): SecretKeySpec {
+        val keyBytes = ByteArray(AES_KEY_SIZE / 8) // 32 bytes for AES-256
+        SecureRandom().nextBytes(keyBytes)
+        return SecretKeySpec(keyBytes, "AES")
+    }
+
+    /**
      * Generates an EC key pair for ECDH key exchange
      * @return KeyPair containing public and private keys
      */
@@ -192,10 +202,29 @@ class Crypto {
         return EncryptedData(ciphertext, iv)
     }
 
+    /**
+     * Encodes a SecretKeySpec to Base64 string for storage
+     * @param secretKey The SecretKeySpec to encode
+     * @return Base64 encoded string representation of the secret key
+     */
+    fun encodeSecretKey(secretKey: SecretKeySpec): String {
+        return Base64.encodeToString(secretKey.encoded, Base64.NO_WRAP)
+    }
+
+    /**
+     * Overloaded method to handle raw byte array input
+     * @param secretKey The raw key bytes
+     * @return Base64 encoded string representation of the secret key
+     */
     fun encodeSecretKey(secretKey: ByteArray): String {
         return Base64.encodeToString(secretKey, Base64.NO_WRAP)
     }
 
+    /**
+     * Decodes Base64 string back to SecretKeySpec
+     * @param encodedKey Base64 encoded string representation of the secret key
+     * @return Decoded SecretKeySpec
+     */
     fun decodeSecretKey(encodedKey: String): SecretKeySpec {
         val keyBytes = Base64.decode(encodedKey, Base64.NO_WRAP)
         return SecretKeySpec(keyBytes, "AES")

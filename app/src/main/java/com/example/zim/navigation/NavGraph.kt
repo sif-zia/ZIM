@@ -245,7 +245,7 @@ fun NavGraph(
                     }
                     composable(Navigation.Groups.route) {
                         SwipeNavigation(navController) {
-                            GroupsScreen()
+                            GroupsScreen(navController = navController)
                         }
                     }
                     composable(Navigation.UserChat.route + "/{userId}") { backStackEntry ->

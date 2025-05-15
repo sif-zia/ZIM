@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.zim.data.room.Dao.AlertDao
+import com.example.zim.data.room.Dao.GroupDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.converters.Converters
@@ -31,6 +32,7 @@ abstract class ZIMDatabase : RoomDatabase() {
     abstract val userDao: UserDao
     abstract val messageDao: MessageDao
     abstract val alertDao: AlertDao
+    abstract val groupDao: GroupDao
 
     companion object {
         @Volatile

@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.LocationManager
 import android.net.wifi.p2p.WifiP2pManager
 import com.example.zim.data.room.Dao.AlertDao
+import com.example.zim.data.room.Dao.GroupDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.ZIMDatabase
@@ -42,6 +43,11 @@ object AppModule {
     @Provides
     fun provideAlertDao(database: ZIMDatabase): AlertDao {
         return database.alertDao
+    }
+
+    @Provides
+    fun provideGroupDao(database: ZIMDatabase): GroupDao {
+        return database.groupDao
     }
 
     @Provides

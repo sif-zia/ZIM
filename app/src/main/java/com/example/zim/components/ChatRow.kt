@@ -92,7 +92,7 @@ fun ChatRow(
     modifier: Modifier = Modifier,
     name: String,
     lastMsg: String? = null,
-    isConnected: Int = 0,
+    isConnected: Int? = 0,
     unReadMsgs: Int = 0,
     time: LocalDateTime? = null,
     dpUri: Uri? = null,
@@ -251,22 +251,23 @@ fun ChatRow(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    val connectedColor = if (isConnected == 1) {
-                        Color.Green
-                    } else if (isConnected == 2) {
-                        Color.Yellow
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) // Faded primary color
+                    if(isConnected != null) {
+                        val connectedColor = if (isConnected == 1) {
+                            Color.Green
+                        } else if (isConnected == 2) {
+                            Color.Yellow
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) // Faded primary color
+                        }
+                        // Connected Status
+                        Box(
+                            modifier = Modifier
+                                .clip(shape = RoundedCornerShape(100))
+                                .background(color = connectedColor)
+                                .height(10.dp)
+                                .width(10.dp)
+                        )
                     }
-                    // Connected Status
-                    Box(
-                        modifier = Modifier
-                            .clip(shape = RoundedCornerShape(100))
-                            .background(color = connectedColor)
-                            .height(10.dp)
-                            .width(10.dp)
-                    )
-
                     // Last Message time - now using the auto-updating formattedTime
                     if (time != null)
                         Text(

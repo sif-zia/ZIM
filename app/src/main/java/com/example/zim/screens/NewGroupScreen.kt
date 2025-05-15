@@ -67,15 +67,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.zim.components.Search
 import com.example.zim.data.room.models.Users
+import com.example.zim.events.GroupsEvent
 import com.example.zim.viewModels.GroupsViewModel
-
-// User data class for our dummy data
-data class User(
-    val id: String,
-    val firstName: String,
-    val lastName: String,
-    val isConnected: Int = 0 // 0: offline, 1: direct connection, 2: routed connection
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -234,7 +227,16 @@ fun NewGroupScreen(
 
             // Create button
             Button(
-                onClick = { /* Handle group creation */ },
+                onClick = {
+                    groupsViewModel.onEvent(
+                        GroupsEvent.AddGroup(
+                            groupName,
+                            selectedUsers,
+                            groupDescription
+                        )
+                    )
+                    navController.popBackStack()
+                },
                 enabled = selectedUsers.size >= 2 && groupName.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
