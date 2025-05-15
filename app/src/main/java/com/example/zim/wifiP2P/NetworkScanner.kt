@@ -568,14 +568,85 @@ class NetworkScanner @Inject constructor(
                 override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
                     // Found an endpoint that's advertising our service
                     Log.d(TAG, "Found endpoint: $endpointId with name: ${info.endpointName}")
+                    return
 
-                    if(!info.endpointName.startsWith("ZIM_")) {
-                        Log.d(TAG, "Ignoring endpoint: $endpointId with name: ${info.endpointName} because does not belong to ZIM app")
+                    if(!info.endpointName.startsWith("ZIM0_")) {
+                        // Initiate connection to get the hotspot details
+                        connectionsClient.requestConnection(
+                            nearbyApiNodeName,
+                            endpointId,
+                            object : ConnectionLifecycleCallback() {
+                                override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
+                                    // Automatically accept connection
+                                    connectionsClient.acceptConnection(endpointId, object : PayloadCallback() {
+                                        override fun onPayloadReceived(endpointId: String, payload: Payload) {
+                                            // Process received hotspot information
+                                            if (payload.type == Payload.Type.BYTES) {
+                                                val payloadBytes = payload.asBytes() ?: return
+                                                val jsonString = String(payloadBytes)
+
+                                                try {
+                                                    val hotspotJson = JSONObject(jsonString)
+                                                    val hotspotInfo = HotspotInfo(
+                                                        ssid = hotspotJson.getString("ssid"),
+                                                        password = hotspotJson.getString("password"),
+                                                        securityType = hotspotJson.getString("securityType"),
+                                                        ipAddress = hotspotJson.optString("ipAddress"),
+                                                        endpointId = endpointId,
+                                                        deviceName = hotspotJson.optString("deviceName")
+                                                    )
+
+                                                    // Update the list of nearby hotspots
+                                                    val currentList = _nearbyHotspots.value.toMutableList()
+                                                    // Replace if existing or add new
+                                                    val existingIndex = currentList.indexOfFirst { it.endpointId == endpointId }
+                                                    if (existingIndex >= 0) {
+                                                        currentList[existingIndex] = hotspotInfo
+                                                    } else {
+                                                        currentList.add(hotspotInfo)
+                                                    }
+                                                    _nearbyHotspots.value = currentList
+                                                    connectToHotspotByEndpointId(endpointId)
+
+                                                    Log.d(TAG, "Received hotspot info: ${hotspotInfo.ssid}")
+                                                } catch (e: Exception) {
+                                                    Log.e(TAG, "Error parsing hotspot info: ${e.message}")
+                                                }
+                                            }
+                                        }
+
+                                        override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
+                                            // Handle transfer updates if needed
+                                        }
+                                    })
+                                }
+
+                                override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+                                    if (result.status.statusCode == ConnectionsStatusCodes.STATUS_OK) {
+                                        Log.d(TAG, "Connected to endpoint $endpointId")
+                                    } else {
+                                        Log.d(TAG, "Connection failed with endpoint $endpointId: ${result.status.statusCode}")
+                                    }
+                                }
+
+                                override fun onDisconnected(endpointId: String) {
+                                    Log.d(TAG, "Disconnected from endpoint $endpointId")
+
+                                    // Remove this endpoint from nearbyHotspots when disconnected
+                                    val currentList = _nearbyHotspots.value.toMutableList()
+                                    currentList.removeAll { it.endpointId == endpointId }
+                                    _nearbyHotspots.value = currentList
+                                }
+                            }
+                        ).addOnFailureListener { e ->
+                            Log.e(TAG, "Failed to request connection to $endpointId: ${e.message}")
+                        }
+
                         return
                     }
 
-                    if(info.endpointName.startsWith("ZIM0_")) {
-                        Log.d(TAG, "Ignoring endpoint: $endpointId with name: ${info.endpointName} because does not have hotspot")
+                    if(!info.endpointName.startsWith("ZIM_")) {
+                        Log.d(TAG, "Ignoring endpoint: $endpointId with name: ${info.endpointName} because does not belong to ZIM app")
                         return
                     }
 
