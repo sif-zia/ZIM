@@ -19,15 +19,15 @@ enum class Screen {
 sealed class Navigation(val route: String, val index: Int) {
     data object SignUp : Navigation(Screen.SIGNUP.name, -1)
     data object Chats : Navigation(Screen.CHATS.name, 0)
-    data object Groups : Navigation(Screen.GROUPS.name, 1)
-    data object Connections : Navigation(Screen.CONNECTIONS.name, 2)
-    data object Alerts : Navigation(Screen.ALERTS.name, 3)
+    data object Connections : Navigation(Screen.CONNECTIONS.name, 1)
+    data object Alerts : Navigation(Screen.ALERTS.name, 2)
     data object UserChat : Navigation(Screen.USER_CHAT.name, -1)
     data object GroupChat : Navigation(Screen.GROUP_CHAT.name, -1)
     data object NewGroup : Navigation(Screen.NEW_GROUP.name, -1)
     data object Profile : Navigation(Screen.PROFILE.name, -1)
     data object Settings : Navigation(Screen.SETTINGS.name, -1)
-    data object FallDetectionModel:Navigation(Screen.FALLDETECTIONMODEL.name,-1)
+    data object FallDetectionModel : Navigation(Screen.FALLDETECTIONMODEL.name, -1)
+    data object Groups : Navigation(Screen.GROUPS.name, -1)
 
     companion object {
         fun values() = listOf(
@@ -73,8 +73,8 @@ fun getLeftScreen(source: Navigation): Navigation {
 }
 
 fun routeToNav(route: String?): Navigation? {
-    for(destination in values())
-        if(destination.route == route)
+    for (destination in values())
+        if (destination.route == route)
             return destination
     return null
 }

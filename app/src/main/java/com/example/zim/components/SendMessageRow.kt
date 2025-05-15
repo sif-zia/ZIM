@@ -49,7 +49,7 @@ fun SendMessageRow(
     lazyListState: LazyListState,
     size: Int,
     onMessageSend: () -> Unit,
-    onImagePicked: (Uri) -> Unit
+    onImagePicked: ((Uri) -> Unit)?
 ) {
     val focusManager = LocalFocusManager.current
     var isFocused by remember { mutableStateOf(false) }
@@ -60,7 +60,7 @@ fun SendMessageRow(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            onImagePicked(it)
+            onImagePicked?.invoke(it)
         }
         showAttachMenu = false
     }
@@ -73,17 +73,22 @@ fun SendMessageRow(
                 .imePadding()
         ) {
             Box {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CustomTextField(
                         text = message,
                         onValueChange = onMessageChange,
                         trailingIcon = {
-                            IconButton(onClick = { showAttachMenu = !showAttachMenu }) {
-                                Icon(
-                                    imageVector = Icons.Outlined.AttachFile,
-                                    contentDescription = "Attach File Button",
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
+                            if (onImagePicked != null) {
+                                IconButton(onClick = { showAttachMenu = !showAttachMenu }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AttachFile,
+                                        contentDescription = "Attach File Button",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
                         },
                         placeholderText = "Message",
@@ -104,7 +109,7 @@ fun SendMessageRow(
                     RoundButton(onClick = {
 //                        focusManager.clearFocus()
                         onMessageSend()
-                    }, size = 50.dp ) {
+                    }, size = 50.dp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Send,
                             contentDescription = "Send Message Button",

@@ -3,6 +3,7 @@ package com.example.zim.navigation
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -38,6 +39,7 @@ import com.example.zim.components.DropDown
 import com.example.zim.components.LogoRow
 import com.example.zim.events.ChatsEvent
 import com.example.zim.events.ConnectionsEvent
+import com.example.zim.events.GroupsEvent
 import com.example.zim.events.ProtocolEvent
 import com.example.zim.events.UpdateUserEvent
 import com.example.zim.events.UserChatEvent
@@ -55,6 +57,7 @@ import com.example.zim.screens.UserChat
 import com.example.zim.states.ConnectionsState
 import com.example.zim.viewModels.ChatsViewModel
 import com.example.zim.viewModels.ConnectionsViewModel
+import com.example.zim.viewModels.GroupsViewModel
 import com.example.zim.viewModels.ProtocolViewModel
 import com.example.zim.viewModels.SignUpViewModel
 import com.example.zim.viewModels.UserChatViewModel
@@ -90,7 +93,8 @@ fun NavGraph(
     signUpViewModel: SignUpViewModel = hiltViewModel(),
     connectionsViewModel: ConnectionsViewModel = hiltViewModel(),
     userChatViewModel: UserChatViewModel = hiltViewModel(),
-    protocolViewModel: ProtocolViewModel = hiltViewModel()
+    protocolViewModel: ProtocolViewModel = hiltViewModel(),
+    groupsViewModel: GroupsViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
 
@@ -258,8 +262,10 @@ fun NavGraph(
                     }
                     composable(Navigation.GroupChat.route + "/{groupId}") { backStackEntry ->
                         val groupId = backStackEntry.arguments?.getString("groupId")?.toInt()
-                        if (groupId != null)
-                            GroupChat(groupId = groupId)
+                        if (groupId != null) {
+                            groupsViewModel.onEvent(GroupsEvent.LoadGroupData(groupId))
+                            GroupChat(groupId = groupId, navController = navController)
+                        }
                     }
                     composable(Navigation.NewGroup.route) {
                         NewGroupScreen(navController)

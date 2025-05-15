@@ -121,13 +121,14 @@ interface UserDao {
                 u.lName,
                 u.UUID,
                 MAX(sm.sentTime) AS latest_message_time,
-                (SELECT msg FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_content,
-                (SELECT type FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_type,
-                (SELECT isSent FROM Messages WHERE Message_ID = sm.Message_ID_FK) AS latest_message_isSent,
+                (SELECT msg FROM Messages WHERE Message_ID = sm.Message_ID_FK AND isDM = 1) AS latest_message_content,
+                (SELECT type FROM Messages WHERE Message_ID = sm.Message_ID_FK AND isDM = 1) AS latest_message_type,
+                (SELECT isSent FROM Messages WHERE Message_ID = sm.Message_ID_FK AND isDM = 1) AS latest_message_isSent,
                 0 AS unread_msgs
             FROM Users u
             LEFT JOIN Sent_Messages sm ON sm.User_ID_FK = u.User_ID
             JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
+            LEFT JOIN Messages m ON m.Message_ID = sm.Message_ID_FK AND m.isDM = 1
             WHERE (u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%") AND u.isActive = 1
             GROUP BY u.User_ID, u.fName, u.lName
 
@@ -139,18 +140,19 @@ interface UserDao {
                 u.lName,
                 u.UUID,
                 MAX(rm.receivedTime) AS latest_message_time,
-                (SELECT msg FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_content,
-                (SELECT type FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_type,
-                (SELECT isSent FROM Messages WHERE Message_ID = rm.Message_ID_FK) AS latest_message_isSent,
+                (SELECT msg FROM Messages WHERE Message_ID = rm.Message_ID_FK AND isDM = 1) AS latest_message_content,
+                (SELECT type FROM Messages WHERE Message_ID = rm.Message_ID_FK AND isDM = 1) AS latest_message_type,
+                (SELECT isSent FROM Messages WHERE Message_ID = rm.Message_ID_FK AND isDM = 1) AS latest_message_isSent,
                 SUM(CASE WHEN rm.isRead = 0 THEN 1 ELSE 0 END) AS unread_msgs
             FROM Users u
             LEFT JOIN Received_Messages rm ON rm.User_ID_FK = u.User_ID
             JOIN Curr_User cu ON cu.User_ID_FK != u.User_ID
+            LEFT JOIN Messages m ON m.Message_ID = rm.Message_ID_FK AND m.isDM = 1
             WHERE (u.lName LIKE "%" || :query || "%" OR u.fName LIKE "%" || :query || "%") AND u.isActive = 1
             GROUP BY u.User_ID, u.fName, u.lName
         ) AS user_info
     GROUP BY user_info.User_ID, user_info.fName, user_info.lName
-    ORDER BY latest_message_time DESC
+    ORDER BY time DESC
 """)
     fun getUsersWithLatestMessage(query: String): Flow<List<Chat>>
 

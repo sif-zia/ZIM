@@ -10,8 +10,10 @@ import android.widget.Toast
 import com.example.zim.batman.Acknowledgement
 import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
+import com.example.zim.data.room.Dao.GroupDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
+import com.example.zim.data.room.models.GroupMsgReceivers
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.SentMessages
 import com.example.zim.data.room.models.UserWithCurrentUser
@@ -44,13 +46,10 @@ class ClientRepository @Inject constructor(
     private val client: HttpClient,
     private val userDao: UserDao,
     private val messageDao: MessageDao,
+    private val groupDao: GroupDao,
     private val activeUserManager: ActiveUserManager,
     private val wifiDirectManager: WifiDirectManager
 ) {
-//    init {
-//        observeConnection()
-//    }
-
     val ips: MutableList<String> = mutableListOf()
     val handshakeMutex = kotlinx.coroutines.sync.Mutex()
 
@@ -224,6 +223,7 @@ class ClientRepository @Inject constructor(
             Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
         }
     }
+
     suspend fun sendAlert(alert: AlertData, neighborIp: String): Boolean{
         try {
             val response = client.post(getURL(neighborIp, ApiRoute.ALERT)){
@@ -389,6 +389,20 @@ class ClientRepository @Inject constructor(
         }
     }
 
+    suspend fun sendGroupInvite(groupInvite: GroupInvite, ip: String): Boolean {
+        try {
+            val response = client.post(getURL(ip, ApiRoute.GROUP_INVITE)) {
+                contentType(ContentType.Application.Json)
+                setBody(groupInvite)
+            }
+            return response.status == HttpStatusCode.OK
+        } catch (e: Exception) {
+            // Log the error here
+            userDisconnected(ip)
+            Log.d(TAG,"Client: Error sending group invite: ${e.message}")
+            return false
+        }
+    }
 
     private suspend fun insertSentMessage(userId: Int, message: String, msgType: String = "Text"): Int {
         val uuid = userDao.getUserById(userId).UUID
@@ -409,50 +423,9 @@ class ClientRepository @Inject constructor(
         return -1
     }
 
-//    private suspend fun sendPendingMessages(uuid: String) {
-//        // Use a mutex to ensure thread safety when accessing the pending messages
-//        val mutex = kotlinx.coroutines.sync.Mutex()
-//
-//        mutex.withLock {
-//            // Get pending messages within the lock to ensure consistency
-//            val messages = messageDao.getPendingMessages(uuid)
-//
-//            try {
-//                // Process each message within the lock
-//
-//                for (message in messages) {
-//                    delay(50)
-////                    sendMessage(userDao.getIdByUUID(uuid), message)
-//                    // Add a small delay to prevent overwhelming the socket
-//
-//                    sendMessage(message, userDao.getIdByUUID(uuid)!!, false)
-//
-//
-//                    Log.d(TAG, "Sending message to ${uuid}")
-//                }
-//
-//                // Mark messages as sent only if the loop completes successfully
-//                messageDao.markPendingMessagesAsSent(uuid)
-//            } catch (e: Exception) {
-//                Log.e(TAG, "Client: Error sending pending messages: ${e.message}", e)
-//                // If there's an error, we don't mark messages as sent
-//            }
-//        }
-//    }
-
     companion object {
         private const val TAG = "ApiRepository"
     }
-
-//    private fun observeConnection() {
-//        CoroutineScope(Dispatchers.IO).launch {
-//            activeUserManager.activeUsers.collect { users ->
-//                users.forEach { (publicKey, _) ->
-//                    sendPendingMessages(publicKey)
-//                }
-//            }
-//        }
-//    }
 
     private fun getFileNameFromUri(uri: Uri): String? {
         var fileName: String? = null

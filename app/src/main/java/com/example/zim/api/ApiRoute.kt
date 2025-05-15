@@ -10,6 +10,7 @@ class ApiRoute {
         const val OGM = "/ogm"
         const val ACK = "/ack"
         const val HELLO = "/hello"
-        const val ALERT="/alert"
+        const val ALERT = "/alert"
+        const val GROUP_INVITE = "/group_invite"
     }
 }

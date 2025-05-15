@@ -24,11 +24,6 @@ data class BottomNavigationItems(
                     notificationCount = unReadMsgs
                 ),
                 BottomNavigationItems(
-                    label = "Groups",
-                    icon = Icons.Filled.Groups,
-                    route = Navigation.Groups.route
-                ),
-                BottomNavigationItems(
                     label = "Connections",
                     icon = Icons.Filled.LeakAdd,
                     route = Navigation.Connections.route
@@ -42,7 +37,7 @@ data class BottomNavigationItems(
         }
 
         fun getBottomNavigationItemsCount(): Int {
-            return 4
+            return 3
         }
 
 }

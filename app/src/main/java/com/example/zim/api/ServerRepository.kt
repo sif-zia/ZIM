@@ -11,9 +11,13 @@ import com.example.zim.batman.BatmanProtocol
 import com.example.zim.batman.MessagePayload
 import com.example.zim.batman.OriginatorMessage
 import com.example.zim.data.room.Dao.AlertDao
+import com.example.zim.data.room.Dao.GroupDao
 import com.example.zim.data.room.Dao.MessageDao
 import com.example.zim.data.room.Dao.UserDao
 import com.example.zim.data.room.models.Alerts
+import com.example.zim.data.room.models.GroupMemberships
+import com.example.zim.data.room.models.GroupMsgReceivers
+import com.example.zim.data.room.models.Groups
 import com.example.zim.data.room.models.Messages
 import com.example.zim.data.room.models.ReceivedAlerts
 import com.example.zim.data.room.models.ReceivedMessages
@@ -53,6 +57,7 @@ class ServerRepository @Inject constructor(
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     private val alertDao: AlertDao,
+    private val groupDao: GroupDao,
     private val activeUserManager: ActiveUserManager,
     private val batmanProtocol: BatmanProtocol,
     private val app: Application
@@ -360,6 +365,35 @@ class ServerRepository @Inject constructor(
                             }
                         }
 
+                        post(ApiRoute.GROUP_INVITE) {
+                            try {
+                                val groupInvite = call.receive<GroupInvite>()
+                                val ip = call.request.origin.remoteHost
+                                val publicKey = groupInvite.groupAdminPuKey
+
+                                activeUserManager.addUser(publicKey, ip)
+
+                                Log.d(
+                                    TAG,
+                                    "Server: Group invite received ${groupInvite.groupName} with description ${groupInvite.groupDescription} and through public key ${groupInvite.groupAdminPuKey}"
+                                )
+
+                                // Create the group in the database
+                                val groupCreated = createGroup(groupInvite)
+
+                                if(groupCreated)
+                                    call.respond(HttpStatusCode.OK, "Group invite received successfully")
+                                else
+                                    call.respond(HttpStatusCode.BadRequest, "Group Not Created")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Server: Error processing GROUP INVITE data", e)
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    "Invalid GROUP INVITE data: ${e.message}"
+                                )
+                            }
+                        }
+
                         post(ApiRoute.HELLO) {
                             try {
                                 val helloData = call.receive<HelloData>()
@@ -532,6 +566,67 @@ class ServerRepository @Inject constructor(
         }
     }
 
+    /**
+     * Inserts a received message for a group chat
+     *
+     * @param senderUuid UUID of the user who sent the message
+     * @param groupId ID of the group the message belongs to
+     * @param message Content of the message
+     * @param messageId Original ID of the message from the sender
+     * @param msgType Type of message (default is "Text")
+     */
+    private suspend fun insertGroupReceivedMessage(
+        senderUuid: String,
+        groupId: Int,
+        message: String,
+        messageId: Int,
+        msgType: String = "Text"
+    ) {
+        // Check if the message already exists
+        val messageExists = messageDao.checkGroupMessageExist(groupId, senderUuid, messageId)
+        if (messageExists) {
+            return // Skip insertion if message already exists
+        }
+
+        // Insert the message with isDM = false to indicate it's a group message
+        val msgId = messageDao.insertMessage(
+            Messages(
+                msg = message,
+                isSent = false,
+                type = msgType,
+                isDM = false  // Important: Mark as not Direct Message
+            )
+        )
+
+        // Get current user ID
+        val currentUser = userDao.getCurrentUser()
+        val currentUserId = currentUser?.users?.id ?: return
+
+        // Get sender's user ID from UUID
+        val senderId = userDao.getIdByUUID(senderUuid) ?: return
+
+        if (msgId > 0) {
+            // Insert into ReceivedMessages table
+            messageDao.insertReceivedMessage(
+                ReceivedMessages(
+                    receivedTime = LocalDateTime.now(),
+                    userIDFK = currentUserId,
+                    msgIDFK = msgId.toInt(),
+                    receivedMessageId = messageId
+                )
+            )
+
+            // Insert into GroupMsgReceivers table to track message in the group
+            messageDao.insertGroupMessageReceiver(
+                GroupMsgReceivers(
+                    msgIdFK = msgId.toInt(),
+                    userIdFK = senderId,    // The sender's ID
+                    groupIdFK = groupId
+                )
+            )
+        }
+    }
+
     private suspend fun saveImageOnDisk(
         imageData: ByteArray,
         fileName: String,
@@ -591,5 +686,66 @@ class ServerRepository @Inject constructor(
             Log.e("ImageReceiver", "Failed to save image", e)
             null // Return null if saving fails
         }
+    }
+
+    private suspend fun createGroup(groupInvite: GroupInvite): Boolean {
+        val TAG = "GroupsViewModel"
+        val alreadyExists = groupDao.checkIfGroupExists(groupInvite.groupSecretKey)
+        if(alreadyExists) {
+            Log.d(TAG, "Server: Group already exists")
+            return true
+        }
+
+        var adminId: Int? = null
+        groupInvite.groupMembers.forEach {
+            var userId = userDao.getIdByUUID(it.puKey)
+            if (userId == null) {
+                userId = userDao.insertUser(
+                    Users(
+                        UUID = it.puKey,
+                        fName = it.fName,
+                        lName = it.lName,
+                        isActive = false
+                    )
+                ).toInt()
+            }
+            if(it.puKey == groupInvite.groupAdminPuKey) {
+                adminId = userId
+            }
+        }
+
+        if(adminId == null) {
+            Log.d(TAG, "Server: Admin not found in group members")
+            return false
+        }
+        Log.d(TAG, "Server: Admin found in group members")
+
+        val groupId = groupDao.insertGroup(Groups(
+            admin = adminId!!,
+            name = groupInvite.groupName,
+            description = groupInvite.groupDescription,
+            secretKey = groupInvite.groupSecretKey
+        ))
+
+        if(groupId < 0) {
+            Log.d(TAG, "Server: Failed to create group")
+            return false
+        }
+        Log.d(TAG, "Server: Group created successfully with ID: $groupId")
+
+        groupInvite.groupMembers.forEach { user ->
+            val userId = userDao.getIdByUUID(user.puKey)
+            if (userId != null) {
+                groupDao.insertGroupMember(
+                    GroupMemberships(
+                        groupId = groupId.toInt(),
+                        userId = userId,
+                        hasReceivedInvitation = false
+                    )
+                )
+            }
+        }
+        Log.d(TAG, "Server: Group members added successfully")
+        return true
     }
 }
