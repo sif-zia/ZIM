@@ -2,6 +2,7 @@ package com.example.zim.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LeakAdd
 import androidx.compose.material.icons.filled.NotificationsNone
@@ -23,6 +24,11 @@ data class BottomNavigationItems(
                     notificationCount = unReadMsgs
                 ),
                 BottomNavigationItems(
+                    label = "Groups",
+                    icon = Icons.Filled.Groups,
+                    route = Navigation.Groups.route
+                ),
+                BottomNavigationItems(
                     label = "Connections",
                     icon = Icons.Filled.LeakAdd,
                     route = Navigation.Connections.route
@@ -31,12 +37,12 @@ data class BottomNavigationItems(
                     label = "Alerts",
                     icon = Icons.Filled.NotificationsNone,
                     route = Navigation.Alerts.route
-                ),
+                )
             )
         }
 
         fun getBottomNavigationItemsCount(): Int {
-            return 3
+            return 4
         }
 
 }

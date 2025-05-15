@@ -46,6 +46,7 @@ import com.example.zim.screens.ChatsScreen
 import com.example.zim.screens.ConnectionsScreen
 import com.example.zim.screens.FallDetectionScreen
 import com.example.zim.screens.GroupChat
+import com.example.zim.screens.GroupsScreen
 import com.example.zim.screens.NewGroupScreen
 import com.example.zim.screens.ProfileScreen
 import com.example.zim.screens.SettingsScreen
@@ -97,13 +98,15 @@ fun NavGraph(
         Navigation.Chats.route,
         Navigation.Connections.route,
         Navigation.Alerts.route,
-        Navigation.FallDetectionModel.route
+        Navigation.FallDetectionModel.route,
+        Navigation.Groups.route
     )
     val routesWithLogoRow: List<String> = listOf(
         Navigation.Chats.route,
         Navigation.Connections.route,
         Navigation.Alerts.route,
-        Navigation.FallDetectionModel.route
+        Navigation.FallDetectionModel.route,
+        Navigation.Groups.route,
     )
 
 
@@ -241,6 +244,11 @@ fun NavGraph(
                             AlertsScreen(navController = navController)
                         }
                     }
+                    composable(Navigation.Groups.route) {
+                        SwipeNavigation(navController) {
+                            GroupsScreen()
+                        }
+                    }
                     composable(Navigation.UserChat.route + "/{userId}") { backStackEntry ->
                         val userId = backStackEntry.arguments?.getString("userId")?.toInt()
                         if (userId != null) {
@@ -255,7 +263,7 @@ fun NavGraph(
                             GroupChat(groupId = groupId)
                     }
                     composable(Navigation.NewGroup.route) {
-                        NewGroupScreen()
+                        NewGroupScreen(navController)
                     }
                     composable(Navigation.Settings.route) {
                         SettingsScreen()

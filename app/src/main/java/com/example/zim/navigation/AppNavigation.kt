@@ -12,14 +12,16 @@ enum class Screen {
     NEW_GROUP,
     PROFILE,
     SETTINGS,
-    FALLDETECTIONMODEL
+    FALLDETECTIONMODEL,
+    GROUPS
 }
 
 sealed class Navigation(val route: String, val index: Int) {
     data object SignUp : Navigation(Screen.SIGNUP.name, -1)
     data object Chats : Navigation(Screen.CHATS.name, 0)
-    data object Connections : Navigation(Screen.CONNECTIONS.name, 1)
-    data object Alerts : Navigation(Screen.ALERTS.name, 2)
+    data object Groups : Navigation(Screen.GROUPS.name, 1)
+    data object Connections : Navigation(Screen.CONNECTIONS.name, 2)
+    data object Alerts : Navigation(Screen.ALERTS.name, 3)
     data object UserChat : Navigation(Screen.USER_CHAT.name, -1)
     data object GroupChat : Navigation(Screen.GROUP_CHAT.name, -1)
     data object NewGroup : Navigation(Screen.NEW_GROUP.name, -1)
@@ -38,7 +40,8 @@ sealed class Navigation(val route: String, val index: Int) {
             NewGroup,
             Profile,
             Settings,
-            FallDetectionModel
+            FallDetectionModel,
+            Groups
         )
     }
 }

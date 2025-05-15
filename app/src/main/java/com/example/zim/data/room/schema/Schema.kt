@@ -20,5 +20,12 @@ class Schema {
         const val ALERTS_ID_FK :String = "Alerts_ID_FK"
         const val RECEIVED_ALERTS: String = "Received_Alerts"
         const val RECEIVED_ALERTS_ID: String = "Received_Alerts_ID"
+        const val GROUPS: String = "Groups"
+        const val GROUP_ID: String = "Group_ID"
+        const val GROUP_ID_FK: String = "Group_ID_FK"
+        const val GROUP_MEMBERSHIPS: String = "Group_Memberships"
+        const val GROUP_MEMBERSHIPS_ID: String = "Group_Memberships_ID"
+        const val GROUP_MESSAGE_RECEIVERS: String = "Group_Message_Receivers"
+        const val GROUP_MESSAGE_RECEIVERS_ID: String = "Group_Message_Receivers_ID"
     }
 }

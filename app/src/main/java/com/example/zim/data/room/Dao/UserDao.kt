@@ -68,7 +68,7 @@ interface UserDao {
         ON C.User_ID_FK != U.User_ID
     """
     )
-    suspend fun getConnectedUsers(): List<UserWithCurrentUser>  // Return a list of UserWithCurrentUser
+    fun getConnectedUsers(): Flow<List<Users>>  // Return a list of UserWithCurrentUser
 
     @Transaction
     @Query(
