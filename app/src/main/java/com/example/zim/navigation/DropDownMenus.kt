@@ -31,11 +31,6 @@ public interface DropDownMenus {
             ): List<DropDownMenuItem> {
                 return listOf(
                     DropDownMenuItem.NavigationItem(
-                        "New Group",
-                        Icons.Filled.GroupAdd,
-                        route = Navigation.NewGroup.route
-                    ),
-                    DropDownMenuItem.NavigationItem(
                         "Profile",
                         Icons.Filled.ManageAccounts,
                         route = Navigation.Profile.route
