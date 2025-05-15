@@ -165,10 +165,9 @@ fun UserInfoRow(username: String, status: Int, userDp: Uri?, navController: NavC
                     DropDown(
                         dropDownMenu = DropDownMenus.UserChatScreen(),
                         navController = navController,
-                        expanded = isExpanded
-                    ) {
-                        isExpanded = false
-                    }
+                        expanded = isExpanded,
+                        dismissMenu = {isExpanded = false}
+                    )
                 }
             }
         }

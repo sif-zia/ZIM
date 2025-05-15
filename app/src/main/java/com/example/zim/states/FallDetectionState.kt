@@ -5,5 +5,6 @@ data class FallDetectionState(
     val accReadings: FloatArray = FloatArray(3),
     val gyroReadings: FloatArray = FloatArray(3),
     val fallAlertStatus: String = "safe",
-    val countDown: Int = -1
+    val countDown: Int = -1,
+    val isFallDetectionEnabled: Boolean = false
 )

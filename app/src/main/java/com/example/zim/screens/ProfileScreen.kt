@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -150,7 +151,7 @@ fun ProfileScreen(
                 title = {
                     Text(
                         "Profile",
-                        fontSize = 18.sp
+                        fontSize = 20.sp,
                     )
                 },
                 navigationIcon = {
@@ -158,7 +159,6 @@ fun ProfileScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                modifier = Modifier.height(40.dp)
             )
         }
     ) { paddingValues ->

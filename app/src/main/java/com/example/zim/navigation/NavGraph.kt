@@ -83,7 +83,7 @@ fun getExitAnimation(sourceRoute: String?, destinationRoute: String?): ExitTrans
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.Q)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun NavGraph(
     chatsViewModel: ChatsViewModel = hiltViewModel(),
@@ -159,10 +159,9 @@ fun NavGraph(
                         DropDown(
                             dropDownMenu = DropDownMenus.ChatsScreen(),
                             navController = navController,
-                            expanded = chatsState.menuExpanded
-                        ) {
-                            onChatsEvent(ChatsEvent.DismissMenu)
-                        }
+                            expanded = chatsState.menuExpanded,
+                            dismissMenu = {onChatsEvent(ChatsEvent.DismissMenu)}
+                        )
                     }
                 }
             },

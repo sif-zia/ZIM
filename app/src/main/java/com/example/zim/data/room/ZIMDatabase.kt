@@ -24,7 +24,7 @@ import com.example.zim.data.room.schema.Schema
 @Database(
     entities = [Users::class, CurrentUser::class, Messages::class, SentMessages::class, ReceivedMessages::class,
         Alerts::class, ReceivedAlerts::class, Groups::class, GroupMemberships::class, GroupMsgReceivers::class],
-    version = 6,
+    version = 7,
 )
 @TypeConverters(Converters::class)
 abstract class ZIMDatabase : RoomDatabase() {

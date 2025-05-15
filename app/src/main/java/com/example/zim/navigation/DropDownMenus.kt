@@ -6,39 +6,46 @@ import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
-public data class DropDownMenuItem (
-    public val label: String,
-    public val icon: ImageVector,
-    public val route: String
-)
+sealed class DropDownMenuItem {
+    data class NavigationItem(
+        val label: String,
+        val icon: ImageVector,
+        val route: String
+    ) : DropDownMenuItem()
+
+    data class ToggleItem(
+        val label: String,
+        val icon: ImageVector,
+        val isChecked: Boolean,
+        val onToggle: (Boolean) -> Unit
+    ) : DropDownMenuItem()
+}
 
 public interface DropDownMenus {
 
     class ChatsScreen: DropDownMenus {
         companion object {
-            fun getItems(): List<DropDownMenuItem> {
+            fun getItems(
+                isFallDetectionEnabled: Boolean = false,
+                onToggleFallDetection: (Boolean) -> Unit = {}
+            ): List<DropDownMenuItem> {
                 return listOf(
-                    DropDownMenuItem(
+                    DropDownMenuItem.NavigationItem(
                         "New Group",
                         Icons.Filled.GroupAdd,
                         route = Navigation.NewGroup.route
                     ),
-                    DropDownMenuItem(
-                        "Settings",
-                        Icons.Filled.Settings,
-                        route = Navigation.Settings.route
-                    ),
-                    DropDownMenuItem(
+                    DropDownMenuItem.NavigationItem(
                         "Profile",
                         Icons.Filled.ManageAccounts,
                         route = Navigation.Profile.route
                     ),
-                    DropDownMenuItem(
-                        "Fall Detection Model",
-                        Icons.Filled.ManageAccounts,
-                        route = Navigation.FallDetectionModel.route
-                    )
-
+                    DropDownMenuItem.ToggleItem(
+                        "Fall Detection",
+                        Icons.Filled.Settings,
+                        isChecked = isFallDetectionEnabled,
+                        onToggle = onToggleFallDetection
+                    ),
                 )
             }
         }
@@ -48,17 +55,17 @@ public interface DropDownMenus {
         companion object {
             fun getItems(): List<DropDownMenuItem> {
                 return listOf(
-                    DropDownMenuItem(
+                    DropDownMenuItem.NavigationItem(
                         "Search",
                         Icons.Filled.GroupAdd,
                         route = Navigation.NewGroup.route
                     ),
-                    DropDownMenuItem(
+                    DropDownMenuItem.NavigationItem(
                         "Delete Chat",
                         Icons.Filled.Settings,
                         route = Navigation.Settings.route
                     ),
-                    DropDownMenuItem(
+                    DropDownMenuItem.NavigationItem(
                         "Remove Connection",
                         Icons.Filled.ManageAccounts,
                         route = Navigation.Profile.route
@@ -67,5 +74,4 @@ public interface DropDownMenus {
             }
         }
     }
-
 }
